@@ -8,7 +8,7 @@ export const authGuard: CanActivateFn = () => {
   const router = inject(Router);
 
   return authService.sessionState$.pipe(
-    filter((state) => !['initializing', 'loading-profile'].includes(state.status)),
+    filter((state) => !['initializing', 'loading-profile', 'loading-role'].includes(state.status)),
     take(1),
     map((state) => {
       if (state.status === 'authenticated') return true;

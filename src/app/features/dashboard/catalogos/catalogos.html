@@ -6,34 +6,48 @@
       <mat-card-title>Categorias</mat-card-title>
     </mat-card-header>
     <mat-card-content>
-      <form class="inline-form" [formGroup]="categoriaForm" (ngSubmit)="addCategoria()">
-        <mat-form-field appearance="outline">
-          <mat-label>Nueva categoria</mat-label>
-          <input matInput formControlName="nombre" />
-        </mat-form-field>
-        <button mat-flat-button class="primary-action" type="submit" [disabled]="categoriaForm.invalid">Agregar</button>
-      </form>
+      @if (auth.can('catalogs.create')) {
+        <form class="inline-form" [formGroup]="categoriaForm" (ngSubmit)="addCategoria()">
+          <mat-form-field appearance="outline">
+            <mat-label>Nueva categoria</mat-label>
+            <input matInput formControlName="nombre" />
+          </mat-form-field>
+          <button mat-flat-button class="primary-action" type="submit" [disabled]="categoriaForm.invalid">Agregar</button>
+        </form>
+      }
 
-      <div class="catalog-list">
-        @for (item of vm.categorias.items; track item.id) {
-          <div>
-            <span>{{ item.nombre }}</span>
-            <button mat-icon-button color="warn" type="button" (click)="removeCategoria(item.id!)" aria-label="Eliminar categoria">
-              <mat-icon>delete</mat-icon>
-            </button>
-          </div>
-        } @empty {
-          <p class="empty-state">No hay categorias registradas.</p>
-        }
-      </div>
+      @if (vm.categorias.total === 0) {
+        <app-empty-state
+          icon="category"
+          title="Sin categorías"
+          description="No hay categorías registradas."
+        />
+      } @else {
+        <div class="catalog-list">
+          @for (item of vm.categorias.items; track item.id) {
+            <div>
+              <span>{{ item.nombre }}</span>
+              @if (auth.can('catalogs.delete')) {
+                <button mat-icon-button color="warn" type="button" (click)="removeCategoria(item.id!)" aria-label="Eliminar categoria">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
+            </div>
+          }
+        </div>
 
-      <mat-paginator
-        [length]="vm.categorias.total"
-        [pageIndex]="vm.categorias.pageIndex"
-        [pageSize]="vm.categorias.pageSize"
-        [pageSizeOptions]="pageSizeOptions"
-        (page)="updatePage($event)"
-      />
+        <mat-paginator
+          [length]="vm.categorias.total"
+          [pageIndex]="vm.categorias.pageIndex"
+          [pageSize]="vm.categorias.pageSize"
+          [pageSizeOptions]="pageSizeOptions"
+          (page)="updatePage($event)"
+        />
+      }
     </mat-card-content>
+  </mat-card>
+} @else {
+  <mat-card>
+    <app-loading text="Cargando categorías..." />
   </mat-card>
 }

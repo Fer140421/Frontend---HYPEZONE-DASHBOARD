@@ -1,59 +1,97 @@
-# DashboardHypezone
+# HypeZone Dashboard
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.31.
+Dashboard administrativo para tienda e-commerce de ropa streetwear. Desarrollado con **Angular 20/21**, **Angular Material** y **Firebase** (Authentication, Firestore, Cloud Functions, Hosting).
 
-## Development server
+---
 
-To start a local development server, run:
+## Características principales
 
-```bash
-ng serve
+- **Autorización Dinámica por Permisos (Authorization V2):** Catálogo granular de 17 permisos, roles como documentos en Firestore, mapa `effectivePermissions` materializado en servidor y evaluación reactativa en tiempo real.
+- **Administración de Usuarios:** Listado en tiempo real con Firestore, edición de roles y overrides en modal `MatDialog`, creación de usuarios con generación de contraseñas temporales vía Cloud Functions Admin SDK, y protección de navegación `CanDeactivate`.
+- **Gestión de Inventario y Lotes:** Control de productos, lotes de importación, cálculo automático de analítica de inversión/ganancias, actualización rápida de precios y borrado lógico.
+- **Registro Transaccional de Ventas:** Confirmaciones atómicas con `runTransaction` en Firestore, actualización de stock e historial.
+- **Diseño Moderno y Responsivo:** Interfaz oscura adaptada a múltiples breakpoints (1440px a 320px) con Angular Material.
+
+---
+
+## Requisitos del sistema
+
+- **Node.js:** `>= 20.0.0`
+- **npm:** `>= 10.0.0`
+- **Angular CLI:** `20.3.31`
+- **Firebase CLI:** Para administración de proyectos y despliegues (`npm install -g firebase-tools`).
+
+---
+
+## Instalación y configuración local
+
+1. **Clonar el repositorio e instalar dependencias:**
+
+   ```bash
+   npm install
+   cd functions && npm install && cd ..
+   ```
+
+2. **Configurar variables de entorno:**
+
+   Completar las credenciales de Firebase en `src/environments/environment.development.ts` y `src/environments/environment.production.ts`.
+
+3. **Iniciar el servidor de desarrollo:**
+
+   ```bash
+   npm run start:dev
+   ```
+
+   La aplicación estará disponible en `http://localhost:4200/`.
+
+---
+
+## Scripts disponibles
+
+| Comando | Descripción |
+| --- | --- |
+| `npm start` | Inicia el servidor de desarrollo Angular. |
+| `npm run start:dev` | Inicia el servidor usando la configuración de desarrollo (`hypezone-dev`). |
+| `npm run build:dev` | Compila la aplicación Angular en modo desarrollo. |
+| `npm run build:prod` | Compila la aplicación Angular para producción (`hypezone-3ed2a`). |
+| `npm test` | Ejecuta la suite de 100 pruebas unitarias con Karma/Jasmine en Chrome Headless. |
+| `npm run functions:build` | Compila el proyecto de Cloud Functions TypeScript en `functions/`. |
+| `npm run seed:firebase:dev` | Ejecuta el script de inicialización de roles y owner en `hypezone-dev`. |
+| `npm run emulators` | Inicia Firebase Emulator Suite (Auth, Firestore, Functions). |
+| `npm run firebase:use:dev` | Selecciona el proyecto Firebase `hypezone-dev`. |
+| `npm run firebase:use:prod` | Selecciona el proyecto Firebase `hypezone-3ed2a`. |
+
+---
+
+## Estructura del proyecto
+
+```text
+dashboard_hypezone/
+├── docs/                      # Documentación del sistema y arquitectura
+│   └── authorization-v2/     # Especificaciones, ROADMAP, STATUS y AUDITORÍA v2
+├── functions/                 # Cloud Functions (TypeScript + Firebase Admin SDK)
+│   └── src/
+│       ├── index.ts           # Callable Functions (createUser, updateUserAuthorization)
+│       └── permissions.ts     # Definición de catálogo y permisos efectivos en servidor
+├── src/
+│   ├── app/
+│   │   ├── core/              # Servicios de Auth, repositorios Firestore, guards, catálogo
+│   │   ├── features/          # Pantallas (resumen, productos, lotes, ventas, usuarios-permisos)
+│   │   └── shared/            # Componentes reutilizables (headers, diálogos, paginador, chips)
+│   ├── environments/          # Configuraciones de entornos DEV y PROD
+│   └── styles.css             # Estilos globales y tokens Angular Material
+├── firestore.rules            # Security Rules v2 de Firestore
+├── firebase.json              # Configuración de Firebase Hosting, Functions y Firestore
+└── ESTADO_PROYECTO.md         # Informe detallado del estado del desarrollo
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+---
 
-## Code scaffolding
+## Documentación detallada
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Consulte la documentación del proyecto para obtener información técnica y de arquitectura:
+- [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) — Diccionario de datos, diagrama Entidad-Relación y Security Rules de Firestore.
+- [STATUS.md](docs/authorization-v2/STATUS.md) — Estado de auditoría y avance por funcionalidad.
+- [ROADMAP.md](docs/authorization-v2/ROADMAP.md) — Plan de fases de autorización A a G.
+- [TODO.md](docs/authorization-v2/TODO.md) — Tareas completadas y pendientes.
+- [DECISIONS.md](docs/authorization-v2/DECISIONS.md) — Decisiones de arquitectura y diseño.

@@ -45,7 +45,7 @@ export class LimpiezaProductosComponent {
   }
 
   async runAudit(): Promise<void> {
-    if (!this.auth.can('cleanupProducts')) return;
+    if (!this.auth.can('products.clean')) return;
     this.working.set(true);
     this.error.set('');
     try {
@@ -58,7 +58,7 @@ export class LimpiezaProductosComponent {
   }
 
   confirmCleanup(): void {
-    if (!this.auth.can('cleanupProducts')) return;
+    if (!this.auth.can('products.clean')) return;
     const current = this.audit();
     if (!current || !this.cleanupService.canCleanup(current) || !current.listosParaLimpieza) return;
 

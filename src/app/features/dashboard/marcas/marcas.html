@@ -1,4 +1,4 @@
-<app-page-header title="Marcas" description="Catalogo de marcas para los formularios de producto y lote." />
+<app-page-header title="Marcas" description="Catálogo de marcas para los formularios de producto y lote." />
 
 @if (listViewModel$ | async; as vm) {
   <mat-card>
@@ -6,34 +6,80 @@
       <mat-card-title>Marcas</mat-card-title>
     </mat-card-header>
     <mat-card-content>
-      <form class="inline-form" [formGroup]="marcaForm" (ngSubmit)="addMarca()">
-        <mat-form-field appearance="outline">
-          <mat-label>Nueva marca</mat-label>
-          <input matInput formControlName="nombre" />
-        </mat-form-field>
-        <button mat-flat-button class="primary-action" type="submit" [disabled]="marcaForm.invalid">Agregar</button>
-      </form>
-
-      <div class="catalog-list">
-        @for (item of vm.marcas.items; track item.id) {
-          <div>
-            <span>{{ item.nombre }}</span>
-            <button mat-icon-button color="warn" type="button" (click)="removeMarca(item.id!)" aria-label="Eliminar marca">
-              <mat-icon>delete</mat-icon>
+      @if (auth.can('catalogs.create')) {
+        <form class="brand-form" [formGroup]="marcaForm" (ngSubmit)="addMarca()">
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="flex-1">
+              <mat-label>Nueva marca</mat-label>
+              <input matInput formControlName="nombre" placeholder="Nombre de la marca" />
+            </mat-form-field>
+            <button mat-flat-button class="primary-action" type="submit" [disabled]="marcaForm.invalid">
+              <mat-icon>add</mat-icon>
+              Agregar marca
             </button>
           </div>
-        } @empty {
-          <p class="empty-state">No hay marcas registradas.</p>
-        }
-      </div>
 
-      <mat-paginator
-        [length]="vm.marcas.total"
-        [pageIndex]="vm.marcas.pageIndex"
-        [pageSize]="vm.marcas.pageSize"
-        [pageSizeOptions]="pageSizeOptions"
-        (page)="updatePage($event)"
-      />
+          <div class="logo-uploader-row">
+            <label class="field-label">Logo / Foto de la marca</label>
+            <app-image-uploader
+              [maxImages]="1"
+              [images]="imagenes()"
+              (uploaded)="onImagesUploaded($event)"
+              (error)="onUploadError($event)"
+            />
+          </div>
+        </form>
+      }
+
+      @if (vm.marcas.total === 0) {
+        <app-empty-state
+          icon="label"
+          title="Sin marcas"
+          description="No hay marcas registradas."
+        />
+      } @else {
+        <div class="catalog-list">
+          @for (item of vm.marcas.items; track item.id) {
+            <div class="brand-item">
+              <div class="brand-info">
+                @if (getMarcaImagen(item); as img) {
+                  <img [src]="thumbnail(img)" [alt]="item.nombre" class="brand-logo" loading="lazy" decoding="async" />
+                } @else {
+                  <div class="brand-logo placeholder">
+                    <mat-icon>label</mat-icon>
+                  </div>
+                }
+                <span class="brand-name">{{ item.nombre }}</span>
+              </div>
+
+              <div class="brand-actions">
+                @if (auth.can('catalogs.update')) {
+                  <button mat-icon-button type="button" (click)="openEdit(item)" aria-label="Editar marca">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                }
+                @if (auth.can('catalogs.delete')) {
+                  <button mat-icon-button color="warn" type="button" (click)="removeMarca(item.id!)" aria-label="Eliminar marca">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <mat-paginator
+          [length]="vm.marcas.total"
+          [pageIndex]="vm.marcas.pageIndex"
+          [pageSize]="vm.marcas.pageSize"
+          [pageSizeOptions]="pageSizeOptions"
+          (page)="updatePage($event)"
+        />
+      }
     </mat-card-content>
+  </mat-card>
+} @else {
+  <mat-card>
+    <app-loading text="Cargando marcas..." />
   </mat-card>
 }

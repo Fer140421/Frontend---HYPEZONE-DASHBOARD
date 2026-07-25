@@ -11,12 +11,15 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { BehaviorSubject, combineLatest, firstValueFrom, map, take } from 'rxjs';
 import { categoriasIniciales } from '../../../core/models/catalogo.model';
 import { CategoriaRepository } from '../../../core/repositories/categoria.repository';
+import { AuthService } from '../../../core/services/auth.service';
 import {
   DEFAULT_PAGE_SIZE,
   DEFAULT_PAGE_SIZE_OPTIONS,
   PaginationState,
   paginateItems,
 } from '../../../shared/utils/pagination.util';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 
 @Component({
@@ -32,6 +35,8 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
     MatInputModule,
     MatPaginatorModule,
     MatSnackBarModule,
+    EmptyStateComponent,
+    LoadingComponent,
     PageHeaderComponent,
   ],
   templateUrl: './catalogos.html',
@@ -41,6 +46,7 @@ export class CatalogosComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly categorias = inject(CategoriaRepository);
   private readonly snack = inject(MatSnackBar);
+  readonly auth = inject(AuthService);
   private readonly pagination$ = new BehaviorSubject<PaginationState>({
     pageIndex: 0,
     pageSize: DEFAULT_PAGE_SIZE,
@@ -58,11 +64,13 @@ export class CatalogosComponent implements OnInit {
   }
 
   async addCategoria(): Promise<void> {
+    if (!this.auth.can('catalogs.create')) return;
     await this.add(this.categoriaForm.getRawValue().nombre);
     this.categoriaForm.reset();
   }
 
   async removeCategoria(id: string): Promise<void> {
+    if (!this.auth.can('catalogs.delete')) return;
     await this.categorias.delete(id);
     this.message('Categoria eliminada.');
   }
@@ -72,6 +80,7 @@ export class CatalogosComponent implements OnInit {
   }
 
   private async initializeCatalogs(): Promise<void> {
+    if (!this.auth.can('catalogs.create')) return;
     try {
       const categorias = await firstValueFrom(this.categorias.getAll(true).pipe(take(1)));
       if (!categorias.length) {
@@ -83,6 +92,7 @@ export class CatalogosComponent implements OnInit {
   }
 
   private async add(value: string): Promise<void> {
+    if (!this.auth.can('catalogs.create')) return;
     const nombre = value.trim();
     if (!nombre) {
       return;

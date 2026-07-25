@@ -8,6 +8,7 @@ import { precioCompraProducto, precioProducto } from '../../../core/models/produ
 import { ProductoRepository } from '../../../core/repositories/producto.repository';
 import { VentaRepository } from '../../../core/repositories/venta.repository';
 import { LoteRepository } from '../../../core/repositories/lote.repository';
+import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { StatusChipComponent } from '../../../shared/components/status-chip/status-chip.component';
 
@@ -21,6 +22,7 @@ import { StatusChipComponent } from '../../../shared/components/status-chip/stat
     MatCardModule,
     MatIconModule,
     MatListModule,
+    LoadingComponent,
     PageHeaderComponent,
     StatusChipComponent,
   ],

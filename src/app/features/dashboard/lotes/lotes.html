@@ -1,83 +1,101 @@
 @if (mode() === 'list') {
   <app-page-header title="Lotes" description="Inventario y rentabilidad calculados desde productos y ventas.">
-    <button mat-flat-button class="primary-action" routerLink="/dashboard/lotes/nuevo">
-      <mat-icon>add</mat-icon>
-      Nuevo lote
-    </button>
+    @if (auth.can('lots.create')) {
+      <button mat-flat-button class="primary-action" routerLink="/dashboard/lotes/nuevo">
+        <mat-icon>add</mat-icon>
+        Nuevo lote
+      </button>
+    }
   </app-page-header>
 
   @if (data$ | async; as data) {
     <mat-card class="wide-table">
-      <table mat-table [dataSource]="data.resumenesPaginados.items">
-        <ng-container matColumnDef="nombre">
-          <th mat-header-cell *matHeaderCellDef>Lote</th>
-          <td mat-cell *matCellDef="let r"><strong>{{ r.lote.nombre }}</strong></td>
-        </ng-container>
-        <ng-container matColumnDef="fecha">
-          <th mat-header-cell *matHeaderCellDef>Compra</th>
-          <td mat-cell *matCellDef="let r">{{ fecha(r.lote.fechaCompra) | date: 'mediumDate' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="costo">
-          <th mat-header-cell *matHeaderCellDef>Costo</th>
-          <td mat-cell *matCellDef="let r">{{ r.lote.costoTotal | currency: 'BOB' : 'symbol-narrow' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="productos">
-          <th mat-header-cell *matHeaderCellDef>Productos</th>
-          <td mat-cell *matCellDef="let r">{{ r.cantidadProductos }}</td>
-        </ng-container>
-        <ng-container matColumnDef="disponibles">
-          <th mat-header-cell *matHeaderCellDef>Disponibles</th>
-          <td mat-cell *matCellDef="let r">{{ r.cantidadDisponibles }}</td>
-        </ng-container>
-        <ng-container matColumnDef="vendidos">
-          <th mat-header-cell *matHeaderCellDef>Vendidos</th>
-          <td mat-cell *matCellDef="let r">{{ r.cantidadVendidos }}</td>
-        </ng-container>
-        <ng-container matColumnDef="inversion">
-          <th mat-header-cell *matHeaderCellDef>Asignado</th>
-          <td mat-cell *matCellDef="let r">{{ r.inversionAsignada | currency: 'BOB' : 'symbol-narrow' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="esperado">
-          <th mat-header-cell *matHeaderCellDef>Esperado</th>
-          <td mat-cell *matCellDef="let r">{{ r.valorEsperado | currency: 'BOB' : 'symbol-narrow' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="ingreso">
-          <th mat-header-cell *matHeaderCellDef>Ingreso real</th>
-          <td mat-cell *matCellDef="let r">{{ r.ingresoReal | currency: 'BOB' : 'symbol-narrow' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="ganancia">
-          <th mat-header-cell *matHeaderCellDef>Ganancia</th>
-          <td mat-cell *matCellDef="let r">{{ r.gananciaReal | currency: 'BOB' : 'symbol-narrow' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="recuperacion">
-          <th mat-header-cell *matHeaderCellDef>Recuperacion</th>
-          <td mat-cell *matCellDef="let r">{{ r.recuperacionInversion | number: '1.0-1' }}%</td>
-        </ng-container>
-        <ng-container matColumnDef="estado">
-          <th mat-header-cell *matHeaderCellDef>Estado</th>
-          <td mat-cell *matCellDef="let r">{{ r.lote.activo === false ? 'Inactivo' : 'Activo' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="acciones">
-          <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let r">
-            <button mat-icon-button [routerLink]="['/dashboard/lotes', r.lote.id]" aria-label="Ver lote">
-              <mat-icon>visibility</mat-icon>
-            </button>
-            <button mat-icon-button [routerLink]="['/dashboard/lotes', r.lote.id, 'editar']" aria-label="Modificar lote">
-              <mat-icon>edit</mat-icon>
-            </button>
-          </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="columns"></tr>
-        <tr mat-row *matRowDef="let row; columns: columns"></tr>
-      </table>
-      <mat-paginator
-        [length]="data.resumenesPaginados.total"
-        [pageIndex]="data.resumenesPaginados.pageIndex"
-        [pageSize]="data.resumenesPaginados.pageSize"
-        [pageSizeOptions]="pageSizeOptions"
-        (page)="updatePage($event)"
-      />
+      @if (data.resumenesPaginados.total === 0) {
+        <app-empty-state
+          icon="inventory_2"
+          title="Sin lotes"
+          description="No hay lotes de compra registrados en el sistema."
+        />
+      } @else {
+        <div class="table-scroll">
+          <table mat-table [dataSource]="data.resumenesPaginados.items">
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Lote</th>
+              <td mat-cell *matCellDef="let r"><strong>{{ r.lote.nombre }}</strong></td>
+            </ng-container>
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef>Compra</th>
+              <td mat-cell *matCellDef="let r">{{ fecha(r.lote.fechaCompra) | date: 'mediumDate' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="costo">
+              <th mat-header-cell *matHeaderCellDef>Costo</th>
+              <td mat-cell *matCellDef="let r">{{ r.lote.costoTotal | currency: 'BOB' : 'symbol-narrow' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="productos">
+              <th mat-header-cell *matHeaderCellDef>Productos</th>
+              <td mat-cell *matCellDef="let r">{{ r.cantidadProductos }}</td>
+            </ng-container>
+            <ng-container matColumnDef="disponibles">
+              <th mat-header-cell *matHeaderCellDef>Disponibles</th>
+              <td mat-cell *matCellDef="let r">{{ r.cantidadDisponibles }}</td>
+            </ng-container>
+            <ng-container matColumnDef="vendidos">
+              <th mat-header-cell *matHeaderCellDef>Vendidos</th>
+              <td mat-cell *matCellDef="let r">{{ r.cantidadVendidos }}</td>
+            </ng-container>
+            <ng-container matColumnDef="inversion">
+              <th mat-header-cell *matHeaderCellDef>Asignado</th>
+              <td mat-cell *matCellDef="let r">{{ r.inversionAsignada | currency: 'BOB' : 'symbol-narrow' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="esperado">
+              <th mat-header-cell *matHeaderCellDef>Esperado</th>
+              <td mat-cell *matCellDef="let r">{{ r.valorEsperado | currency: 'BOB' : 'symbol-narrow' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="ingreso">
+              <th mat-header-cell *matHeaderCellDef>Ingreso real</th>
+              <td mat-cell *matCellDef="let r">{{ r.ingresoReal | currency: 'BOB' : 'symbol-narrow' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="ganancia">
+              <th mat-header-cell *matHeaderCellDef>Ganancia</th>
+              <td mat-cell *matCellDef="let r">{{ r.gananciaReal | currency: 'BOB' : 'symbol-narrow' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="recuperacion">
+              <th mat-header-cell *matHeaderCellDef>Recuperacion</th>
+              <td mat-cell *matCellDef="let r">{{ r.recuperacionInversion | number: '1.0-1' }}%</td>
+            </ng-container>
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let r">{{ r.lote.activo === false ? 'Inactivo' : 'Activo' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let r">
+                <button mat-icon-button [routerLink]="['/dashboard/lotes', r.lote.id]" aria-label="Ver lote">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+                @if (auth.can('lots.update')) {
+                  <button mat-icon-button [routerLink]="['/dashboard/lotes', r.lote.id, 'editar']" aria-label="Modificar lote">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                }
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="columns"></tr>
+            <tr mat-row *matRowDef="let row; columns: columns"></tr>
+          </table>
+        </div>
+        <mat-paginator
+          [length]="data.resumenesPaginados.total"
+          [pageIndex]="data.resumenesPaginados.pageIndex"
+          [pageSize]="data.resumenesPaginados.pageSize"
+          [pageSizeOptions]="pageSizeOptions"
+          (page)="updatePage($event)"
+        />
+      }
+    </mat-card>
+  } @else {
+    <mat-card>
+      <app-loading text="Cargando lotes..." />
     </mat-card>
   }
 } @else {
@@ -88,7 +106,7 @@
   @if (mode() === 'new') {
     <ng-container *ngTemplateOutlet="loteForm" />
   } @else if (detail$ | async; as detail) {
-    @if (mode() === 'edit') {
+    @if (mode() === 'edit' && auth.can('lots.update')) {
       <section class="detail-actions">
         <button
           mat-flat-button
@@ -100,12 +118,12 @@
           <mat-icon>add</mat-icon>
           Registrar producto
         </button>
-        @if (detail.resumen.lote.activo === false) {
+        @if (auth.can('lots.delete') && detail.resumen.lote.activo === false) {
           <button mat-stroked-button type="button" (click)="restore(detail.resumen.lote)">
             <mat-icon>restore</mat-icon>
             Restaurar lote
           </button>
-        } @else {
+        } @else if (auth.can('lots.delete')) {
           <button mat-stroked-button color="warn" type="button" (click)="deactivate(detail)">
             <mat-icon>archive</mat-icon>
             Desactivar lote
@@ -163,7 +181,7 @@
       </mat-card>
     }
 
-    @if (mode() === 'edit') {
+    @if (mode() === 'edit' && auth.can('lots.update')) {
       <mat-card>
         <mat-card-header><mat-card-title>Asociar producto existente sin lote</mat-card-title></mat-card-header>
         <mat-card-content>
@@ -201,7 +219,7 @@
               <span class="product-name">{{ producto.nombre }}</span>
               <span>{{ precioCompra(producto) | currency: 'BOB' : 'symbol-narrow' }} / {{ precio(producto) | currency: 'BOB' : 'symbol-narrow' }}</span>
               <app-status-chip [status]="producto.estado" />
-              @if (mode() === 'edit') {
+              @if (mode() === 'edit' && auth.can('lots.update')) {
                 <button mat-icon-button type="button" (click)="confirmUnlink(detail.resumen.lote, producto)" aria-label="Desvincular producto">
                   <mat-icon>link_off</mat-icon>
                 </button>
@@ -284,7 +302,7 @@
           <mat-label>Notas</mat-label>
           <textarea matInput rows="3" formControlName="notas"></textarea>
         </mat-form-field>
-        <button mat-flat-button class="primary-action" type="submit" [disabled]="form.invalid">
+        <button mat-flat-button class="primary-action" type="submit" [disabled]="form.invalid || (currentId() ? !auth.can('lots.update') : !auth.can('lots.create'))">
           {{ currentId() ? 'Guardar cambios' : 'Guardar lote' }}
         </button>
       </form>

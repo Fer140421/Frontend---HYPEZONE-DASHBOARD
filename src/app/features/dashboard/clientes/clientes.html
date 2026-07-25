@@ -2,10 +2,12 @@
   title="Clientes"
   description="Administra clientes con registro rapido, filtros y reactivacion."
 >
-  <button mat-flat-button class="primary-action" type="button" (click)="openCreate()">
-    <mat-icon>person_add</mat-icon>
-    Registrar cliente
-  </button>
+  @if (auth.can('clients.create')) {
+    <button mat-flat-button class="primary-action" type="button" (click)="openCreate()">
+      <mat-icon>person_add</mat-icon>
+      Registrar cliente
+    </button>
+  }
 </app-page-header>
 
 @if (listViewModel$ | async; as vm) {
@@ -33,57 +35,71 @@
       </mat-form-field>
     </form>
 
-    <div class="table-scroll">
-      <table mat-table [dataSource]="vm.clientes.items">
-        <ng-container matColumnDef="nombreCompleto">
-          <th mat-header-cell *matHeaderCellDef>Cliente</th>
-          <td mat-cell *matCellDef="let cliente"><strong>{{ cliente.nombreCompleto }}</strong></td>
-        </ng-container>
+    @if (vm.clientes.total === 0) {
+      <app-empty-state
+        icon="people"
+        title="Sin clientes"
+        description="No se encontraron clientes registrados o que coincidan con los filtros."
+      />
+    } @else {
+      <div class="table-scroll">
+        <table mat-table [dataSource]="vm.clientes.items">
+          <ng-container matColumnDef="nombreCompleto">
+            <th mat-header-cell *matHeaderCellDef>Cliente</th>
+            <td mat-cell *matCellDef="let cliente"><strong>{{ cliente.nombreCompleto }}</strong></td>
+          </ng-container>
 
-        <ng-container matColumnDef="celular">
-          <th mat-header-cell *matHeaderCellDef>Celular</th>
-          <td mat-cell *matCellDef="let cliente">{{ cliente.celular }}</td>
-        </ng-container>
+          <ng-container matColumnDef="celular">
+            <th mat-header-cell *matHeaderCellDef>Celular</th>
+            <td mat-cell *matCellDef="let cliente">{{ cliente.celular }}</td>
+          </ng-container>
 
-        <ng-container matColumnDef="ci">
-          <th mat-header-cell *matHeaderCellDef>CI</th>
-          <td mat-cell *matCellDef="let cliente">{{ cliente.ci || 'Sin CI' }}</td>
-        </ng-container>
+          <ng-container matColumnDef="ci">
+            <th mat-header-cell *matHeaderCellDef>CI</th>
+            <td mat-cell *matCellDef="let cliente">{{ cliente.ci || 'Sin CI' }}</td>
+          </ng-container>
 
-        <ng-container matColumnDef="estado">
-          <th mat-header-cell *matHeaderCellDef>Estado</th>
-          <td mat-cell *matCellDef="let cliente">{{ cliente.activo === false ? 'Inactivo' : 'Activo' }}</td>
-        </ng-container>
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let cliente">{{ cliente.activo === false ? 'Inactivo' : 'Activo' }}</td>
+          </ng-container>
 
-        <ng-container matColumnDef="acciones">
-          <th mat-header-cell *matHeaderCellDef>Acciones</th>
-          <td mat-cell *matCellDef="let cliente" class="actions-cell">
-            <button mat-icon-button type="button" (click)="openEdit(cliente)" aria-label="Editar cliente">
-              <mat-icon>edit</mat-icon>
-            </button>
-            @if (cliente.activo === false) {
-              <button mat-icon-button type="button" (click)="confirmRestore(cliente)" aria-label="Reactivar cliente">
-                <mat-icon>restore</mat-icon>
-              </button>
-            } @else {
-              <button mat-icon-button type="button" color="warn" (click)="confirmDelete(cliente)" aria-label="Eliminar cliente">
-                <mat-icon>delete</mat-icon>
-              </button>
-            }
-          </td>
-        </ng-container>
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let cliente" class="actions-cell">
+              @if (auth.can('clients.update')) {
+                <button mat-icon-button type="button" (click)="openEdit(cliente)" aria-label="Editar cliente">
+                  <mat-icon>edit</mat-icon>
+                </button>
+              }
+              @if (auth.can('clients.delete') && cliente.activo === false) {
+                <button mat-icon-button type="button" (click)="confirmRestore(cliente)" aria-label="Reactivar cliente">
+                  <mat-icon>restore</mat-icon>
+                </button>
+              } @else if (auth.can('clients.delete')) {
+                <button mat-icon-button type="button" color="warn" (click)="confirmDelete(cliente)" aria-label="Eliminar cliente">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
+            </td>
+          </ng-container>
 
-        <tr mat-header-row *matHeaderRowDef="columns"></tr>
-        <tr mat-row *matRowDef="let row; columns: columns"></tr>
-      </table>
-    </div>
+          <tr mat-header-row *matHeaderRowDef="columns"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns"></tr>
+        </table>
+      </div>
 
-    <mat-paginator
-      [length]="vm.clientes.total"
-      [pageIndex]="vm.clientes.pageIndex"
-      [pageSize]="vm.clientes.pageSize"
-      [pageSizeOptions]="pageSizeOptions"
-      (page)="updatePage($event)"
-    />
+      <mat-paginator
+        [length]="vm.clientes.total"
+        [pageIndex]="vm.clientes.pageIndex"
+        [pageSize]="vm.clientes.pageSize"
+        [pageSizeOptions]="pageSizeOptions"
+        (page)="updatePage($event)"
+      />
+    }
+  </mat-card>
+} @else {
+  <mat-card>
+    <app-loading text="Cargando clientes..." />
   </mat-card>
 }

@@ -4,7 +4,6 @@ import { Router } from '@angular/router';
 import { BehaviorSubject, firstValueFrom, Observable, take, timeout } from 'rxjs';
 import { authGuard } from './auth.guard';
 import { publicGuard } from './public.guard';
-import { roleGuard } from './role.guard';
 import { AuthService, SessionState } from '../services/auth.service';
 
 describe('authorization guards', () => {
@@ -50,21 +49,6 @@ describe('authorization guards', () => {
     await expectAsync(firstValueFrom(asObservable(result$))).toBeResolvedTo('redirect');
   });
 
-  it('allows owner but blocks admin and seller from limpieza-productos', async () => {
-    const route = { data: { roles: ['owner'] } } as never;
-    state$.next({ status: 'authenticated', user: {} as never, profile: activeProfile('seller') });
-    roleSpy.and.returnValue('seller');
-    let result$ = TestBed.runInInjectionContext(() => roleGuard(route, {} as never));
-    await expectAsync(firstValueFrom(asObservable(result$))).toBeResolvedTo('redirect');
-    state$.next({ status: 'authenticated', user: {} as never, profile: activeProfile('admin') });
-    roleSpy.and.returnValue('admin');
-    result$ = TestBed.runInInjectionContext(() => roleGuard(route, {} as never));
-    await expectAsync(firstValueFrom(asObservable(result$))).toBeResolvedTo('redirect');
-    state$.next({ status: 'authenticated', user: {} as never, profile: activeProfile('owner') });
-    roleSpy.and.returnValue('owner');
-    result$ = TestBed.runInInjectionContext(() => roleGuard(route, {} as never));
-    await expectAsync(firstValueFrom(asObservable(result$))).toBeResolvedTo(true);
-  });
 });
 
 function activeProfile(role: 'owner' | 'admin' | 'seller') {

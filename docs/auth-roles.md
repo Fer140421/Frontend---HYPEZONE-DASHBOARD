@@ -1,60 +1,84 @@
-# Autenticación y roles (DEV)
+# Autenticación y roles — Arquitectura V2 (DEV / PROD)
 
-Esta fase usa Firebase Authentication para identidad y `users/{uid}` en Firestore para el perfil administrativo. Es una implementación **provisional para DEV**: no se desplegaron reglas ni se escribieron datos.
+Este documento describe el modelo de autenticación y autorización dinámica del proyecto HypeZone Dashboard.
 
-## Roles y permisos iniciales
+---
 
-| Permiso | owner | admin | seller |
-| --- | --- | --- | --- |
-| Gestionar usuarios y configuración | Sí | No | No |
-| Productos: ver | Sí | Sí | Sí |
-| Productos: crear, editar, precio, eliminar | Sí | Sí | No |
-| Lotes, proveedores y catálogos | Sí | Sí | No |
-| Clientes y registrar ventas | Sí | Sí | Sí |
-| Editar ventas, reportes y ver costos | Sí | Sí | No |
-| Limpieza de productos | Sí | No | No |
+## Modelo de Autorización V2
 
-`AuthService` es la fuente central: expone `role`, `isOwner`, `isAdmin`, `isSeller` y `can(permission)`. Guards, navegación y acciones sensibles usan esa API. Ocultar una opción no sustituye los guards ni las reglas.
+El sistema migró de roles estáticos hardcodeados a un modelo de **Autorización Dinámica Granular (Authorization V2)**:
 
-## Documento requerido
+1. **Identidad:** Manejada por Firebase Authentication.
+2. **Perfiles:** Almacenados en la colección `users/{uid}` en Firestore.
+3. **Roles como Documentos:** Almacenados en la colección `roles/{roleId}` (`owner`, `admin`, `seller`).
+4. **Catálogo Tipado de Permisos:** Definido en `src/app/core/authorization/permission-catalog.ts` (17 permisos como `dashboard.view`, `users.view`, `products.create`, `permissions.managePermissions`, etc.).
+5. **Overrides de Permisos:** Cada documento `users/{uid}` puede tener un objeto `permissionOverrides` con claves del catálogo asignadas a `true` (Permitir) o `false` (Denegar).
+6. **Permisos Efectivos (`effectivePermissions`):** Mapa consolidado `Record<PermissionKey, boolean>` recalculado de forma autoritativa en el servidor (Cloud Functions) y materializado en el documento del usuario para ser consumido por Firestore Security Rules.
 
-Ruta: `users/{uid}`
+---
+
+## Matriz de Roles y Permisos por Defecto
+
+| Módulo / Permiso | Key | owner | admin | seller |
+| --- | --- | --- | --- | --- |
+| Ver Dashboard | `dashboard.view` | Sí | Sí | Sí |
+| Ver Usuarios y Permisos | `users.view` | Sí | No | No |
+| Crear Usuarios | `users.create` | Sí | No | No |
+| Modificar Permisos | `permissions.managePermissions` | Sí | No | No |
+| Ver Productos | `products.view` | Sí | Sí | Sí |
+| Crear Productos | `products.create` | Sí | Sí | No |
+| Modificar Productos | `products.update` | Sí | Sí | No |
+| Eliminar Productos | `products.delete` | Sí | Sí | No |
+| Limpiar Productos | `products.clean` | Sí | No | No |
+| Ver Lotes | `lots.view` | Sí | Sí | No |
+| Crear Lotes | `lots.create` | Sí | Sí | No |
+| Modificar Lotes | `lots.update` | Sí | Sí | No |
+| Eliminar Lotes | `lots.delete` | Sí | Sí | No |
+| Ver Ventas | `sales.view` | Sí | Sí | Sí |
+| Registrar Ventas | `sales.create` | Sí | Sí | Sí |
+| Modificar Ventas | `sales.update` | Sí | Sí | No |
+| Ver Clientes / Proveedores / Catálogos | `clients.*`, `providers.*`, `catalogs.*` | Sí | Sí | Según acción |
+
+---
+
+## Estructura del Documento `users/{uid}`
 
 ```ts
 {
-  uid: 'UID_DE_FIREBASE_AUTH',
-  email: 'owner-dev@example.com',
-  displayName: 'Owner DEV',
-  role: 'owner', // 'owner' | 'admin' | 'seller'
+  uid: 'UID_FIREBASE_AUTH',
+  email: 'usuario@example.com',
+  displayName: 'Nombre Usuario',
+  roleId: 'owner', // 'owner' | 'admin' | 'seller'
   active: true,
+  permissionOverrides: {
+    'products.delete': false // Override específico opcional
+  },
+  effectivePermissions: {
+    'dashboard.view': true,
+    'users.view': true,
+    'permissions.managePermissions': true,
+    // ...resto de permisos consolidados
+  },
+  protectedOwner: true, // Protege la cuenta principal de degradación o desactivación
   createdAt: Timestamp,
   updatedAt: Timestamp
 }
 ```
 
-Los timestamps siguen el patrón del proyecto: `serverTimestamp()` al crear o actualizar. Angular no crea perfiles, no asigna roles y no realiza escrituras administrativas de usuarios.
+---
 
-## Crear el primer owner DEV manualmente
+## Estados de Sesión en `AuthService`
 
-1. Selecciona el proyecto Firebase DEV en la consola.
-2. Crea el usuario de email/password en Firebase Authentication DEV.
-3. Copia su UID.
-4. Crea manualmente el documento `users/{UID}` con el ejemplo anterior, `role: 'owner'` y `active: true`.
-5. Inicia sesión en el dashboard DEV.
+- `initializing` / `loading-profile`: Espera inicial mientras Firebase Auth y Firestore resuelven la sesión.
+- `unauthenticated`: Sin usuario autenticado. Redirige a `/auth/login`.
+- `missing-profile`: Autenticado en Auth pero no existe el documento `users/{uid}`.
+- `inactive`: Perfil existente pero `active === false`. Acceso bloqueado.
+- `error`: Error al consultar Firestore.
+- `authenticated`: Sesión activa y perfil válido. Habilita los métodos `can()`, `canAny()`, `canAll()`.
 
-## Estados de sesión
+---
 
-- `initializing` / `loading-profile`: Auth o la lectura de perfil aún no resolvieron; los guards esperan, sin redirección prematura.
-- `unauthenticated`: se redirige a login.
-- `missing-profile`: acceso bloqueado y mensaje “Tu cuenta no tiene un perfil administrativo configurado”.
-- `inactive`: acceso bloqueado y mensaje “Tu cuenta está desactivada”.
-- `error`: acceso bloqueado con mensaje de verificación fallida.
-- `authenticated`: perfil existente, activo y apto para guards por rol.
+## Seguridad y Servidor Privilegiado
 
-## Guards y Security Rules
-
-Los guards protegen navegación y UX. Las Security Rules protegen Firestore ante URL directa, DevTools o clientes externos. Ninguno reemplaza al otro.
-
-`firestore.rules` es una propuesta local DEV: deniega por defecto, permite al usuario leer solo su perfil, reserva la gestión de `users` para owner, impide borrado físico de ventas y no permite acceso anónimo a datos privados. La regla temporal para seller sobre productos es document-wide; no garantiza ocultar costos u otros campos privados. La siguiente fase debe crear vistas/modelos de lectura específicos y reglas por datos, además de mover la autorización principal a custom claims con Admin SDK y Cloud Functions.
-
-No hay todavía ruta de usuarios, reportes o auditoría: los permisos se reservaron en la matriz, sin inventar pantallas.
+- Ningún cliente Angular puede modificar directamente `/users/{uid}` (denegado en `firestore.rules`).
+- Las mutaciones de rol, estado y permisos se realizan exclusivamente mediante las Cloud Functions `createUser` y `updateUserAuthorization` en `functions/src/index.ts` ejecutadas con Firebase Admin SDK.

@@ -6,34 +6,48 @@
       <mat-card-title>Tallas</mat-card-title>
     </mat-card-header>
     <mat-card-content>
-      <form class="inline-form" [formGroup]="tallaForm" (ngSubmit)="addTalla()">
-        <mat-form-field appearance="outline">
-          <mat-label>Nueva talla</mat-label>
-          <input matInput formControlName="nombre" />
-        </mat-form-field>
-        <button mat-flat-button class="primary-action" type="submit" [disabled]="tallaForm.invalid">Agregar</button>
-      </form>
+      @if (auth.can('catalogs.create')) {
+        <form class="inline-form" [formGroup]="tallaForm" (ngSubmit)="addTalla()">
+          <mat-form-field appearance="outline">
+            <mat-label>Nueva talla</mat-label>
+            <input matInput formControlName="nombre" />
+          </mat-form-field>
+          <button mat-flat-button class="primary-action" type="submit" [disabled]="tallaForm.invalid">Agregar</button>
+        </form>
+      }
 
-      <div class="catalog-list">
-        @for (item of vm.tallas.items; track item.id) {
-          <div>
-            <span>{{ item.nombre }}</span>
-            <button mat-icon-button color="warn" type="button" (click)="removeTalla(item.id!)" aria-label="Eliminar talla">
-              <mat-icon>delete</mat-icon>
-            </button>
-          </div>
-        } @empty {
-          <p class="empty-state">No hay tallas registradas.</p>
-        }
-      </div>
+      @if (vm.tallas.total === 0) {
+        <app-empty-state
+          icon="straighten"
+          title="Sin tallas"
+          description="No hay tallas registradas."
+        />
+      } @else {
+        <div class="catalog-list">
+          @for (item of vm.tallas.items; track item.id) {
+            <div>
+              <span>{{ item.nombre }}</span>
+              @if (auth.can('catalogs.delete')) {
+                <button mat-icon-button color="warn" type="button" (click)="removeTalla(item.id!)" aria-label="Eliminar talla">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
+            </div>
+          }
+        </div>
 
-      <mat-paginator
-        [length]="vm.tallas.total"
-        [pageIndex]="vm.tallas.pageIndex"
-        [pageSize]="vm.tallas.pageSize"
-        [pageSizeOptions]="pageSizeOptions"
-        (page)="updatePage($event)"
-      />
+        <mat-paginator
+          [length]="vm.tallas.total"
+          [pageIndex]="vm.tallas.pageIndex"
+          [pageSize]="vm.tallas.pageSize"
+          [pageSizeOptions]="pageSizeOptions"
+          (page)="updatePage($event)"
+        />
+      }
     </mat-card-content>
+  </mat-card>
+} @else {
+  <mat-card>
+    <app-loading text="Cargando tallas..." />
   </mat-card>
 }

@@ -1,47 +1,84 @@
-// PROVISIONAL PARA DEV. No desplegar sin revisión específica del entorno destino.
-// El rol se lee de users/{uid}; en la siguiente fase se duplicará en custom claims.
+// DEV authorization rules. Sensitive user mutations are Admin SDK-only.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)); }
-    function hasRole(role) { return signedIn() && profile().data.role == role && profile().data.active == true; }
-    function owner() { return hasRole('owner'); }
-    function operator() { return hasRole('owner') || hasRole('admin'); }
-    function seller() { return hasRole('seller'); }
-
-    // Each authenticated user can read their profile. Only an owner manages user profiles.
-    match /users/{uid} {
-      allow read: if signedIn() && (request.auth.uid == uid || owner());
-      allow create, update, delete: if owner();
+    function activeUser() { return signedIn() && profile().data.active == true; }
+    function hasPermission(permission) {
+      return activeUser() && profile().data.effectivePermissions[permission] == true;
     }
 
-    // Seller product access is temporary and document-wide. Field-level views come next phase.
+    // A user may read their own profile. The administrative list requires the
+    // server-materialized users.view permission. No client can mutate profiles.
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || hasPermission('users.view'));
+      allow create, update, delete: if false;
+    }
+
+    // AuthService needs the active role document to resolve the session.
+    match /roles/{roleId} {
+      allow read: if activeUser();
+      allow write: if false;
+    }
+
     match /productos/{id} {
-      allow read: if operator() || seller();
-      allow create, update, delete: if operator();
+      allow read: if hasPermission('products.view');
+      allow create: if hasPermission('products.create');
+      allow update: if hasPermission('products.update');
+      allow delete: if hasPermission('products.delete');
     }
     match /clientes/{id} {
-      allow read, create, update: if operator() || seller();
-      allow delete: if operator();
+      allow read: if hasPermission('clients.view');
+      allow create: if hasPermission('clients.create');
+      allow update: if hasPermission('clients.update');
+      allow delete: if hasPermission('clients.delete');
     }
     match /ventas/{id} {
-      allow read, create: if operator() || seller();
-      allow update: if operator();
+      allow read: if hasPermission('sales.view');
+      allow create: if hasPermission('sales.create');
+      allow update: if hasPermission('sales.update');
       allow delete: if false;
     }
     match /operacionesVenta/{id} {
-      allow read, create: if operator() || seller();
-      allow update: if operator();
+      allow read: if hasPermission('sales.view');
+      allow create: if hasPermission('sales.create');
+      allow update: if hasPermission('sales.update');
       allow delete: if false;
     }
-    match /lotes/{id} { allow read, write: if operator(); }
-    match /proveedores/{id} { allow read, write: if operator(); }
-    match /{collection}/{id} {
-      allow read, write: if operator() && collection in ['categorias', 'marcas', 'tallas'];
+    match /lotes/{id} {
+      allow read: if hasPermission('lots.view');
+      allow create: if hasPermission('lots.create');
+      allow update: if hasPermission('lots.update');
+      allow delete: if hasPermission('lots.delete');
+    }
+    match /proveedores/{id} {
+      allow read: if hasPermission('providers.view');
+      allow create: if hasPermission('providers.create');
+      allow update: if hasPermission('providers.update');
+      allow delete: if hasPermission('providers.delete');
+    }
+    match /categorias/{id} {
+      allow read: if hasPermission('catalogs.view');
+      allow create: if hasPermission('catalogs.create');
+      allow update: if hasPermission('catalogs.update');
+      allow delete: if hasPermission('catalogs.delete');
+    }
+    match /marcas/{id} {
+      allow read: if hasPermission('catalogs.view');
+      allow create: if hasPermission('catalogs.create');
+      allow update: if hasPermission('catalogs.update');
+      allow delete: if hasPermission('catalogs.delete');
+    }
+    match /tallas/{id} {
+      allow read: if hasPermission('catalogs.view');
+      allow create: if hasPermission('catalogs.create');
+      allow update: if hasPermission('catalogs.update');
+      allow delete: if hasPermission('catalogs.delete');
     }
 
-    // Final default: all unlisted collections and anonymous requests are denied.
-    match /{document=**} { allow read, write: if false; }
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }

@@ -7,10 +7,12 @@
   "
 >
   @if (mode() === 'list') {
-    <button mat-flat-button class="primary-action" routerLink="/dashboard/ventas/nueva">
-      <mat-icon>point_of_sale</mat-icon>
-      Nueva venta
-    </button>
+    @if (auth.can('sales.create')) {
+      <button mat-flat-button class="primary-action" routerLink="/dashboard/ventas/nueva">
+        <mat-icon>point_of_sale</mat-icon>
+        Nueva venta
+      </button>
+    }
   } @else {
     <button mat-button routerLink="/dashboard/ventas">
       <mat-icon>arrow_back</mat-icon>
@@ -183,10 +185,12 @@
                 </mat-form-field>
 
                 <div class="client-actions">
-                  <button mat-stroked-button type="button" (click)="openClientDialog()">
-                    <mat-icon>person_add</mat-icon>
-                    Registrar cliente
-                  </button>
+                  @if (auth.can('clients.create')) {
+                    <button mat-stroked-button type="button" (click)="openClientDialog()">
+                      <mat-icon>person_add</mat-icon>
+                      Registrar cliente
+                    </button>
+                  }
                   @if (selectedCliente()) {
                     <button mat-button type="button" (click)="clearCliente()">Limpiar</button>
                   }
@@ -226,7 +230,7 @@
               mat-flat-button
               class="primary-action confirm-button"
               type="submit"
-              [disabled]="saleForm.invalid || detalles.length === 0 || procesandoVenta()"
+              [disabled]="saleForm.invalid || detalles.length === 0 || procesandoVenta() || (mode() === 'edit' ? !auth.can('sales.update') : !auth.can('sales.create'))"
             >
               <mat-icon>check_circle</mat-icon>
               {{ procesandoVenta() ? 'Procesando...' : mode() === 'edit' ? 'Guardar cambios' : 'Confirmar venta' }}
@@ -272,61 +276,75 @@
         </mat-form-field>
       </form>
 
-      <div class="table-scroll">
-        <table mat-table [dataSource]="vm.ventas.items">
-          <ng-container matColumnDef="nombreProducto">
-            <th mat-header-cell *matHeaderCellDef>Producto</th>
-            <td mat-cell *matCellDef="let venta"><strong>{{ venta.nombreProducto }}</strong></td>
-          </ng-container>
-          <ng-container matColumnDef="operacion">
-            <th mat-header-cell *matHeaderCellDef>Venta</th>
-            <td mat-cell *matCellDef="let venta">
-              {{ venta.operacionId ? '#' + venta.operacionId.slice(0, 6).toUpperCase() : 'Individual' }}
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="fechaVenta">
-            <th mat-header-cell *matHeaderCellDef>Fecha</th>
-            <td mat-cell *matCellDef="let venta">{{ venta.fechaVenta | date: 'mediumDate' }}</td>
-          </ng-container>
-          <ng-container matColumnDef="precioVenta">
-            <th mat-header-cell *matHeaderCellDef>Precio acordado</th>
-            <td mat-cell *matCellDef="let venta">
-              {{ venta.precioVenta | currency: 'BOB' : 'symbol-narrow' }}
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="ganancia">
-            <th mat-header-cell *matHeaderCellDef>Ganancia</th>
-            <td mat-cell *matCellDef="let venta">
-              {{ venta.ganancia | currency: 'BOB' : 'symbol-narrow' }}
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="metodoPago">
-            <th mat-header-cell *matHeaderCellDef>Pago</th>
-            <td mat-cell *matCellDef="let venta">{{ venta.metodoPago || 'otro' }}</td>
-          </ng-container>
-          <ng-container matColumnDef="acciones">
-            <th mat-header-cell *matHeaderCellDef>Acciones</th>
-            <td mat-cell *matCellDef="let venta" class="sale-actions">
-              <button mat-icon-button type="button" (click)="viewSale(venta)" aria-label="Ver venta">
-                <mat-icon>visibility</mat-icon>
-              </button>
-              <button mat-icon-button type="button" (click)="editSale(venta)" aria-label="Editar venta">
-                <mat-icon>edit</mat-icon>
-              </button>
-            </td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="columns"></tr>
-          <tr mat-row *matRowDef="let row; columns: columns"></tr>
-        </table>
-      </div>
+      @if (vm.ventas.total === 0) {
+        <app-empty-state
+          icon="receipt_long"
+          title="Sin ventas"
+          description="No se encontraron registros de ventas con los criterios seleccionados."
+        />
+      } @else {
+        <div class="table-scroll">
+          <table mat-table [dataSource]="vm.ventas.items">
+            <ng-container matColumnDef="nombreProducto">
+              <th mat-header-cell *matHeaderCellDef>Producto</th>
+              <td mat-cell *matCellDef="let venta"><strong>{{ venta.nombreProducto }}</strong></td>
+            </ng-container>
+            <ng-container matColumnDef="operacion">
+              <th mat-header-cell *matHeaderCellDef>Venta</th>
+              <td mat-cell *matCellDef="let venta">
+                {{ venta.operacionId ? '#' + venta.operacionId.slice(0, 6).toUpperCase() : 'Individual' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="fechaVenta">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let venta">{{ venta.fechaVenta | date: 'mediumDate' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="precioVenta">
+              <th mat-header-cell *matHeaderCellDef>Precio acordado</th>
+              <td mat-cell *matCellDef="let venta">
+                {{ venta.precioVenta | currency: 'BOB' : 'symbol-narrow' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="ganancia">
+              <th mat-header-cell *matHeaderCellDef>Ganancia</th>
+              <td mat-cell *matCellDef="let venta">
+                {{ venta.ganancia | currency: 'BOB' : 'symbol-narrow' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="metodoPago">
+              <th mat-header-cell *matHeaderCellDef>Pago</th>
+              <td mat-cell *matCellDef="let venta">{{ venta.metodoPago || 'otro' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let venta" class="sale-actions">
+                <button mat-icon-button type="button" (click)="viewSale(venta)" aria-label="Ver venta">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+                @if (auth.can('sales.update')) {
+                  <button mat-icon-button type="button" (click)="editSale(venta)" aria-label="Editar venta">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                }
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="columns"></tr>
+            <tr mat-row *matRowDef="let row; columns: columns"></tr>
+          </table>
+        </div>
 
-      <mat-paginator
-        [length]="vm.ventas.total"
-        [pageIndex]="vm.ventas.pageIndex"
-        [pageSize]="vm.ventas.pageSize"
-        [pageSizeOptions]="pageSizeOptions"
-        (page)="updatePage($event)"
-      />
+        <mat-paginator
+          [length]="vm.ventas.total"
+          [pageIndex]="vm.ventas.pageIndex"
+          [pageSize]="vm.ventas.pageSize"
+          [pageSizeOptions]="pageSizeOptions"
+          (page)="updatePage($event)"
+        />
+      }
+    </mat-card>
+  } @else {
+    <mat-card>
+      <app-loading text="Cargando ventas..." />
     </mat-card>
   }
 }

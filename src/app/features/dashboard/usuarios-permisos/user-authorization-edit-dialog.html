@@ -1,0 +1,98 @@
+@if (data.user(); as user) {
+  <div class="dialog-title" mat-dialog-title>
+    <div class="user-avatar" aria-hidden="true">
+      {{ user.displayName.charAt(0) }}
+    </div>
+    <span>
+      <strong id="user-authorization-dialog-title">{{ user.displayName }}</strong>
+      <small>
+        {{ user.email }}
+        @if (user.protectedOwner) {
+          <span class="protected-owner">· Owner protegido</span>
+        }
+      </small>
+    </span>
+  </div>
+
+  <mat-dialog-content
+    class="editor-content"
+    [formGroup]="data.form"
+    aria-labelledby="user-authorization-dialog-title"
+  >
+    <section class="authorization-fields" aria-labelledby="authorization-heading">
+      <div class="section-heading">
+        <h3 id="authorization-heading">Acceso de la cuenta</h3>
+        <p>Configura el rol y el estado de acceso del usuario.</p>
+      </div>
+
+      <div class="authorization-controls">
+        <mat-form-field appearance="outline">
+          <mat-label>Rol</mat-label>
+          <mat-select formControlName="roleId">
+            <mat-option value="owner">owner</mat-option>
+            <mat-option value="admin">admin</mat-option>
+            <mat-option value="seller">seller</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-slide-toggle formControlName="active">
+          Cuenta activa
+        </mat-slide-toggle>
+      </div>
+    </section>
+
+    <section class="permission-section" aria-labelledby="permissions-heading">
+      <div class="section-heading">
+        <h3 id="permissions-heading">Overrides de permisos</h3>
+        <p>Cada permiso puede heredarse del rol, permitirse o denegarse localmente.</p>
+      </div>
+
+      <div class="permissions">
+        @for (permission of data.permissions; track permission.key) {
+          <div class="permission-row">
+            <span class="permission-description">
+              <strong>{{ permission.label }}</strong>
+              <small [class.is-allowed]="data.effective(permission.key)">
+                {{
+                  data.effective(permission.key)
+                    ? 'Efectivo: permitir'
+                    : 'Efectivo: denegar'
+                }}
+              </small>
+            </span>
+            <mat-select
+              [attr.aria-label]="'Override para ' + permission.label"
+              [value]="data.overrideFor(permission.key)"
+              [disabled]="!data.canManage() || user.protectedOwner"
+              (selectionChange)="data.setOverride(permission.key, $event.value)"
+            >
+              <mat-option value="inherit">Heredar</mat-option>
+              <mat-option value="allow">Permitir</mat-option>
+              <mat-option value="deny">Denegar</mat-option>
+            </mat-select>
+          </div>
+        }
+      </div>
+    </section>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" (click)="requestClose()">
+      Cerrar
+    </button>
+    @if (data.dirty()) {
+      <button mat-button type="button" (click)="data.discard()">
+        Descartar cambios
+      </button>
+      <button
+        mat-flat-button
+        type="button"
+        class="primary-action"
+        [disabled]="data.form.invalid || data.saving()"
+        (click)="save()"
+      >
+        {{ data.saving() ? 'Guardando…' : 'Guardar cambios' }}
+      </button>
+    }
+  </mat-dialog-actions>
+}

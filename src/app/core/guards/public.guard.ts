@@ -8,7 +8,7 @@ export const publicGuard: CanActivateFn = () => {
   const router = inject(Router);
 
   return authService.sessionState$.pipe(
-    filter((state) => !['initializing', 'loading-profile'].includes(state.status)),
+    filter((state) => !['initializing', 'loading-profile', 'loading-role'].includes(state.status)),
     take(1),
     map((state) => (state.status === 'authenticated' ? router.createUrlTree(['/dashboard']) : true)),
   );

@@ -1,4 +1,4 @@
-﻿import { AsyncPipe, CurrencyPipe } from '@angular/common';
+import { AsyncPipe, CurrencyPipe } from '@angular/common';
 import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -35,7 +35,9 @@ import { VentaService } from '../../../core/services/venta.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { cloudinaryDetailUrl, cloudinaryThumbnailUrl } from '../../../core/utils/cloudinary-image.util';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { ImageUploaderComponent } from '../../../shared/components/image-uploader/image-uploader.component';
+import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { StatusChipComponent } from '../../../shared/components/status-chip/status-chip.component';
 import {
@@ -64,7 +66,9 @@ import {
     MatSnackBarModule,
     MatSortModule,
     MatTableModule,
+    EmptyStateComponent,
     ImageUploaderComponent,
+    LoadingComponent,
     PageHeaderComponent,
     StatusChipComponent,
   ],
@@ -279,7 +283,7 @@ export class ProductosComponent implements OnInit {
   }
 
   openEdit(producto: Producto): void {
-    if (!this.auth.can('manageProducts')) return;
+    if (!this.auth.can('products.update')) return;
     if (!producto.id) {
       return;
     }
@@ -303,7 +307,7 @@ export class ProductosComponent implements OnInit {
   }
 
   async save(): Promise<void> {
-    if (!this.auth.can('manageProducts')) return;
+    if (!this.auth.can('products.create') && !this.auth.can('products.update')) return;
     const raw = this.form.getRawValue();
     const { precioOferta, ...productValues } = raw;
     const payload: Partial<Producto> = {
@@ -328,7 +332,7 @@ export class ProductosComponent implements OnInit {
   }
 
   openPriceEdit(producto: Producto): void {
-    if (!this.auth.can('manageProducts')) return;
+    if (!this.auth.can('products.update')) return;
     if (!producto.id) {
       return;
     }
@@ -350,7 +354,7 @@ export class ProductosComponent implements OnInit {
   }
 
   softDelete(producto: Producto): void {
-    if (!this.auth.can('manageProducts')) return;
+    if (!this.auth.can('products.delete')) return;
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Eliminar producto',
@@ -368,7 +372,7 @@ export class ProductosComponent implements OnInit {
   }
 
   async restore(producto: Producto): Promise<void> {
-    if (!this.auth.can('manageProducts')) return;
+    if (!this.auth.can('products.delete')) return;
     if (!producto.id) {
       return;
     }

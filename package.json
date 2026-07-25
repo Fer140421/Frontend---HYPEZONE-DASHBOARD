@@ -8,11 +8,13 @@
     "build": "ng build",
     "build:dev": "ng build --configuration development",
     "build:prod": "ng build --configuration production",
+    "seed:firebase:dev": "node scripts/seed-firebase-dev-roles.cjs --project hypezone-dev",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "firebase:use:dev": "firebase use dev",
     "firebase:use:prod": "firebase use prod",
     "emulators": "firebase emulators:start"
+    ,"functions:build": "npm --prefix functions run build"
   },
   "prettier": {
     "printWidth": 100,

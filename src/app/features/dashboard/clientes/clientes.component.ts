@@ -14,7 +14,10 @@ import { MatTableModule } from '@angular/material/table';
 import { BehaviorSubject, combineLatest, firstValueFrom, map, shareReplay, startWith, take } from 'rxjs';
 import { Cliente } from '../../../core/models/cliente.model';
 import { ClienteRepository } from '../../../core/repositories/cliente.repository';
+import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import {
   DEFAULT_PAGE_SIZE,
@@ -41,6 +44,8 @@ type EstadoFiltro = 'todos' | 'activos' | 'inactivos';
     MatSelectModule,
     MatSnackBarModule,
     MatTableModule,
+    EmptyStateComponent,
+    LoadingComponent,
     PageHeaderComponent,
   ],
   templateUrl: './clientes.html',
@@ -51,12 +56,16 @@ export class ClientesComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
   private readonly clientes = inject(ClienteRepository);
+  readonly auth = inject(AuthService);
   private readonly pagination$ = new BehaviorSubject<PaginationState>({
     pageIndex: 0,
     pageSize: DEFAULT_PAGE_SIZE,
   });
 
-  readonly columns = ['nombreCompleto', 'celular', 'ci', 'estado', 'acciones'];
+  get columns(): string[] {
+    const base = ['nombreCompleto', 'celular', 'ci', 'estado'];
+    return this.auth.canAny(['clients.update', 'clients.delete']) ? [...base, 'acciones'] : base;
+  }
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
   readonly filters = this.fb.nonNullable.group({
     nombre: [''],
@@ -107,6 +116,7 @@ export class ClientesComponent implements OnInit {
   }
 
   openCreate(): void {
+    if (!this.auth.can('clients.create')) return;
     this.dialog
       .open(ClienteFormDialogComponent, {
         width: 'min(560px, 96vw)',
@@ -121,6 +131,7 @@ export class ClientesComponent implements OnInit {
   }
 
   openEdit(cliente: Cliente): void {
+    if (!this.auth.can('clients.update')) return;
     this.dialog
       .open(ClienteFormDialogComponent, {
         width: 'min(560px, 96vw)',
@@ -136,7 +147,7 @@ export class ClientesComponent implements OnInit {
   }
 
   confirmDelete(cliente: Cliente): void {
-    if (!cliente.id) {
+    if (!this.auth.can('clients.delete') || !cliente.id) {
       return;
     }
     this.dialog
@@ -158,7 +169,7 @@ export class ClientesComponent implements OnInit {
   }
 
   confirmRestore(cliente: Cliente): void {
-    if (!cliente.id) {
+    if (!this.auth.can('clients.delete') || !cliente.id) {
       return;
     }
     this.dialog
@@ -200,6 +211,7 @@ export class ClientesComponent implements OnInit {
 export class ClienteFormDialogComponent {
   private readonly fb = inject(FormBuilder);
   private readonly repository = inject(ClienteRepository);
+  private readonly auth = inject(AuthService);
   private readonly ref = inject(MatDialogRef<ClienteFormDialogComponent>);
   readonly data = inject<Cliente | null>(MAT_DIALOG_DATA, { optional: true }) ?? null;
   readonly saving = signal(false);
@@ -210,7 +222,7 @@ export class ClienteFormDialogComponent {
   });
 
   async save(): Promise<void> {
-    if (this.form.invalid || this.saving()) {
+    if (this.form.invalid || this.saving() || (this.data?.id ? !this.auth.can('clients.update') : !this.auth.can('clients.create'))) {
       return;
     }
     this.saving.set(true);

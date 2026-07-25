@@ -49,17 +49,17 @@ export class DashboardLayoutComponent {
   );
 
   private readonly navItems: NavItem[] = [
-    { label: 'Resumen', icon: 'dashboard', route: '/dashboard/resumen', permission: 'viewProducts' },
-    { label: 'Lotes', icon: 'local_shipping', route: '/dashboard/lotes', permission: 'manageLots' },
-    { label: 'Productos', icon: 'inventory_2', route: '/dashboard/productos', permission: 'viewProducts' },
-    { label: 'Ventas', icon: 'point_of_sale', route: '/dashboard/ventas', permission: 'registerSales' },
-    { label: 'Proveedores', icon: 'local_shipping', route: '/dashboard/proveedores', permission: 'manageSuppliers' },
-    { label: 'Clientes', icon: 'groups', route: '/dashboard/clientes', permission: 'manageCustomers' },
-    { label: 'Categorias', icon: 'category', route: '/dashboard/catalogos', permission: 'manageCatalogs' },
-    { label: 'Marcas', icon: 'branding_watermark', route: '/dashboard/marcas', permission: 'manageCatalogs' },
-    { label: 'Tallas', icon: 'straighten', route: '/dashboard/tallas', permission: 'manageCatalogs' },
-    { label: 'Configuracion', icon: 'settings', route: '/dashboard/configuracion', permission: 'manageSettings' },
-    { label: 'Limpiar productos', icon: 'cleaning_services', route: '/dashboard/limpieza-productos', permission: 'cleanupProducts' },
+    { label: 'Resumen', icon: 'dashboard', route: '/dashboard/resumen', permission: 'dashboard.view' },
+    { label: 'Lotes', icon: 'local_shipping', route: '/dashboard/lotes', permission: 'lots.view' },
+    { label: 'Productos', icon: 'inventory_2', route: '/dashboard/productos', permission: 'products.view' },
+    { label: 'Ventas', icon: 'point_of_sale', route: '/dashboard/ventas', permission: 'sales.view' },
+    { label: 'Proveedores', icon: 'local_shipping', route: '/dashboard/proveedores', permission: 'providers.view' },
+    { label: 'Clientes', icon: 'groups', route: '/dashboard/clientes', permission: 'clients.view' },
+    { label: 'Categorias', icon: 'category', route: '/dashboard/catalogos', permission: 'catalogs.view' },
+    { label: 'Marcas', icon: 'branding_watermark', route: '/dashboard/marcas', permission: 'catalogs.view' },
+    { label: 'Tallas', icon: 'straighten', route: '/dashboard/tallas', permission: 'catalogs.view' },
+    { label: 'Limpiar productos', icon: 'cleaning_services', route: '/dashboard/limpieza-productos', permission: 'products.clean' },
+    { label: 'Usuarios y permisos', icon: 'manage_accounts', route: '/dashboard/usuarios-permisos', permission: 'users.view' },
   ];
   readonly visibleNavItems = computed(() => this.navItems.filter((item) => this.auth.can(item.permission)));
 

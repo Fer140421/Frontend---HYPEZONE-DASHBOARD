@@ -23,11 +23,14 @@ import { ClienteRepository } from '../../../core/repositories/cliente.repository
 import { ProductoRepository } from '../../../core/repositories/producto.repository';
 import { VentaRepository } from '../../../core/repositories/venta.repository';
 import { VentaService } from '../../../core/services/venta.service';
+import { AuthService } from '../../../core/services/auth.service';
 import {
   cloudinaryCardUrl,
   cloudinaryPreviewUrl,
   cloudinaryThumbnailUrl,
 } from '../../../core/utils/cloudinary-image.util';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import {
   DEFAULT_PAGE_SIZE,
@@ -58,6 +61,8 @@ import { ClienteFormDialogComponent } from '../clientes/clientes.component';
     MatSelectModule,
     MatSnackBarModule,
     MatTableModule,
+    EmptyStateComponent,
+    LoadingComponent,
     PageHeaderComponent,
   ],
   templateUrl: './ventas.html',
@@ -73,6 +78,7 @@ export class VentasComponent implements OnInit {
   private readonly productoRepository = inject(ProductoRepository);
   private readonly ventaRepository = inject(VentaRepository);
   private readonly ventaService = inject(VentaService);
+  readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly pagination$ = new BehaviorSubject<PaginationState>({
     pageIndex: 0,
@@ -358,6 +364,7 @@ export class VentasComponent implements OnInit {
   }
 
   async openClientDialog(): Promise<void> {
+    if (!this.auth.can('clients.create')) return;
     const result = await firstValueFrom(
       this.dialog
         .open(ClienteFormDialogComponent, {
@@ -391,11 +398,12 @@ export class VentasComponent implements OnInit {
   }
 
   editSale(venta: Venta): void {
+    if (!this.auth.can('sales.update')) return;
     void this.router.navigate(['/dashboard/ventas', venta.operacionId ?? venta.id, 'editar']);
   }
 
   async registrarVenta(): Promise<void> {
-    if (this.saleForm.invalid || !this.detalles.length || this.procesandoVenta()) {
+    if (this.saleForm.invalid || !this.detalles.length || this.procesandoVenta() || (this.mode() === 'edit' ? !this.auth.can('sales.update') : !this.auth.can('sales.create'))) {
       return;
     }
 

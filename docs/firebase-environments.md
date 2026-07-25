@@ -1,106 +1,56 @@
-# Firebase Environments
+# Configuración de Entornos Firebase
 
-## Estado actual
+El proyecto HypeZone Dashboard cuenta con una separación estricta entre los entornos de Desarrollo (**DEV**) y Producción (**PROD**).
 
-- El proyecto Firebase `hypezone-3ed2a` debe tratarse como `PROD`.
-- El dashboard no debe ejecutarse en desarrollo contra `hypezone-3ed2a`.
-- El nuevo proyecto Firebase de desarrollo todavia debe crearse y configurarse.
+---
 
-## Archivos de entorno
+## Proyectos Firebase
 
-- `src/environments/environment.ts`
-  - Base segura local.
-  - No apunta a produccion.
-- `src/environments/environment.development.ts`
-  - Usado por `ng serve` y `ng build --configuration development`.
-- `src/environments/environment.production.ts`
-  - Usado por `ng build --configuration production`.
-  - Contiene la configuracion web actual de `hypezone-3ed2a`.
+| Entorno | Alias CLI | Firebase Project ID | Propósito |
+| --- | --- | --- | --- |
+| **DEV** | `dev` | `hypezone-dev` | Entorno de desarrollo, pruebas e implementación de nuevas características. |
+| **PROD** | `prod` | `hypezone-3ed2a` | Entorno de producción en vivo. |
 
-## Campos que debes completar manualmente
+Toda la implementación actual de autorización dinámica (Authorization V2), migración de esquema y Cloud Functions se realizó exclusivamente para el entorno **DEV**.
 
-Cuando tengas el proyecto Firebase DEV, reemplaza los placeholders de:
+---
 
-- `src/environments/environment.ts`
-- `src/environments/environment.development.ts`
+## Archivos de Entorno en Angular
 
-Campos a completar:
+- `src/environments/environment.ts`: Configuración base local.
+- `src/environments/environment.development.ts`: Configuración de desarrollo (`hypezone-dev`), utilizada por `ng serve` y `npm run start:dev`.
+- `src/environments/environment.production.ts`: Configuración de producción (`hypezone-3ed2a`), utilizada por `npm run build:prod`.
 
-- `firebase.apiKey`
-- `firebase.authDomain`
-- `firebase.projectId`
-- `firebase.storageBucket`
-- `firebase.messagingSenderId`
-- `firebase.appId`
-- `cloudinary.cloudName`
-- `cloudinary.uploadPreset`
+---
 
-## Como obtener la configuracion web de Firebase DEV
+## Configuración de Aliases en Firebase CLI (`.firebaserc`)
 
-1. Abre Firebase Console.
-2. Entra al proyecto de desarrollo.
-3. Ve a `Project settings`.
-4. En la seccion `Your apps`, crea o abre la app web del dashboard.
-5. Copia la configuracion web y colócala en los archivos de entorno DEV.
+```json
+{
+  "projects": {
+    "prod": "hypezone-3ed2a",
+    "dev": "hypezone-dev"
+  }
+}
+```
 
-## Comandos
+---
 
-- Desarrollo: `npm run start:dev`
-- Build DEV: `npm run build:dev`
-- Build PROD: `npm run build:prod`
-- Seleccionar alias DEV: `npm run firebase:use:dev`
-- Seleccionar alias PROD: `npm run firebase:use:prod`
-- Emuladores: `npm run emulators`
+## Comandos para Gestión de Entornos
 
-## Seleccion de configuraciones
+- **Iniciar desarrollo DEV:** `npm run start:dev`
+- **Compilar para DEV:** `npm run build:dev`
+- **Compilar para PROD:** `npm run build:prod`
+- **Seleccionar alias DEV en CLI:** `npm run firebase:use:dev`
+- **Seleccionar alias PROD en CLI:** `npm run firebase:use:prod`
+- **Sembrar roles y owner inicial en DEV:** `npm run seed:firebase:dev`
+- **Compilar Cloud Functions:** `npm run functions:build`
+- **Iniciar Emuladores Firebase:** `npm run emulators`
 
-- `ng serve`
-  - Usa la configuracion `development`.
-  - Reemplaza `src/environments/environment.ts` por `src/environments/environment.development.ts`.
-- `ng serve --configuration development`
-  - Usa `environment.development.ts`.
-- `ng build`
-  - Usa la configuracion por defecto `production`.
-- `ng build --configuration production`
-  - Usa `environment.production.ts`.
+---
 
-## Verificacion visual de DEV
+## Reglas y Políticas de Despliegue
 
-- En desarrollo debe aparecer la etiqueta `ENTORNO DE DEV` en la barra superior del dashboard.
-- En produccion esa etiqueta no debe aparecer.
-
-## Validaciones de seguridad
-
-Al iniciar la app:
-
-- si un entorno no productivo apunta a `hypezone-3ed2a`, la app falla de forma explicita;
-- si `DEV` no tiene `projectId` real configurado, la app falla de forma explicita.
-
-## Firebase CLI
-
-Archivos iniciales creados:
-
-- `.firebaserc`
-- `firebase.json`
-- `firestore.rules`
-- `firestore.indexes.json`
-
-Aliases definidos:
-
-- `dev` -> `HYPEZONE_DEV_PROJECT_ID`
-- `prod` -> `hypezone-3ed2a`
-
-## Advertencias importantes
-
-- No uses `ng serve` hasta reemplazar los placeholders DEV por credenciales reales.
-- No desplegar `firestore.rules` todavia.
-- Antes de cualquier deploy futuro, copia y revisa las reglas reales actualmente publicadas en Firebase.
-- Esta fase no crea Functions, no configura Hosting y no despliega cambios.
-
-## Pendientes manuales en Firebase Console
-
-1. Crear el proyecto Firebase DEV.
-2. Crear la app web del dashboard en DEV.
-3. Obtener la configuracion web DEV.
-4. Configurar Authentication y Firestore en DEV.
-5. Revisar y exportar las reglas reales de produccion antes de versionarlas localmente.
+1. **Nunca desplegar a Producción (`hypezone-3ed2a`) sin autorización explícita.**
+2. **Validación previa:** Todo cambio en Cloud Functions o Firestore Rules debe ser probado primeramente con Firebase Emulator Suite (`npm run emulators`) y posteriormente en `hypezone-dev`.
+3. **Indicador de Entorno:** El dashboard en DEV muestra la etiqueta visual `ENTORNO DE DEV` en la barra superior del layout.

@@ -1,0 +1,59 @@
+<h2 mat-dialog-title>Nuevo usuario</h2>
+
+<mat-dialog-content [formGroup]="form" class="create-user-content">
+  <div class="create-user-fields">
+    <mat-form-field appearance="outline">
+      <mat-label>Nombre completo</mat-label>
+      <input matInput formControlName="displayName" autocomplete="name" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Correo electrónico</mat-label>
+      <input matInput type="email" formControlName="email" autocomplete="email" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Rol</mat-label>
+      <mat-select formControlName="roleId">
+        <mat-option value="owner">owner</mat-option>
+        <mat-option value="admin">admin</mat-option>
+        <mat-option value="seller">seller</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-slide-toggle formControlName="active">Cuenta activa</mat-slide-toggle>
+  </div>
+
+  <section class="permission-section">
+    <div class="section-heading">
+      <h3>Overrides de permisos</h3>
+      <p>Los permisos no seleccionados heredarán la configuración del rol.</p>
+    </div>
+    <div class="permissions">
+      @for (permission of data.permissions; track permission.key) {
+        <div class="permission-row">
+          <span class="permission-description">
+            <strong>{{ permission.label }}</strong>
+            <small>{{ permission.description }}</small>
+          </span>
+          <mat-select
+            [attr.aria-label]="'Override para ' + permission.label"
+            [value]="overrideFor(permission.key)"
+            (selectionChange)="setOverride(permission.key, $event.value)"
+          >
+            <mat-option value="inherit">Heredar</mat-option>
+            <mat-option value="allow">Permitir</mat-option>
+            <mat-option value="deny">Denegar</mat-option>
+          </mat-select>
+        </div>
+      }
+    </div>
+  </section>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="cancel()">Cancelar</button>
+  <button mat-flat-button type="button" class="primary-action" [disabled]="form.invalid || saving()" (click)="submit()">
+    Crear usuario
+  </button>
+</mat-dialog-actions>

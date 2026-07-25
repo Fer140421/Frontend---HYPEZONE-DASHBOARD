@@ -2,10 +2,12 @@
   title="Proveedores"
   description="Gestiona tus proveedores con filtros, categorias y borrado logico."
 >
-  <button mat-flat-button class="primary-action" type="button" (click)="openCreate()">
-    <mat-icon>person_add</mat-icon>
-    Registrar proveedor
-  </button>
+  @if (auth.can('providers.create')) {
+    <button mat-flat-button class="primary-action" type="button" (click)="openCreate()">
+      <mat-icon>person_add</mat-icon>
+      Registrar proveedor
+    </button>
+  }
 </app-page-header>
 
 @if (listViewModel$ | async; as vm) {
@@ -29,67 +31,81 @@
       </mat-form-field>
     </form>
 
-    <div class="table-scroll">
-      <table mat-table [dataSource]="vm.proveedores.items">
-        <ng-container matColumnDef="nombreCompleto">
-          <th mat-header-cell *matHeaderCellDef>Proveedor</th>
-          <td mat-cell *matCellDef="let proveedor">
-            <div class="main-cell">
-              <strong>{{ proveedor.nombreCompleto }}</strong>
-              <span>{{ proveedor.direccion || 'Sin direccion' }}</span>
-            </div>
-          </td>
-        </ng-container>
+    @if (vm.proveedores.total === 0) {
+      <app-empty-state
+        icon="local_shipping"
+        title="Sin proveedores"
+        description="No se encontraron proveedores registrados o que coincidan con los filtros."
+      />
+    } @else {
+      <div class="table-scroll">
+        <table mat-table [dataSource]="vm.proveedores.items">
+          <ng-container matColumnDef="nombreCompleto">
+            <th mat-header-cell *matHeaderCellDef>Proveedor</th>
+            <td mat-cell *matCellDef="let proveedor">
+              <div class="main-cell">
+                <strong>{{ proveedor.nombreCompleto }}</strong>
+                <span>{{ proveedor.direccion || 'Sin direccion' }}</span>
+              </div>
+            </td>
+          </ng-container>
 
-        <ng-container matColumnDef="celular">
-          <th mat-header-cell *matHeaderCellDef>Celular</th>
-          <td mat-cell *matCellDef="let proveedor">{{ proveedor.celular }}</td>
-        </ng-container>
+          <ng-container matColumnDef="celular">
+            <th mat-header-cell *matHeaderCellDef>Celular</th>
+            <td mat-cell *matCellDef="let proveedor">{{ proveedor.celular }}</td>
+          </ng-container>
 
-        <ng-container matColumnDef="categorias">
-          <th mat-header-cell *matHeaderCellDef>Categorias</th>
-          <td mat-cell *matCellDef="let proveedor">{{ categoriesLabel(proveedor) }}</td>
-        </ng-container>
+          <ng-container matColumnDef="categorias">
+            <th mat-header-cell *matHeaderCellDef>Categorias</th>
+            <td mat-cell *matCellDef="let proveedor">{{ categoriesLabel(proveedor) }}</td>
+          </ng-container>
 
-        <ng-container matColumnDef="redes">
-          <th mat-header-cell *matHeaderCellDef>Redes</th>
-          <td mat-cell *matCellDef="let proveedor">{{ redesLabel(proveedor) }}</td>
-        </ng-container>
+          <ng-container matColumnDef="redes">
+            <th mat-header-cell *matHeaderCellDef>Redes</th>
+            <td mat-cell *matCellDef="let proveedor">{{ redesLabel(proveedor) }}</td>
+          </ng-container>
 
-        <ng-container matColumnDef="estado">
-          <th mat-header-cell *matHeaderCellDef>Estado</th>
-          <td mat-cell *matCellDef="let proveedor">{{ proveedor.activo === false ? 'Inactivo' : 'Activo' }}</td>
-        </ng-container>
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let proveedor">{{ proveedor.activo === false ? 'Inactivo' : 'Activo' }}</td>
+          </ng-container>
 
-        <ng-container matColumnDef="acciones">
-          <th mat-header-cell *matHeaderCellDef>Acciones</th>
-          <td mat-cell *matCellDef="let proveedor" class="actions-cell">
-            <button mat-icon-button type="button" (click)="openEdit(proveedor)" aria-label="Editar proveedor">
-              <mat-icon>edit</mat-icon>
-            </button>
-            @if (proveedor.activo === false) {
-              <button mat-icon-button type="button" (click)="confirmRestore(proveedor)" aria-label="Reactivar proveedor">
-                <mat-icon>restore</mat-icon>
-              </button>
-            } @else {
-              <button mat-icon-button type="button" color="warn" (click)="confirmDelete(proveedor)" aria-label="Eliminar proveedor">
-                <mat-icon>delete</mat-icon>
-              </button>
-            }
-          </td>
-        </ng-container>
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let proveedor" class="actions-cell">
+              @if (auth.can('providers.update')) {
+                <button mat-icon-button type="button" (click)="openEdit(proveedor)" aria-label="Editar proveedor">
+                  <mat-icon>edit</mat-icon>
+                </button>
+              }
+              @if (auth.can('providers.delete') && proveedor.activo === false) {
+                <button mat-icon-button type="button" (click)="confirmRestore(proveedor)" aria-label="Reactivar proveedor">
+                  <mat-icon>restore</mat-icon>
+                </button>
+              } @else if (auth.can('providers.delete')) {
+                <button mat-icon-button type="button" color="warn" (click)="confirmDelete(proveedor)" aria-label="Eliminar proveedor">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
+            </td>
+          </ng-container>
 
-        <tr mat-header-row *matHeaderRowDef="columns"></tr>
-        <tr mat-row *matRowDef="let row; columns: columns"></tr>
-      </table>
-    </div>
+          <tr mat-header-row *matHeaderRowDef="columns"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns"></tr>
+        </table>
+      </div>
 
-    <mat-paginator
-      [length]="vm.proveedores.total"
-      [pageIndex]="vm.proveedores.pageIndex"
-      [pageSize]="vm.proveedores.pageSize"
-      [pageSizeOptions]="pageSizeOptions"
-      (page)="updatePage($event)"
-    />
+      <mat-paginator
+        [length]="vm.proveedores.total"
+        [pageIndex]="vm.proveedores.pageIndex"
+        [pageSize]="vm.proveedores.pageSize"
+        [pageSizeOptions]="pageSizeOptions"
+        (page)="updatePage($event)"
+      />
+    }
+  </mat-card>
+} @else {
+  <mat-card>
+    <app-loading text="Cargando proveedores..." />
   </mat-card>
 }

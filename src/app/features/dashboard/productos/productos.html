@@ -1,7 +1,7 @@
 
     @if (mode() === 'list') {
       <app-page-header title="Productos" description="Inventario completo con filtros.">
-        @if (auth.can('manageProducts')) {
+        @if (auth.can('products.create')) {
           <button mat-flat-button class="primary-action" routerLink="/dashboard/productos/nuevo">
             <mat-icon>add</mat-icon>
             Nuevo producto
@@ -54,77 +54,93 @@
           </mat-form-field>
         </form>
 
-        <table mat-table matSort [dataSource]="vm.productos.items" class="product-table">
-          <ng-container matColumnDef="imagen">
-            <th mat-header-cell *matHeaderCellDef>Foto</th>
-            <td mat-cell *matCellDef="let producto">
-              @if (firstImage(producto); as image) {
-                <img class="product-thumb" [src]="image" [alt]="producto.nombre" loading="lazy" decoding="async" width="160" height="160" />
-              } @else {
-                <div class="product-thumb placeholder">
-                  <mat-icon>image</mat-icon>
-                </div>
-              }
-            </td>
-          </ng-container>
+        @if (vm.productos.total === 0) {
+          <app-empty-state
+            icon="inventory_2"
+            title="Sin productos"
+            description="No se encontraron productos registrados o que coincidan con los filtros."
+          />
+        } @else {
+          <div class="table-scroll">
+            <table mat-table matSort [dataSource]="vm.productos.items" class="product-table">
+              <ng-container matColumnDef="imagen">
+                <th mat-header-cell *matHeaderCellDef>Foto</th>
+                <td mat-cell *matCellDef="let producto">
+                  @if (firstImage(producto); as image) {
+                    <img class="product-thumb" [src]="image" [alt]="producto.nombre" loading="lazy" decoding="async" width="160" height="160" />
+                  } @else {
+                    <div class="product-thumb placeholder">
+                      <mat-icon>image</mat-icon>
+                    </div>
+                  }
+                </td>
+              </ng-container>
 
-          <ng-container matColumnDef="nombre">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Producto</th>
-            <td mat-cell *matCellDef="let producto">
-              <strong>{{ producto.nombre }}</strong>
-            </td>
-          </ng-container>
+              <ng-container matColumnDef="nombre">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>Producto</th>
+                <td mat-cell *matCellDef="let producto">
+                  <strong>{{ producto.nombre }}</strong>
+                </td>
+              </ng-container>
 
-          <ng-container matColumnDef="talla">
-            <th mat-header-cell *matHeaderCellDef>Talla</th>
-            <td mat-cell *matCellDef="let producto">{{ producto.talla }}</td>
-          </ng-container>
+              <ng-container matColumnDef="talla">
+                <th mat-header-cell *matHeaderCellDef>Talla</th>
+                <td mat-cell *matCellDef="let producto">{{ producto.talla }}</td>
+              </ng-container>
 
-          <ng-container matColumnDef="precioVenta">
-            <th mat-header-cell *matHeaderCellDef>Venta</th>
-            <td mat-cell *matCellDef="let producto">
-              <div class="price-cell">
-                <span>{{ precio(producto) | currency: 'BOB' : 'symbol-narrow' }}</span>
-                @if (auth.can('manageProducts')) {
-                  <button mat-icon-button type="button" (click)="openPriceEdit(producto)" aria-label="Editar precio"><mat-icon>edit</mat-icon></button>
-                }
-              </div>
-            </td>
-          </ng-container>
+              <ng-container matColumnDef="precioVenta">
+                <th mat-header-cell *matHeaderCellDef>Venta</th>
+                <td mat-cell *matCellDef="let producto">
+                  <div class="price-cell">
+                    <span>{{ precio(producto) | currency: 'BOB' : 'symbol-narrow' }}</span>
+                    @if (auth.can('products.update')) {
+                      <button mat-icon-button type="button" (click)="openPriceEdit(producto)" aria-label="Editar precio"><mat-icon>edit</mat-icon></button>
+                    }
+                  </div>
+                </td>
+              </ng-container>
 
-          <ng-container matColumnDef="estado">
-            <th mat-header-cell *matHeaderCellDef>Estado</th>
-            <td mat-cell *matCellDef="let producto"><app-status-chip [status]="producto.estado" /></td>
-          </ng-container>
+              <ng-container matColumnDef="estado">
+                <th mat-header-cell *matHeaderCellDef>Estado</th>
+                <td mat-cell *matCellDef="let producto"><app-status-chip [status]="producto.estado" /></td>
+              </ng-container>
 
-          <ng-container matColumnDef="acciones">
-            <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let producto" class="table-actions">
-              <button mat-icon-button type="button" (click)="openView(producto)" aria-label="Ver producto">
-                <mat-icon>visibility</mat-icon>
-              </button>
-              @if (auth.can('manageProducts')) {
-                <button mat-icon-button (click)="openEdit(producto)" aria-label="Editar producto"><mat-icon>edit</mat-icon></button>
-                @if (producto.activo !== false) {
-                  <button mat-icon-button color="warn" (click)="softDelete(producto)" aria-label="Eliminar producto"><mat-icon>delete</mat-icon></button>
-                } @else {
-                  <button mat-icon-button color="primary" (click)="confirmRestore(producto)" aria-label="Restaurar producto"><mat-icon>restore</mat-icon></button>
-                }
-              }
-            </td>
-          </ng-container>
+              <ng-container matColumnDef="acciones">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let producto" class="table-actions">
+                  <button mat-icon-button type="button" (click)="openView(producto)" aria-label="Ver producto">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                  @if (auth.can('products.update') || auth.can('products.delete')) {
+                    @if (auth.can('products.update')) {
+                    <button mat-icon-button (click)="openEdit(producto)" aria-label="Editar producto"><mat-icon>edit</mat-icon></button>
+                    }
+                    @if (producto.activo !== false) {
+                      <button mat-icon-button color="warn" (click)="softDelete(producto)" aria-label="Eliminar producto"><mat-icon>delete</mat-icon></button>
+                    } @else {
+                      <button mat-icon-button color="primary" (click)="confirmRestore(producto)" aria-label="Restaurar producto"><mat-icon>restore</mat-icon></button>
+                    }
+                  }
+                </td>
+              </ng-container>
 
-          <tr mat-header-row *matHeaderRowDef="columns"></tr>
-          <tr mat-row *matRowDef="let row; columns: columns"></tr>
-        </table>
-        <mat-paginator
-          [length]="vm.productos.total"
-          [pageIndex]="vm.productos.pageIndex"
-          [pageSize]="vm.productos.pageSize"
-          [pageSizeOptions]="pageSizeOptions"
-          (page)="updatePage($event)"
-        />
+              <tr mat-header-row *matHeaderRowDef="columns"></tr>
+              <tr mat-row *matRowDef="let row; columns: columns"></tr>
+            </table>
+          </div>
+          <mat-paginator
+            [length]="vm.productos.total"
+            [pageIndex]="vm.productos.pageIndex"
+            [pageSize]="vm.productos.pageSize"
+            [pageSizeOptions]="pageSizeOptions"
+            (page)="updatePage($event)"
+          />
+        }
       </mat-card>
+      } @else {
+        <mat-card>
+          <app-loading text="Cargando productos..." />
+        </mat-card>
       }
     } @else {
       <app-page-header [title]="mode() === 'new' ? 'Nuevo producto' : 'Detalle de producto'">

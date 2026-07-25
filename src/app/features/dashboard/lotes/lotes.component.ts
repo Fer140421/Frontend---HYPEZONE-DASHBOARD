@@ -37,6 +37,7 @@ import { ProveedorRepository } from '../../../core/repositories/proveedor.reposi
 import { TallaRepository } from '../../../core/repositories/talla.repository';
 import { VentaRepository } from '../../../core/repositories/venta.repository';
 import { LoteAnalyticsService } from '../../../core/services/lote-analytics.service';
+import { AuthService } from '../../../core/services/auth.service';
 import {
   LoteDeactivationMode,
   LoteDomainError,
@@ -44,7 +45,9 @@ import {
 } from '../../../core/services/lote-management.service';
 import { cloudinaryThumbnailUrl } from '../../../core/utils/cloudinary-image.util';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { ImageUploaderComponent } from '../../../shared/components/image-uploader/image-uploader.component';
+import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { StatusChipComponent } from '../../../shared/components/status-chip/status-chip.component';
 import {
@@ -91,6 +94,8 @@ interface LoteDetail {
     MatSelectModule,
     MatSnackBarModule,
     MatTableModule,
+    EmptyStateComponent,
+    LoadingComponent,
     PageHeaderComponent,
     StatusChipComponent,
   ],
@@ -111,13 +116,16 @@ export class LotesComponent implements OnInit {
   private readonly proveedores = inject(ProveedorRepository);
   private readonly analytics = inject(LoteAnalyticsService);
   private readonly management = inject(LoteManagementService);
+  readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly pagination$ = new BehaviorSubject<PaginationState>({
     pageIndex: 0,
     pageSize: DEFAULT_PAGE_SIZE,
   });
 
-  readonly columns = ['nombre', 'fecha', 'costo', 'productos', 'disponibles', 'vendidos', 'inversion', 'esperado', 'ingreso', 'ganancia', 'recuperacion', 'estado', 'acciones'];
+  get columns(): string[] {
+    return ['nombre', 'fecha', 'costo', 'productos', 'disponibles', 'vendidos', 'inversion', 'esperado', 'ingreso', 'ganancia', 'recuperacion', 'estado', 'acciones'];
+  }
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
   readonly mode = signal<'list' | 'new' | 'detail' | 'edit'>('list');
   readonly currentId = signal<string | null>(null);
@@ -243,6 +251,9 @@ export class LotesComponent implements OnInit {
   }
 
   async save(): Promise<void> {
+    if (this.currentId() ? !this.auth.can('lots.update') : !this.auth.can('lots.create')) {
+      return;
+    }
     const raw = this.form.getRawValue();
     const proveedores = await firstValueFrom(this.proveedoresSource$.pipe(take(1)));
     const proveedor = proveedores.find((item) => item.id === raw.proveedorId);
@@ -274,7 +285,7 @@ export class LotesComponent implements OnInit {
   }
 
   openProductDialog(lote: Lote): void {
-    if (!lote.id || lote.activo === false) {
+    if (!this.auth.can('products.create') || !lote.id || lote.activo === false) {
       return;
     }
     this.dialog.open(LoteProductCreateDialogComponent, {
@@ -285,7 +296,7 @@ export class LotesComponent implements OnInit {
   }
 
   async associate(lote: Lote): Promise<void> {
-    if (!lote.id) {
+    if (!this.auth.can('lots.update') || !lote.id) {
       return;
     }
     try {
@@ -305,7 +316,7 @@ export class LotesComponent implements OnInit {
   }
 
   confirmUnlink(lote: Lote, producto: Producto): void {
-    if (!lote.id || !producto.id) {
+    if (!this.auth.can('lots.update') || !lote.id || !producto.id) {
       return;
     }
     this.dialog
@@ -332,7 +343,7 @@ export class LotesComponent implements OnInit {
 
   deactivate(detail: LoteDetail): void {
     const lote = detail.resumen.lote;
-    if (!lote.id) {
+    if (!this.auth.can('lots.delete') || !lote.id) {
       return;
     }
     const ref = this.dialog.open(LoteDeactivateDialogComponent, {
@@ -352,7 +363,7 @@ export class LotesComponent implements OnInit {
   }
 
   async restore(lote: Lote): Promise<void> {
-    if (!lote.id) {
+    if (!this.auth.can('lots.delete') || !lote.id) {
       return;
     }
     try {

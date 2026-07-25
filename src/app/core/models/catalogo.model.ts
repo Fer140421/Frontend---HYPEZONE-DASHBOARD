@@ -6,6 +6,14 @@ export interface Categoria extends AuditableEntity {
 
 export interface Marca extends AuditableEntity {
   nombre: string;
+  imagenUrl?: string;
+  imagen?: string;
+  imagenes?: string[];
+}
+
+export function marcaImagen(marca?: Marca | null): string | undefined {
+  if (!marca) return undefined;
+  return marca.imagenUrl || marca.imagen || (Array.isArray(marca.imagenes) && marca.imagenes.length > 0 ? marca.imagenes[0] : undefined);
 }
 
 export interface Talla extends AuditableEntity {

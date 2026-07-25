@@ -11,6 +11,9 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { BehaviorSubject, combineLatest, firstValueFrom, map, take } from 'rxjs';
 import { tallasIniciales } from '../../../core/models/catalogo.model';
 import { TallaRepository } from '../../../core/repositories/talla.repository';
+import { AuthService } from '../../../core/services/auth.service';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import {
   DEFAULT_PAGE_SIZE,
@@ -32,6 +35,8 @@ import {
     MatInputModule,
     MatPaginatorModule,
     MatSnackBarModule,
+    EmptyStateComponent,
+    LoadingComponent,
     PageHeaderComponent,
   ],
   templateUrl: './tallas.html',
@@ -41,6 +46,7 @@ export class TallasComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly tallas = inject(TallaRepository);
   private readonly snack = inject(MatSnackBar);
+  readonly auth = inject(AuthService);
   private readonly pagination$ = new BehaviorSubject<PaginationState>({
     pageIndex: 0,
     pageSize: DEFAULT_PAGE_SIZE,
@@ -58,11 +64,13 @@ export class TallasComponent implements OnInit {
   }
 
   async addTalla(): Promise<void> {
+    if (!this.auth.can('catalogs.create')) return;
     await this.add(this.tallaForm.getRawValue().nombre);
     this.tallaForm.reset();
   }
 
   async removeTalla(id: string): Promise<void> {
+    if (!this.auth.can('catalogs.delete')) return;
     await this.tallas.delete(id);
     this.message('Talla eliminada.');
   }
@@ -72,6 +80,7 @@ export class TallasComponent implements OnInit {
   }
 
   private async initializeCatalogs(): Promise<void> {
+    if (!this.auth.can('catalogs.create')) return;
     try {
       const tallas = await firstValueFrom(this.tallas.getAll(true).pipe(take(1)));
       if (!tallas.length) {
@@ -83,6 +92,7 @@ export class TallasComponent implements OnInit {
   }
 
   private async add(value: string): Promise<void> {
+    if (!this.auth.can('catalogs.create')) return;
     const nombre = value.trim();
     if (!nombre) {
       return;

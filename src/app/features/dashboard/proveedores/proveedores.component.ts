@@ -14,7 +14,10 @@ import { MatTableModule } from '@angular/material/table';
 import { BehaviorSubject, combineLatest, firstValueFrom, map, shareReplay, startWith, take } from 'rxjs';
 import { Proveedor } from '../../../core/models/proveedor.model';
 import { ProveedorRepository } from '../../../core/repositories/proveedor.repository';
+import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import {
   DEFAULT_PAGE_SIZE,
@@ -41,6 +44,8 @@ type EstadoFiltro = 'todos' | 'activos' | 'inactivos';
     MatSelectModule,
     MatSnackBarModule,
     MatTableModule,
+    EmptyStateComponent,
+    LoadingComponent,
     PageHeaderComponent,
   ],
   templateUrl: './proveedores.html',
@@ -51,12 +56,16 @@ export class ProveedoresComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
   private readonly proveedores = inject(ProveedorRepository);
+  readonly auth = inject(AuthService);
   private readonly pagination$ = new BehaviorSubject<PaginationState>({
     pageIndex: 0,
     pageSize: DEFAULT_PAGE_SIZE,
   });
 
-  readonly columns = ['nombreCompleto', 'celular', 'categorias', 'redes', 'estado', 'acciones'];
+  get columns(): string[] {
+    const base = ['nombreCompleto', 'celular', 'categorias', 'redes', 'estado'];
+    return this.auth.canAny(['providers.update', 'providers.delete']) ? [...base, 'acciones'] : base;
+  }
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
   readonly filters = this.fb.nonNullable.group({
     nombre: [''],
@@ -114,6 +123,7 @@ export class ProveedoresComponent implements OnInit {
   }
 
   openCreate(): void {
+    if (!this.auth.can('providers.create')) return;
     this.dialog
       .open(ProveedorFormDialogComponent, {
         width: 'min(760px, 96vw)',
@@ -128,6 +138,7 @@ export class ProveedoresComponent implements OnInit {
   }
 
   openEdit(proveedor: Proveedor): void {
+    if (!this.auth.can('providers.update')) return;
     this.dialog
       .open(ProveedorFormDialogComponent, {
         width: 'min(760px, 96vw)',
@@ -143,7 +154,7 @@ export class ProveedoresComponent implements OnInit {
   }
 
   confirmDelete(proveedor: Proveedor): void {
-    if (!proveedor.id) {
+    if (!this.auth.can('providers.delete') || !proveedor.id) {
       return;
     }
     this.dialog
@@ -165,7 +176,7 @@ export class ProveedoresComponent implements OnInit {
   }
 
   confirmRestore(proveedor: Proveedor): void {
-    if (!proveedor.id) {
+    if (!this.auth.can('providers.delete') || !proveedor.id) {
       return;
     }
     this.dialog
@@ -218,6 +229,7 @@ export class ProveedoresComponent implements OnInit {
 export class ProveedorFormDialogComponent {
   private readonly fb = inject(FormBuilder);
   private readonly repository = inject(ProveedorRepository);
+  private readonly auth = inject(AuthService);
   private readonly ref = inject(MatDialogRef<ProveedorFormDialogComponent>);
   readonly data = inject<Proveedor | null>(MAT_DIALOG_DATA, { optional: true }) ?? null;
   readonly saving = signal(false);
@@ -259,7 +271,7 @@ export class ProveedorFormDialogComponent {
   }
 
   async save(): Promise<void> {
-    if (this.form.invalid || this.saving()) {
+    if (this.form.invalid || this.saving() || (this.data?.id ? !this.auth.can('providers.update') : !this.auth.can('providers.create'))) {
       return;
     }
     this.saving.set(true);

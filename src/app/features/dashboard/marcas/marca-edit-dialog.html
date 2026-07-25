@@ -1,0 +1,24 @@
+<h2 mat-dialog-title>Editar marca</h2>
+<mat-dialog-content>
+  <form [formGroup]="form" class="edit-dialog-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Nombre de la marca</mat-label>
+      <input matInput formControlName="nombre" />
+    </mat-form-field>
+
+    <div class="uploader-field">
+      <label class="field-label">Foto / Logo de la marca</label>
+      <app-image-uploader
+        [maxImages]="1"
+        [images]="imagenes()"
+        (uploaded)="onImagesUploaded($event)"
+      />
+    </div>
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close [disabled]="saving()">Cancelar</button>
+  <button mat-flat-button color="primary" (click)="save()" [disabled]="form.invalid || saving()">
+    {{ saving() ? 'Guardando...' : 'Guardar' }}
+  </button>
+</mat-dialog-actions>

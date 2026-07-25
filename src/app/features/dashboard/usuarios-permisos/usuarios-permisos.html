@@ -1,0 +1,150 @@
+<app-page-header
+  title="Usuarios y permisos"
+  description="Consulta roles y prepara cambios de autorización para su confirmación segura."
+>
+  @if (canCreateUser()) {
+    <button mat-flat-button class="primary-action" type="button" (click)="openCreateUser()">
+      <mat-icon>person_add</mat-icon>
+      Nuevo usuario
+    </button>
+  }
+</app-page-header>
+
+<div class="users-layout">
+  <mat-card class="users-card">
+    <mat-card-content>
+      <div class="filters users-filters" aria-label="Filtros de usuarios">
+        <mat-form-field appearance="outline" class="search-filter">
+          <mat-label>Buscar usuario</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input
+            matInput
+            type="search"
+            [value]="search()"
+            (input)="onSearch($event)"
+          />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Rol</mat-label>
+          <mat-select
+            [value]="roleFilter()"
+            (selectionChange)="setRoleFilter($event.value)"
+          >
+            <mat-option value="">Todos</mat-option>
+            @for (role of availableRoles(); track role) {
+              <mat-option [value]="role">{{ role }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Estado</mat-label>
+          <mat-select
+            [value]="activeFilter()"
+            (selectionChange)="setActiveFilter($event.value)"
+          >
+            <mat-option value="all">Todos</mat-option>
+            <mat-option value="active">Activos</mat-option>
+            <mat-option value="inactive">Inactivos</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <div class="filter-actions">
+          @if (filtersActive()) {
+            <button mat-button type="button" (click)="clearFilters()">
+              <mat-icon>filter_alt_off</mat-icon>
+              Limpiar filtros
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (admin.loading()) {
+        <app-loading text="Cargando usuarios..." />
+      } @else if (admin.error(); as error) {
+        <div class="load-error" role="alert">
+          <p>{{ error }}</p>
+          <button mat-button type="button" (click)="retryLoadUsers()">
+            <mat-icon>refresh</mat-icon>
+            Reintentar
+          </button>
+        </div>
+      } @else {
+        @if (!users().length) {
+          <app-empty-state
+            icon="manage_accounts"
+            title="Sin usuarios"
+            [description]="filtersActive() ? 'No se encontraron usuarios con los filtros seleccionados.' : 'No hay usuarios registrados.'"
+          />
+        } @else {
+          <div class="table-scroll" tabindex="0" aria-label="Listado de usuarios">
+            <table mat-table [dataSource]="paginatedUsers().items" class="users-table">
+              <ng-container matColumnDef="name">
+                <th mat-header-cell *matHeaderCellDef>Usuario</th>
+                <td mat-cell *matCellDef="let user">
+                  <span class="user-name">{{ user.displayName }}</span>
+                  <small>{{ user.email }}</small>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="role">
+                <th mat-header-cell *matHeaderCellDef>Rol</th>
+                <td mat-cell *matCellDef="let user">
+                  <span class="role-label">{{ user.roleId || user.role }}</span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef>Estado</th>
+                <td mat-cell *matCellDef="let user">
+                  <span
+                    class="account-status"
+                    [class.is-active]="user.active"
+                    [class.is-inactive]="!user.active"
+                  >
+                    {{ user.active ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="select">
+                <th mat-header-cell *matHeaderCellDef class="edit-column">Editar</th>
+                <td mat-cell *matCellDef="let user" class="edit-column">
+                  <button
+                    mat-icon-button
+                    type="button"
+                    (click)="select(user)"
+                    [attr.aria-label]="'Editar permisos de ' + user.displayName"
+                    [attr.aria-pressed]="selected()?.uid === user.uid"
+                  >
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="['name', 'role', 'status', 'select']"></tr>
+              <tr
+                mat-row
+                *matRowDef="let row; columns: ['name', 'role', 'status', 'select']"
+                [class.selected-row]="selected()?.uid === row.uid"
+                [attr.aria-selected]="selected()?.uid === row.uid"
+              ></tr>
+            </table>
+          </div>
+
+          <mat-paginator
+            aria-label="Paginación de usuarios"
+            [length]="paginatedUsers().total"
+            [pageIndex]="paginatedUsers().pageIndex"
+            [pageSize]="paginatedUsers().pageSize"
+            [pageSizeOptions]="pageSizeOptions"
+            [showFirstLastButtons]="true"
+            (page)="updatePage($event)"
+          />
+        }
+      }
+    </mat-card-content>
+  </mat-card>
+
+</div>

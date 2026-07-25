@@ -1,0 +1,199 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.users-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.users-card {
+  min-width: 0;
+}
+
+.users-card mat-card-content {
+  padding: 20px;
+}
+
+.users-filters {
+  grid-template-columns: minmax(240px, 2fr) repeat(2, minmax(150px, 1fr)) auto;
+  align-items: start;
+  margin-bottom: 4px;
+}
+
+.users-filters mat-form-field {
+  min-width: 0;
+}
+
+.filter-actions {
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.filter-actions button {
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.loading-state {
+  gap: 14px;
+}
+
+.load-error {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  color: #aeb8c7;
+  text-align: center;
+}
+
+.load-error p {
+  margin: 0;
+}
+
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 8px 8px 0 0;
+  outline: none;
+}
+
+.table-scroll:focus-visible {
+  box-shadow: 0 0 0 2px #12f2a0;
+}
+
+.users-table {
+  min-width: 620px;
+}
+
+.users-table th,
+.users-table td {
+  vertical-align: middle;
+}
+
+.users-table tr.mat-mdc-row {
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.users-table tr.mat-mdc-row:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.users-table tr.selected-row {
+  background: rgba(18, 242, 160, 0.09);
+  box-shadow: inset 3px 0 #12f2a0;
+}
+
+.user-name {
+  display: block;
+  font-weight: 700;
+}
+
+.users-table small {
+  display: block;
+  margin-top: 3px;
+  color: #9ca8b7;
+  overflow-wrap: anywhere;
+}
+
+.role-label,
+.account-status {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.account-status.is-active {
+  color: #79f8c1;
+  background: rgba(18, 242, 160, 0.12);
+}
+
+.account-status.is-inactive {
+  color: #c0c7d1;
+  background: rgba(156, 168, 183, 0.12);
+}
+
+.edit-column {
+  width: 76px;
+  text-align: center;
+}
+
+.users-table button[aria-pressed='true'] {
+  color: #12f2a0;
+  background: rgba(18, 242, 160, 0.12);
+}
+
+.users-table button:focus-visible,
+.filter-actions button:focus-visible {
+  outline: 2px solid #12f2a0;
+  outline-offset: 2px;
+}
+
+.empty-state {
+  margin: 0;
+}
+
+.users-card mat-paginator {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+@media (max-width: 900px) {
+  .users-card mat-card-content {
+    padding: 16px;
+  }
+
+  .users-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .search-filter,
+  .filter-actions {
+    grid-column: 1 / -1;
+  }
+
+  .filter-actions {
+    min-height: auto;
+    justify-content: flex-start;
+  }
+
+}
+
+@media (max-width: 600px) {
+  .users-card mat-card-content {
+    padding: 14px;
+  }
+
+  .users-filters {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .search-filter,
+  .filter-actions {
+    grid-column: auto;
+  }
+
+  .filter-actions button {
+    width: 100%;
+  }
+
+  .users-table {
+    min-width: 580px;
+  }
+
+}
