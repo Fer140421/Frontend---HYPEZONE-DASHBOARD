@@ -1,5 +1,5 @@
 import { AsyncPipe, CurrencyPipe } from '@angular/common';
-import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -450,17 +450,28 @@ interface ProductPriceDialogData {
 @Component({
   selector: 'app-product-view-dialog',
   standalone: true,
-  imports: [CurrencyPipe, MatButtonModule, MatDialogModule, StatusChipComponent],
+  imports: [CurrencyPipe, MatButtonModule, MatIconModule, MatDialogModule, StatusChipComponent],
   templateUrl: './product-view-dialog.html',
   styleUrl: './product-view-dialog.css',
 })
 export class ProductViewDialogComponent {
   readonly data = inject<ProductViewDialogData>(MAT_DIALOG_DATA);
-  readonly imagenes = imagenesProducto(this.data.producto).map((image, index) =>
-    index === 0 ? cloudinaryDetailUrl(image) : cloudinaryThumbnailUrl(image),
-  );
+  readonly rawImages = imagenesProducto(this.data.producto);
+  readonly selectedIndex = signal<number>(0);
+
+  readonly mainImage = computed(() => {
+    if (!this.rawImages.length) return null;
+    const idx = Math.min(this.selectedIndex(), this.rawImages.length - 1);
+    return cloudinaryDetailUrl(this.rawImages[idx]);
+  });
+
+  readonly thumbnails = this.rawImages.map((img) => cloudinaryThumbnailUrl(img));
   readonly precioVenta = precioProducto(this.data.producto);
   readonly precioCompra = precioCompraProducto(this.data.producto);
+
+  selectImage(index: number): void {
+    this.selectedIndex.set(index);
+  }
 }
 
 @Component({

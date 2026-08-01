@@ -30,17 +30,13 @@ import {
   standalone: true,
   imports: [
     AsyncPipe,
-    ReactiveFormsModule,
     MatButtonModule,
     MatCardModule,
     MatDialogModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
     MatPaginatorModule,
     MatSnackBarModule,
     EmptyStateComponent,
-    ImageUploaderComponent,
     LoadingComponent,
     PageHeaderComponent,
   ],
@@ -48,7 +44,6 @@ import {
   styleUrl: './marcas.css',
 })
 export class MarcasComponent implements OnInit {
-  private readonly fb = inject(FormBuilder);
   private readonly marcas = inject(MarcaRepository);
   private readonly snack = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
@@ -62,9 +57,7 @@ export class MarcasComponent implements OnInit {
   });
 
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
-  readonly imagenes = signal<string[]>([]);
   readonly marcas$ = this.marcas.getAll().pipe(map((items) => [...items].sort((a, b) => a.nombre.localeCompare(b.nombre))));
-  readonly marcaForm = this.fb.nonNullable.group({ nombre: ['', Validators.required] });
   readonly listViewModel$ = combineLatest([this.marcas$, this.pagination$]).pipe(
     map(([marcas, pagination]) => ({ marcas: paginateItems(marcas, pagination) })),
   );
@@ -73,42 +66,33 @@ export class MarcasComponent implements OnInit {
     void this.initializeCatalogs();
   }
 
-  onImagesUploaded(urls: string[]): void {
-    this.imagenes.set(urls);
-  }
-
-  onUploadError(msg: string): void {
-    this.message(msg);
-  }
-
-  async addMarca(): Promise<void> {
+  openCreate(): void {
     if (!this.auth.can('catalogs.create')) return;
-    const nombre = this.marcaForm.getRawValue().nombre.trim();
-    if (!nombre) return;
-
-    const items = await firstValueFrom(this.marcas.getAll(true).pipe(take(1)));
-    if (items.some((item) => item.nombre.toLocaleLowerCase() === nombre.toLocaleLowerCase())) {
-      this.message('Esa marca ya existe.');
-      return;
-    }
-
-    const imagenUrl = this.imagenes()[0] || undefined;
-    await this.marcas.create({ nombre, imagenUrl });
-    this.marcaForm.reset();
-    this.imagenes.set([]);
-    this.message('Marca agregada correctamente.');
+    this.dialog
+      .open(MarcaDialogComponent, {
+        width: '460px',
+      })
+      .afterClosed()
+      .subscribe((saved) => {
+        if (saved) {
+          this.message('Marca registrada correctamente.');
+        }
+      });
   }
 
   openEdit(marca: Marca): void {
     if (!this.auth.can('catalogs.update')) return;
-    this.dialog.open(MarcaEditDialogComponent, {
-      width: '460px',
-      data: marca,
-    }).afterClosed().subscribe((saved) => {
-      if (saved) {
-        this.message('Marca actualizada.');
-      }
-    });
+    this.dialog
+      .open(MarcaDialogComponent, {
+        width: '460px',
+        data: marca,
+      })
+      .afterClosed()
+      .subscribe((saved) => {
+        if (saved) {
+          this.message('Marca actualizada correctamente.');
+        }
+      });
   }
 
   async removeMarca(id: string): Promise<void> {
@@ -139,7 +123,7 @@ export class MarcasComponent implements OnInit {
 }
 
 @Component({
-  selector: 'app-marca-edit-dialog',
+  selector: 'app-marca-dialog',
   standalone: true,
   imports: [
     ReactiveFormsModule,
@@ -149,21 +133,26 @@ export class MarcasComponent implements OnInit {
     MatInputModule,
     ImageUploaderComponent,
   ],
-  templateUrl: './marca-edit-dialog.html',
+  templateUrl: './marca-dialog.html',
   styleUrl: './marcas.css',
 })
-export class MarcaEditDialogComponent {
+export class MarcaDialogComponent {
   private readonly fb = inject(FormBuilder);
   private readonly repository = inject(MarcaRepository);
   private readonly auth = inject(AuthService);
-  private readonly dialogRef = inject(MatDialogRef<MarcaEditDialogComponent>);
-  readonly data = inject<Marca>(MAT_DIALOG_DATA);
+  private readonly dialogRef = inject(MatDialogRef<MarcaDialogComponent>);
+  readonly data = inject<Marca | null>(MAT_DIALOG_DATA, { optional: true });
+
+  readonly isEdit = !!this.data?.id;
   readonly saving = signal(false);
+  readonly errorMessage = signal<string | null>(null);
+
   readonly imagenes = signal<string[]>(
-    marcaImagen(this.data) ? [marcaImagen(this.data)!] : [],
+    this.data && marcaImagen(this.data) ? [marcaImagen(this.data)!] : [],
   );
+
   readonly form = this.fb.nonNullable.group({
-    nombre: [this.data?.nombre ?? '', Validators.required],
+    nombre: [this.data?.nombre ?? '', [Validators.required]],
   });
 
   onImagesUploaded(urls: string[]): void {
@@ -171,14 +160,44 @@ export class MarcaEditDialogComponent {
   }
 
   async save(): Promise<void> {
-    if (this.form.invalid || this.saving() || !this.auth.can('catalogs.update')) {
-      return;
-    }
-    this.saving.set(true);
+    if (this.form.invalid || this.saving()) return;
+    this.errorMessage.set(null);
+
     const nombre = this.form.getRawValue().nombre.trim();
-    const imagenUrl = this.imagenes()[0] || undefined;
-    await this.repository.update(this.data.id!, { nombre, imagenUrl });
-    this.saving.set(false);
-    this.dialogRef.close(true);
+    if (!nombre) return;
+
+    this.saving.set(true);
+
+    try {
+      const items = await firstValueFrom(this.repository.getAll(true).pipe(take(1)));
+      const duplicate = items.some(
+        (item) =>
+          item.nombre.toLowerCase() === nombre.toLowerCase() &&
+          (!this.isEdit || item.id !== this.data?.id)
+      );
+
+      if (duplicate) {
+        this.errorMessage.set('Esa marca ya existe.');
+        this.saving.set(false);
+        return;
+      }
+
+      const imagenUrl = this.imagenes()[0] || undefined;
+
+      if (this.isEdit && this.data?.id) {
+        await this.repository.update(this.data.id, { nombre, imagenUrl });
+      } else {
+        await this.repository.create({ nombre, imagenUrl });
+      }
+
+      this.saving.set(false);
+      this.dialogRef.close(true);
+    } catch {
+      this.errorMessage.set('Ocurrió un error al guardar la marca.');
+      this.saving.set(false);
+    }
   }
 }
+
+// Alias for backwards compatibility if needed
+export const MarcaEditDialogComponent = MarcaDialogComponent;

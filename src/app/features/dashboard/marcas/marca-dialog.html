@@ -1,0 +1,28 @@
+<h2 mat-dialog-title>{{ isEdit ? 'Editar marca' : 'Nueva marca' }}</h2>
+<mat-dialog-content>
+  <form [formGroup]="form" (ngSubmit)="save()" class="dialog-form">
+    @if (errorMessage()) {
+      <div class="form-error">{{ errorMessage() }}</div>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Nombre de la marca</mat-label>
+      <input matInput formControlName="nombre" placeholder="Ej. Nike, Adidas, Puma" />
+    </mat-form-field>
+
+    <div class="uploader-field">
+      <label class="field-label">Foto / Logo de la marca</label>
+      <app-image-uploader
+        [maxImages]="1"
+        [images]="imagenes()"
+        (uploaded)="onImagesUploaded($event)"
+      />
+    </div>
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close [disabled]="saving()">Cancelar</button>
+  <button mat-flat-button class="primary-action" (click)="save()" [disabled]="form.invalid || saving()">
+    {{ saving() ? 'Guardando...' : (isEdit ? 'Guardar cambios' : 'Crear marca') }}
+  </button>
+</mat-dialog-actions>

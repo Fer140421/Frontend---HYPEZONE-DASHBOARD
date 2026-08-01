@@ -1,73 +1,123 @@
-
+<div class="product-dialog-header">
+  <div class="header-titles">
+    <span class="product-category-tag">{{ data.producto.categoria || 'Producto' }}</span>
     <h2 mat-dialog-title>{{ data.producto.nombre }}</h2>
-    <mat-dialog-content>
-      <section class="product-view">
-        <div class="product-view-gallery">
-          @if (imagenes.length) {
-            @for (image of imagenes; track image; let first = $first) {
-              <img [src]="image" [alt]="data.producto.nombre" [attr.loading]="first ? 'eager' : 'lazy'" decoding="async" [attr.width]="first ? 1200 : 160" [attr.height]="first ? 1200 : 160" />
-            }
-          } @else {
-            <div class="product-view-placeholder">Sin foto</div>
+    @if (data.producto.codigo) {
+      <span class="product-code-badge">SKU: {{ data.producto.codigo }}</span>
+    }
+  </div>
+  <app-status-chip [status]="data.producto.estado" />
+</div>
+
+<mat-dialog-content>
+  <div class="product-view-container">
+    <!-- Gallery Column -->
+    <div class="product-gallery">
+      <div class="main-image-wrapper">
+        @if (mainImage(); as activeImage) {
+          <img [src]="activeImage" [alt]="data.producto.nombre" class="main-image" loading="eager" decoding="async" />
+        } @else {
+          <div class="gallery-placeholder">
+            <mat-icon>image_not_supported</mat-icon>
+            <span>Sin imagen registrada</span>
+          </div>
+        }
+      </div>
+
+      @if (thumbnails.length > 1) {
+        <div class="thumbnail-strip">
+          @for (thumb of thumbnails; track thumb; let i = $index) {
+            <button
+              type="button"
+              class="thumb-button"
+              [class.active]="selectedIndex() === i"
+              (click)="selectImage(i)"
+              [attr.aria-label]="'Ver imagen ' + (i + 1)"
+            >
+              <img [src]="thumb" [alt]="data.producto.nombre" loading="lazy" decoding="async" />
+            </button>
           }
         </div>
+      }
+    </div>
 
-        <div class="product-view-details">
-          <app-status-chip [status]="data.producto.estado" />
-          <dl>
-            <div>
-              <dt>Talla</dt>
-              <dd>{{ data.producto.talla }}</dd>
-            </div>
-            <div>
-              <dt>Precio venta</dt>
-              <dd>{{ precioVenta | currency: 'BOB' : 'symbol-narrow' }}</dd>
-            </div>
-            <div>
-              <dt>Precio compra</dt>
-              <dd>{{ precioCompra | currency: 'BOB' : 'symbol-narrow' }}</dd>
-            </div>
-            @if (data.producto.precioOferta !== undefined) {
-              <div>
-                <dt>Precio oferta</dt>
-                <dd>{{ data.producto.precioOferta | currency: 'BOB' : 'symbol-narrow' }}</dd>
-              </div>
-            }
-            <div>
-              <dt>Categoria</dt>
-              <dd>{{ data.producto.categoria || 'Sin categoria' }}</dd>
-            </div>
-            <div>
-              <dt>Marca</dt>
-              <dd>{{ data.producto.marca || 'Sin marca' }}</dd>
-            </div>
-            <div>
-              <dt>Color</dt>
-              <dd>{{ data.producto.color || 'Sin color' }}</dd>
-            </div>
-            <div>
-              <dt>Genero</dt>
-              <dd>{{ data.producto.genero || 'Sin definir' }}</dd>
-            </div>
-            <div>
-              <dt>Codigo</dt>
-              <dd>{{ data.producto.codigo || 'Sin codigo' }}</dd>
-            </div>
-            <div class="full">
-              <dt>Descripcion</dt>
-              <dd>{{ data.producto.descripcion || 'Sin descripcion' }}</dd>
-            </div>
-            @if (data.producto.notas) {
-              <div class="full">
-                <dt>Notas</dt>
-                <dd>{{ data.producto.notas }}</dd>
-              </div>
-            }
-          </dl>
+    <!-- Details Column -->
+    <div class="product-info">
+      <!-- Price Card -->
+      <div class="price-banner">
+        <div class="price-main">
+          <span class="price-label">Precio de venta</span>
+          <strong class="price-value">{{ precioVenta | currency: 'BOB' : 'symbol-narrow' }}</strong>
         </div>
-      </section>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-flat-button class="primary-action" type="button" mat-dialog-close>Cerrar</button>
-    </mat-dialog-actions>
-  
+
+        @if (data.producto.precioOferta !== undefined) {
+          <div class="price-offer">
+            <span class="offer-tag">OFERTA</span>
+            <span class="offer-value">{{ data.producto.precioOferta | currency: 'BOB' : 'symbol-narrow' }}</span>
+          </div>
+        }
+
+        <div class="price-cost">
+          <span class="price-label">Costo de compra</span>
+          <span class="cost-value">{{ precioCompra | currency: 'BOB' : 'symbol-narrow' }}</span>
+        </div>
+      </div>
+
+      <!-- Specs Grid -->
+      <div class="specs-grid">
+        <div class="spec-card">
+          <mat-icon>straighten</mat-icon>
+          <div class="spec-content">
+            <span class="spec-label">Talla</span>
+            <strong class="spec-value">{{ data.producto.talla || 'Única' }}</strong>
+          </div>
+        </div>
+
+        <div class="spec-card">
+          <mat-icon>label</mat-icon>
+          <div class="spec-content">
+            <span class="spec-label">Marca</span>
+            <strong class="spec-value">{{ data.producto.marca || 'Sin marca' }}</strong>
+          </div>
+        </div>
+
+        <div class="spec-card">
+          <mat-icon>palette</mat-icon>
+          <div class="spec-content">
+            <span class="spec-label">Color</span>
+            <strong class="spec-value">{{ data.producto.color || 'Sin especificar' }}</strong>
+          </div>
+        </div>
+
+        <div class="spec-card">
+          <mat-icon>wc</mat-icon>
+          <div class="spec-content">
+            <span class="spec-label">Género</span>
+            <strong class="spec-value">{{ data.producto.genero || 'Unisex' }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Description & Notes -->
+      @if (data.producto.descripcion) {
+        <div class="text-block">
+          <span class="block-title"><mat-icon>notes</mat-icon> Descripción</span>
+          <p>{{ data.producto.descripcion }}</p>
+        </div>
+      }
+
+      @if (data.producto.notas) {
+        <div class="text-block notes-block">
+          <span class="block-title"><mat-icon>sticky_note_2</mat-icon> Notas internas</span>
+          <p>{{ data.producto.notas }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-flat-button class="primary-action" type="button" mat-dialog-close>
+    Cerrar
+  </button>
+</mat-dialog-actions>

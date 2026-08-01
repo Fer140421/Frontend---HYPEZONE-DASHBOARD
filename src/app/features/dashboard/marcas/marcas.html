@@ -1,41 +1,20 @@
-<app-page-header title="Marcas" description="Catálogo de marcas para los formularios de producto y lote." />
+<app-page-header title="Marcas" description="Catálogo de marcas para los formularios de producto y lote.">
+  @if (auth.can('catalogs.create')) {
+    <button mat-flat-button class="primary-action" type="button" (click)="openCreate()">
+      <mat-icon>add</mat-icon>
+      Nueva marca
+    </button>
+  }
+</app-page-header>
 
 @if (listViewModel$ | async; as vm) {
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>Marcas</mat-card-title>
-    </mat-card-header>
+  <mat-card class="list-card">
     <mat-card-content>
-      @if (auth.can('catalogs.create')) {
-        <form class="brand-form" [formGroup]="marcaForm" (ngSubmit)="addMarca()">
-          <div class="form-row">
-            <mat-form-field appearance="outline" class="flex-1">
-              <mat-label>Nueva marca</mat-label>
-              <input matInput formControlName="nombre" placeholder="Nombre de la marca" />
-            </mat-form-field>
-            <button mat-flat-button class="primary-action" type="submit" [disabled]="marcaForm.invalid">
-              <mat-icon>add</mat-icon>
-              Agregar marca
-            </button>
-          </div>
-
-          <div class="logo-uploader-row">
-            <label class="field-label">Logo / Foto de la marca</label>
-            <app-image-uploader
-              [maxImages]="1"
-              [images]="imagenes()"
-              (uploaded)="onImagesUploaded($event)"
-              (error)="onUploadError($event)"
-            />
-          </div>
-        </form>
-      }
-
       @if (vm.marcas.total === 0) {
         <app-empty-state
           icon="label"
           title="Sin marcas"
-          description="No hay marcas registradas."
+          description="No hay marcas registradas en el sistema."
         />
       } @else {
         <div class="catalog-list">

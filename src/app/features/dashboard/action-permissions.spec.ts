@@ -34,15 +34,17 @@ describe('Dashboard action permission gates', () => {
     expect(component.dialog.open).not.toHaveBeenCalled();
   });
 
-  it('does not create or delete catalog entries without catalog permissions', async () => {
+  it('does not open catalog create dialogs or delete entries without catalog permissions', async () => {
     const component = Object.create(CatalogosComponent.prototype) as any;
     component.auth = denies;
-    component.categorias = { create: jasmine.createSpy('create'), delete: jasmine.createSpy('delete') };
+    component.dialog = { open: jasmine.createSpy('open') };
+    component.categorias = { delete: jasmine.createSpy('delete') };
 
-    await component.addCategoria();
+    component.openCreate();
+    component.openEdit({ id: 'cat-1' });
     await component.removeCategoria('category-1');
 
-    expect(component.categorias.create).not.toHaveBeenCalled();
+    expect(component.dialog.open).not.toHaveBeenCalled();
     expect(component.categorias.delete).not.toHaveBeenCalled();
   });
 

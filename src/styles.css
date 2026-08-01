@@ -251,20 +251,52 @@ mat-card {
   color: var(--hz-black) !important;
 }
 
+mat-card.list-card > mat-card-content,
+.users-card > mat-card-content {
+  padding: 20px !important;
+}
+
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--hz-border);
+  outline: none;
+}
+
 table {
   width: 100%;
   background: transparent !important;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 th {
   color: var(--hz-gray);
   font-weight: 600;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--hz-border) !important;
+  background: var(--hz-surface);
 }
 
 td {
   color: var(--hz-black);
+  padding: 12px 16px;
   border-bottom: 1px solid var(--hz-border) !important;
+}
+
+tr.mat-mdc-row {
+  transition: background-color 120ms ease;
+}
+
+tr.mat-mdc-row:hover {
+  background: var(--hz-background) !important;
+}
+
+mat-paginator {
+  background: transparent !important;
+  border-top: 1px solid var(--hz-border);
+  margin-top: 4px;
 }
 
 .table-actions {
@@ -302,7 +334,18 @@ td {
   padding-top: 8px;
 }
 
-.filters,
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  align-items: start;
+  margin-bottom: 16px;
+}
+
+.filters mat-form-field .mat-mdc-form-field-subscript-wrapper {
+  display: none !important;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));

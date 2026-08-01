@@ -9,8 +9,9 @@
   </app-page-header>
 
   @if (data$ | async; as data) {
-    <mat-card class="wide-table">
-      @if (data.resumenesPaginados.total === 0) {
+    <mat-card class="list-card wide-table">
+      <mat-card-content>
+        @if (data.resumenesPaginados.total === 0) {
         <app-empty-state
           icon="inventory_2"
           title="Sin lotes"
@@ -102,6 +103,7 @@
           (page)="updatePage($event)"
         />
       }
+      </mat-card-content>
     </mat-card>
   } @else {
     <mat-card>

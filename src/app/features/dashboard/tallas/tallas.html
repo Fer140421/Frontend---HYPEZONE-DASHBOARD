@@ -1,37 +1,38 @@
-<app-page-header title="Tallas" description="Catalogo de tallas para estandarizar la carga de productos." />
+<app-page-header title="Tallas" description="Catálogo de tallas para estandarizar la carga de productos.">
+  @if (auth.can('catalogs.create')) {
+    <button mat-flat-button class="primary-action" type="button" (click)="openCreate()">
+      <mat-icon>add</mat-icon>
+      Nueva talla
+    </button>
+  }
+</app-page-header>
 
 @if (listViewModel$ | async; as vm) {
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>Tallas</mat-card-title>
-    </mat-card-header>
+  <mat-card class="list-card">
     <mat-card-content>
-      @if (auth.can('catalogs.create')) {
-        <form class="inline-form" [formGroup]="tallaForm" (ngSubmit)="addTalla()">
-          <mat-form-field appearance="outline">
-            <mat-label>Nueva talla</mat-label>
-            <input matInput formControlName="nombre" />
-          </mat-form-field>
-          <button mat-flat-button class="primary-action" type="submit" [disabled]="tallaForm.invalid">Agregar</button>
-        </form>
-      }
-
       @if (vm.tallas.total === 0) {
         <app-empty-state
           icon="straighten"
           title="Sin tallas"
-          description="No hay tallas registradas."
+          description="No hay tallas registradas en el sistema."
         />
       } @else {
         <div class="catalog-list">
           @for (item of vm.tallas.items; track item.id) {
-            <div>
-              <span>{{ item.nombre }}</span>
-              @if (auth.can('catalogs.delete')) {
-                <button mat-icon-button color="warn" type="button" (click)="removeTalla(item.id!)" aria-label="Eliminar talla">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              }
+            <div class="catalog-item">
+              <span class="item-name">{{ item.nombre }}</span>
+              <div class="item-actions">
+                @if (auth.can('catalogs.update')) {
+                  <button mat-icon-button type="button" (click)="openEdit(item)" aria-label="Editar talla">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                }
+                @if (auth.can('catalogs.delete')) {
+                  <button mat-icon-button color="warn" type="button" (click)="removeTalla(item.id!)" aria-label="Eliminar talla">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
+              </div>
             </div>
           }
         </div>

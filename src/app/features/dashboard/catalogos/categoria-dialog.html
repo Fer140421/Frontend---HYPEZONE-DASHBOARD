@@ -1,0 +1,19 @@
+<h2 mat-dialog-title>{{ isEdit ? 'Editar categoría' : 'Nueva categoría' }}</h2>
+<mat-dialog-content>
+  <form [formGroup]="form" (ngSubmit)="save()" class="dialog-form">
+    @if (errorMessage()) {
+      <div class="form-error">{{ errorMessage() }}</div>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Nombre de la categoría</mat-label>
+      <input matInput formControlName="nombre" placeholder="Ej. Poleras, Zapatillas, Pantalones" />
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close [disabled]="saving()">Cancelar</button>
+  <button mat-flat-button class="primary-action" (click)="save()" [disabled]="form.invalid || saving()">
+    {{ saving() ? 'Guardando...' : (isEdit ? 'Guardar cambios' : 'Crear categoría') }}
+  </button>
+</mat-dialog-actions>

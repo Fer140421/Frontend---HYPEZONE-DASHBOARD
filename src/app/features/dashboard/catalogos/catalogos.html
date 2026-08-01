@@ -1,37 +1,38 @@
-<app-page-header title="Categorias" description="Catalogo para organizar los productos por tipo." />
+<app-page-header title="Categorías" description="Catálogo para organizar los productos por tipo.">
+  @if (auth.can('catalogs.create')) {
+    <button mat-flat-button class="primary-action" type="button" (click)="openCreate()">
+      <mat-icon>add</mat-icon>
+      Nueva categoría
+    </button>
+  }
+</app-page-header>
 
 @if (listViewModel$ | async; as vm) {
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>Categorias</mat-card-title>
-    </mat-card-header>
+  <mat-card class="list-card">
     <mat-card-content>
-      @if (auth.can('catalogs.create')) {
-        <form class="inline-form" [formGroup]="categoriaForm" (ngSubmit)="addCategoria()">
-          <mat-form-field appearance="outline">
-            <mat-label>Nueva categoria</mat-label>
-            <input matInput formControlName="nombre" />
-          </mat-form-field>
-          <button mat-flat-button class="primary-action" type="submit" [disabled]="categoriaForm.invalid">Agregar</button>
-        </form>
-      }
-
       @if (vm.categorias.total === 0) {
         <app-empty-state
           icon="category"
           title="Sin categorías"
-          description="No hay categorías registradas."
+          description="No hay categorías registradas en el sistema."
         />
       } @else {
         <div class="catalog-list">
           @for (item of vm.categorias.items; track item.id) {
-            <div>
-              <span>{{ item.nombre }}</span>
-              @if (auth.can('catalogs.delete')) {
-                <button mat-icon-button color="warn" type="button" (click)="removeCategoria(item.id!)" aria-label="Eliminar categoria">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              }
+            <div class="catalog-item">
+              <span class="item-name">{{ item.nombre }}</span>
+              <div class="item-actions">
+                @if (auth.can('catalogs.update')) {
+                  <button mat-icon-button type="button" (click)="openEdit(item)" aria-label="Editar categoría">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                }
+                @if (auth.can('catalogs.delete')) {
+                  <button mat-icon-button color="warn" type="button" (click)="removeCategoria(item.id!)" aria-label="Eliminar categoría">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
+              </div>
             </div>
           }
         </div>

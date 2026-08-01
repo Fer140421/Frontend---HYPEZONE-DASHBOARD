@@ -10,8 +10,9 @@
       </app-page-header>
 
       @if (listViewModel$ | async; as vm) {
-      <mat-card>
-        <form class="filters" [formGroup]="filters">
+      <mat-card class="list-card">
+        <mat-card-content>
+          <form class="filters" [formGroup]="filters">
           <mat-form-field appearance="outline">
             <mat-label>Buscar</mat-label>
             <input matInput formControlName="search" placeholder="Nombre o marca" />
@@ -136,6 +137,7 @@
             (page)="updatePage($event)"
           />
         }
+        </mat-card-content>
       </mat-card>
       } @else {
         <mat-card>

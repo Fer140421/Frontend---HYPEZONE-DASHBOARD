@@ -253,8 +253,9 @@
       <mat-card><span>Ganancia</span><strong>{{ vm.summary.ganancia | currency: 'BOB' : 'symbol-narrow' }}</strong></mat-card>
     </section>
 
-    <mat-card>
-      <form class="filters" [formGroup]="filters">
+    <mat-card class="list-card">
+      <mat-card-content>
+        <form class="filters" [formGroup]="filters">
         <mat-form-field appearance="outline">
           <mat-label>Producto</mat-label>
           <input matInput formControlName="producto" />
@@ -341,6 +342,7 @@
           (page)="updatePage($event)"
         />
       }
+      </mat-card-content>
     </mat-card>
   } @else {
     <mat-card>
