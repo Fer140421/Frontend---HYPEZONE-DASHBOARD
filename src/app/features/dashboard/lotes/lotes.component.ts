@@ -20,9 +20,11 @@ import { Lote, emptyLote, loteFechaCompra } from '../../../core/models/lote.mode
 import { Proveedor } from '../../../core/models/proveedor.model';
 import { LoteResumen } from '../../../core/models/lote-resumen.model';
 import {
+  coloresProducto,
   estadosProducto,
   generosProducto,
   GeneroProducto,
+  generateProductCode,
   imagenesProducto,
   precioCompraProducto,
   precioProducto,
@@ -456,6 +458,7 @@ export class LoteProductCreateDialogComponent {
   readonly tallas$ = this.tallaRepository.getAll();
   readonly estados = estadosProducto;
   readonly generos = generosProducto;
+  readonly colores = coloresProducto;
   readonly imagenes = signal<string[]>([]);
   readonly saving = signal(false);
 
@@ -470,7 +473,7 @@ export class LoteProductCreateDialogComponent {
     precioCompra: [0, [Validators.required, Validators.min(0)]],
     precioVenta: [0, [Validators.required, Validators.min(0)]],
     estado: ['disponible', Validators.required],
-    codigo: [''],
+    codigo: [generateProductCode()],
   });
 
   async saveAndContinue(): Promise<void> {
@@ -482,6 +485,7 @@ export class LoteProductCreateDialogComponent {
       const raw = this.form.getRawValue();
       await this.productos.create({
         ...raw,
+        codigo: raw.codigo || generateProductCode(),
         loteId: this.data.loteId,
         genero: (raw.genero || undefined) as GeneroProducto | undefined,
         imagenes: this.imagenes(),
@@ -499,7 +503,7 @@ export class LoteProductCreateDialogComponent {
         precioCompra: 0,
         precioVenta: 0,
         estado: 'disponible',
-        codigo: '',
+        codigo: generateProductCode(),
       });
       this.imagenes.set([]);
     } catch (error) {

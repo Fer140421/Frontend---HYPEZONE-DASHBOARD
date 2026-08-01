@@ -1,9 +1,0 @@
-
-    .actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
-    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 20px 0; }
-    .metric-grid mat-card { padding: 20px; display: grid; gap: 8px; }
-    .metric-grid strong { font-size: 2rem; }
-    .result-list { display: grid; gap: 12px; padding-top: 12px; }
-    .result-list span { display: flex; justify-content: space-between; gap: 16px; }
-    .error { color: var(--mat-sys-error); margin-top: 16px; }
-  

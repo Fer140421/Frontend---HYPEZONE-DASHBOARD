@@ -140,14 +140,7 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/dashboard/tallas/tallas.component').then((m) => m.TallasComponent),
       },
-      {
-        path: 'limpieza-productos',
-        canActivate: [permissionGuard], data: { permission: 'products.clean' },
-        loadComponent: () =>
-          import('./features/dashboard/limpieza-productos/limpieza-productos.component').then(
-            (m) => m.LimpiezaProductosComponent,
-          ),
-      },
+
       {
         path: 'usuarios-permisos',
         canActivate: [permissionGuard],

@@ -65,7 +65,17 @@
             </ng-container>
             <ng-container matColumnDef="estado">
               <th mat-header-cell *matHeaderCellDef>Estado</th>
-              <td mat-cell *matCellDef="let r">{{ r.lote.activo === false ? 'Inactivo' : 'Activo' }}</td>
+              <td mat-cell *matCellDef="let r">
+                @if (r.lote.activo === false) {
+                  @if (r.cantidadDisponibles === 0 && r.cantidadProductos > 0) {
+                    <app-status-chip status="terminado" />
+                  } @else {
+                    <app-status-chip status="inactivo" />
+                  }
+                } @else {
+                  <app-status-chip status="activo" />
+                }
+              </td>
             </ng-container>
             <ng-container matColumnDef="acciones">
               <th mat-header-cell *matHeaderCellDef></th>

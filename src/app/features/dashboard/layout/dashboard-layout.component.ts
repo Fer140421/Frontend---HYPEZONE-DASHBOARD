@@ -58,7 +58,6 @@ export class DashboardLayoutComponent {
     { label: 'Categorias', icon: 'category', route: '/dashboard/catalogos', permission: 'catalogs.view' },
     { label: 'Marcas', icon: 'branding_watermark', route: '/dashboard/marcas', permission: 'catalogs.view' },
     { label: 'Tallas', icon: 'straighten', route: '/dashboard/tallas', permission: 'catalogs.view' },
-    { label: 'Limpiar productos', icon: 'cleaning_services', route: '/dashboard/limpieza-productos', permission: 'products.clean' },
     { label: 'Usuarios y permisos', icon: 'manage_accounts', route: '/dashboard/usuarios-permisos', permission: 'users.view' },
   ];
   readonly visibleNavItems = computed(() => this.navItems.filter((item) => this.auth.can(item.permission)));

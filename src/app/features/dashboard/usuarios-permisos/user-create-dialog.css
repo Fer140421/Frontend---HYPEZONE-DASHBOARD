@@ -3,10 +3,10 @@
 .create-user-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .create-user-fields mat-slide-toggle { align-self: center; min-height: 56px; }
 .permission-section { margin-top: 10px; }
-.section-heading h3 { margin: 0 0 4px; }
-.section-heading p { margin: 0 0 14px; color: #9ca8b7; }
+.section-heading h3 { margin: 0 0 4px; color: var(--hz-black); }
+.section-heading p { margin: 0 0 14px; color: var(--hz-gray); }
 .permissions { display: grid; gap: 8px; }
-.permission-row { display: grid; grid-template-columns: minmax(0, 1fr) 145px; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.08); }
+.permission-row { display: grid; grid-template-columns: minmax(0, 1fr) 145px; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--hz-border); }
 .permission-description strong, .permission-description small { display: block; }
-.permission-description small { margin-top: 3px; color: #9ca8b7; }
+.permission-description small { margin-top: 3px; color: var(--hz-gray); }
 @media (max-width: 620px) { .create-user-content { min-width: 0; } .create-user-fields { grid-template-columns: 1fr; } .permission-row { grid-template-columns: 1fr; } }

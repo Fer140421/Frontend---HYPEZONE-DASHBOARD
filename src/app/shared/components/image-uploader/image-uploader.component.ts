@@ -29,7 +29,7 @@ export class ImageUploaderComponent {
     const invalid = files.find((file) => !this.cloudinaryService.isValidImageType(file));
 
     if (invalid) {
-      this.error.emit('Solo se permiten imagenes JPG, PNG o WEBP.');
+      this.error.emit('Solo se permiten archivos de imagen validos (JPG, PNG, WEBP, HEIC, etc.).');
       inputElement.value = '';
       return;
     }

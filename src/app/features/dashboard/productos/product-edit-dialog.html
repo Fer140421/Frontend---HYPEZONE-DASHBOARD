@@ -42,7 +42,12 @@
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Color</mat-label>
-          <input matInput formControlName="color" />
+          <mat-select formControlName="color">
+            <mat-option value="">Sin especificar</mat-option>
+            @for (col of colores; track col) {
+              <mat-option [value]="col">{{ col }}</mat-option>
+            }
+          </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Genero</mat-label>
@@ -74,8 +79,9 @@
           <input matInput type="number" formControlName="precioOferta" />
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Codigo</mat-label>
-          <input matInput formControlName="codigo" />
+          <mat-label>Código</mat-label>
+          <input matInput formControlName="codigo" readonly />
+          <mat-hint>Autogenerado</mat-hint>
         </mat-form-field>
         <mat-form-field appearance="outline" class="full">
           <mat-label>Descripcion</mat-label>

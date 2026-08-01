@@ -1,7 +1,7 @@
 
     <div class="image-uploader">
       <label class="upload-dropzone">
-        <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" [multiple]="maxImages() > 1" (change)="onSelect($event)" />
+        <input type="file" accept="image/*" [multiple]="maxImages() > 1" (change)="onSelect($event)" />
         <mat-icon>cloud_upload</mat-icon>
         <span>{{ uploading() ? 'Subiendo imagenes...' : 'Subir imagenes' }}</span>
       </label>

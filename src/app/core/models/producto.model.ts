@@ -78,3 +78,29 @@ export const categoriasProducto: CategoriaProducto[] = [
 
 export const estadosProducto: EstadoProducto[] = ['disponible', 'reservado', 'vendido', 'agotado'];
 export const generosProducto: GeneroProducto[] = ['hombre', 'mujer', 'unisex', 'nino', 'nina'];
+
+export const coloresProducto: string[] = [
+  'Negro',
+  'Blanco',
+  'Gris',
+  'Plomo',
+  'Rojo',
+  'Azul',
+  'Azul Marino',
+  'Verde',
+  'Verde Olivo',
+  'Amarillo',
+  'Naranja',
+  'Rosado',
+  'Morado',
+  'Beige',
+  'Marrón',
+  'Celeste',
+  'Multicolor',
+  'Otro',
+];
+
+export function generateProductCode(): string {
+  const randomNum = Math.floor(100000 + Math.random() * 900000);
+  return `HZ-${randomNum}`;
+}

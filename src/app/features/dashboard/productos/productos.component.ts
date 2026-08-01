@@ -17,13 +17,16 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable, BehaviorSubject, combineLatest, map, of, shareReplay, startWith, switchMap } from 'rxjs';
 import { Lote } from '../../../core/models/lote.model';
 import {
-  Producto,
+  CategoriaProducto,
+  coloresProducto,
   estadosProducto,
   generosProducto,
   GeneroProducto,
+  generateProductCode,
   imagenesProducto,
   precioCompraProducto,
   precioProducto,
+  Producto,
 } from '../../../core/models/producto.model';
 import { metodosPago } from '../../../core/models/venta.model';
 import { LoteRepository } from '../../../core/repositories/lote.repository';
@@ -172,6 +175,8 @@ export class ProductosComponent implements OnInit {
     lotes: this.lotes$,
   }).pipe(shareReplay({ bufferSize: 1, refCount: true }));
 
+  readonly colores = coloresProducto;
+
   readonly form = this.fb.nonNullable.group({
     loteId: [''],
     nombre: ['', Validators.required],
@@ -227,7 +232,7 @@ export class ProductosComponent implements OnInit {
               precioVenta: 0,
               precioOferta: null,
               estado: 'disponible',
-              codigo: '',
+              codigo: generateProductCode(),
               notas: '',
             });
             this.imagenes.set([]);
@@ -248,7 +253,7 @@ export class ProductosComponent implements OnInit {
           precioVenta: precioProducto(producto),
           precioOferta: producto.precioOferta ?? null,
           estado: producto.estado,
-          codigo: producto.codigo ?? '',
+          codigo: producto.codigo || generateProductCode(),
           notas: producto.notas ?? '',
         });
         this.imagenes.set(imagenesProducto(producto));
@@ -314,6 +319,7 @@ export class ProductosComponent implements OnInit {
       ...productValues,
       loteId: raw.loteId || undefined,
       genero: (raw.genero || undefined) as GeneroProducto | undefined,
+      codigo: raw.codigo || generateProductCode(),
       ...(precioOferta === null ? {} : { precioOferta }),
       imagenes: this.imagenes(),
       activo: true,
@@ -516,6 +522,7 @@ export class ProductEditDialogComponent {
   readonly tallas$ = this.tallaRepository.getAll().pipe(shareReplay({ bufferSize: 1, refCount: true }));
   readonly estados = estadosProducto;
   readonly generos = generosProducto;
+  readonly colores = coloresProducto;
   readonly imagenes = signal(imagenesProducto(this.data.producto));
 
   readonly form = this.fb.nonNullable.group({
@@ -531,7 +538,7 @@ export class ProductEditDialogComponent {
     precioVenta: [precioProducto(this.data.producto), [Validators.required, Validators.min(0)]],
     precioOferta: this.fb.control<number | null>(this.data.producto.precioOferta ?? null),
     estado: [this.data.producto.estado, Validators.required],
-    codigo: [this.data.producto.codigo ?? ''],
+    codigo: [this.data.producto.codigo || generateProductCode()],
     notas: [this.data.producto.notas ?? ''],
   });
 

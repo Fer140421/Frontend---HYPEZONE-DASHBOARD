@@ -27,7 +27,6 @@ export const PERMISSION_CATALOG = [
   define({ key: 'products.create', module: 'products', action: 'create', label: 'Crear productos', description: 'Registrar productos.', order: 21, sensitive: false, defaultRoles: ['owner', 'admin'] }),
   define({ key: 'products.update', module: 'products', action: 'update', label: 'Modificar productos', description: 'Editar producto y precio.', order: 22, sensitive: false, defaultRoles: ['owner', 'admin'] }),
   define({ key: 'products.delete', module: 'products', action: 'delete', label: 'Eliminar productos', description: 'Desactivar productos.', order: 23, sensitive: true, defaultRoles: ['owner', 'admin'] }),
-  define({ key: 'products.clean', module: 'products', action: 'clean', label: 'Limpiar productos', description: 'Eliminar campos históricos.', order: 24, sensitive: true, defaultRoles: ['owner'] }),
   define({ key: 'lots.view', module: 'lots', action: 'view', label: 'Ver lotes', description: 'Consultar lotes.', order: 30, sensitive: false, defaultRoles: ['owner', 'admin'] }),
   define({ key: 'lots.create', module: 'lots', action: 'create', label: 'Crear lotes', description: 'Registrar lotes.', order: 31, sensitive: false, defaultRoles: ['owner', 'admin'] }),
   define({ key: 'lots.update', module: 'lots', action: 'update', label: 'Modificar lotes', description: 'Editar y asociar lotes.', order: 32, sensitive: false, defaultRoles: ['owner', 'admin'] }),

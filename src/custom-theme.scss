@@ -1,32 +1,67 @@
 
-// Include theming for Angular Material with `mat.theme()`.
-// This Sass mixin will define CSS variables that are used for styling Angular Material
-// components according to the Material 3 design spec.
-// Learn more about theming and how to use it for your application's
-// custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
+
+:root {
+  /* Brand / Primary */
+  --hz-primary: #36b7a6;
+  --hz-primary-hover: #2fa394;
+  --hz-primary-soft: #eaf8f6;
+
+  /* Neutrales Oscuros */
+  --hz-black: #111111;
+  --hz-dark: #1a1a1a;
+  --hz-gray: #6b6b6b;
+  --hz-gray-light: #a3a3a3;
+  --hz-border: #e7e7e7;
+
+  /* Fondos y Superficies */
+  --hz-background: #f8f8f8;
+  --hz-surface: #ffffff;
+  --hz-white: #ffffff;
+
+  /* Alertas / Estado / Feedback */
+  --hz-danger: #7a2424;
+  --hz-danger-soft: #fee2e2;
+  --hz-warning: #a47716;
+  --hz-warning-soft: #fff8e7;
+  --hz-skeleton: #eeeeee;
+
+  /* Material 3 Token Overrides */
+  --mat-sys-primary: var(--hz-primary);
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-primary-container: var(--hz-primary-soft);
+  --mat-sys-on-primary-container: var(--hz-primary-hover);
+
+  --mat-sys-surface: var(--hz-surface);
+  --mat-sys-on-surface: var(--hz-black);
+  --mat-sys-surface-container: var(--hz-surface);
+  --mat-sys-surface-container-low: var(--hz-background);
+  --mat-sys-surface-container-high: #f4f4f4;
+  --mat-sys-surface-container-highest: #eeeeee;
+
+  --mat-sys-on-surface-variant: var(--hz-gray);
+  --mat-sys-outline: var(--hz-border);
+  --mat-sys-outline-variant: var(--hz-border);
+  --mat-sys-error: var(--hz-danger);
+  --mat-sys-error-container: var(--hz-danger-soft);
+}
 
 html {
   @include mat.theme((
     color: (
-      primary: mat.$green-palette,
-      tertiary: mat.$rose-palette,
+      theme-type: light,
+      primary: mat.$cyan-palette,
     ),
-    typography: Roboto,
+    typography: Inter,
     density: 0,
   ));
 }
 
 body {
-  color-scheme: dark;
-
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
-  background-color: #0a0b0f;
-  color: var(--mat-sys-on-surface);
+  color-scheme: light;
+  background-color: var(--hz-background);
+  color: var(--hz-black);
   font: var(--mat-sys-body-medium);
-
-  // Reset the user agent margin.
   margin: 0;
 }
+

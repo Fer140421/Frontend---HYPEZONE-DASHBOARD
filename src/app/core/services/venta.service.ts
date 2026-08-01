@@ -77,6 +77,21 @@ export class VentaService {
         updatedAt: timestamp,
       }));
 
+      const loteIds = [...new Set(currentProducts.map((p) => p.loteId).filter((id): id is string => !!id))];
+      const lotesCompletados: string[] = [];
+      for (const loteId of loteIds) {
+        const productosLoteSnap = await getDocs(
+          query(collection(this.firestore, 'productos'), where('loteId', '==', loteId))
+        );
+        const otrosDisponibles = productosLoteSnap.docs.filter((docSnap) => {
+          const data = docSnap.data() as Producto;
+          return data.activo !== false && data.estado === 'disponible' && !ids.includes(docSnap.id);
+        });
+        if (otrosDisponibles.length === 0) {
+          lotesCompletados.push(loteId);
+        }
+      }
+
       currentProducts.forEach((current, index) => {
         const precioCompra = this.readPurchasePrice(current);
         const precioVenta = precios[index];
@@ -94,6 +109,10 @@ export class VentaService {
           createdAt: timestamp, updatedAt: timestamp,
         }));
         transaction.update(productoRefs[index], { estado: 'vendido', precioVenta, updatedAt: timestamp });
+      });
+
+      lotesCompletados.forEach((loteId) => {
+        transaction.update(doc(this.firestore, `lotes/${loteId}`), { activo: false, updatedAt: timestamp });
       });
     });
 

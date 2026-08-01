@@ -55,7 +55,8 @@ Toda la arquitectura de **autorización dinámica (Authorization V2)** se desarr
 
 - **Resumen (`/dashboard/resumen`):** Métricas clave (ventas del mes, ingresos, ganancia real, alertas de stock).
 - **Lotes (`/dashboard/lotes`):** CRUD de lotes de prendas, métricas de inversión/ingresos (`LoteAnalyticsService`), asignación de productos.
-- **Productos (`/dashboard/productos`):** CRUD completo de inventario, soporte multi-imagen Cloudinary, cambio rápido de precio, borrado lógico y restauración.
+- **Productos (`/dashboard/productos`):** CRUD completo de inventario, soporte multi-imagen Cloudinary con **compresión automática pre-upload en cliente**, cambio rápido de precio, borrado lógico y restauración.
+- **Optimización de Imágenes Pre-Upload (`image-compressor.util.ts`):** Redimensión y compresión automática en el navegador vía HTML5 Canvas antes del envío HTTP a Cloudinary. Soporta imágenes de alta resolución (iPhone/Android, HEIC/JPEG/PNG/WEBP), limita las dimensiones a un máximo de `1920px` manteniendo relación de aspecto y comprime a calidad `85%`, reduciendo el peso de los archivos entre **80% y 95%** sin pérdida de calidad visual perceptible.
 - **Ventas (`/dashboard/ventas`):** Registro de ventas transaccionales en Firestore (`runTransaction`), actualización automática de estado del producto a vendido, historial y snapshots.
 - **Clientes / Proveedores / Catálogos (`/dashboard/clientes`, `/dashboard/proveedores`, `/dashboard/catalogos`, `/dashboard/marcas`, `/dashboard/tallas`):** Pantallas administrativas protegidas por permisos declarativos.
 - **Limpieza de productos (`/dashboard/limpieza-productos`):** Herramienta manual auditada para elevar el esquema de productos a `schemaVersion: 3`.

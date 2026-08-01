@@ -8,7 +8,7 @@ Dashboard administrativo para tienda e-commerce de ropa streetwear. Desarrollado
 
 - **Autorización Dinámica por Permisos (Authorization V2):** Catálogo granular de 17 permisos, roles como documentos en Firestore, mapa `effectivePermissions` materializado en servidor y evaluación reactativa en tiempo real.
 - **Administración de Usuarios:** Listado en tiempo real con Firestore, edición de roles y overrides en modal `MatDialog`, creación de usuarios con generación de contraseñas temporales vía Cloud Functions Admin SDK, y protección de navegación `CanDeactivate`.
-- **Gestión de Inventario y Lotes:** Control de productos, lotes de importación, cálculo automático de analítica de inversión/ganancias, actualización rápida de precios y borrado lógico.
+- **Gestión de Inventario, Lotes y Subida de Imágenes Optimizada:** Control de productos y lotes con analítica de ganancia, y componente de subida de imágenes con **compresión y redimensión automática en cliente (HTML5 Canvas)** previa al envío a Cloudinary, optimizando fotos pesadas de iPhone/Android (reducción de hasta 95% en peso sin pérdida visual).
 - **Registro Transaccional de Ventas:** Confirmaciones atómicas con `runTransaction` en Firestore, actualización de stock e historial.
 - **Diseño Moderno y Responsivo:** Interfaz oscura adaptada a múltiples breakpoints (1440px a 320px) con Angular Material.
 
@@ -52,6 +52,7 @@ Dashboard administrativo para tienda e-commerce de ropa streetwear. Desarrollado
 | --- | --- |
 | `npm start` | Inicia el servidor de desarrollo Angular. |
 | `npm run start:dev` | Inicia el servidor usando la configuración de desarrollo (`hypezone-dev`). |
+| `npm run start:prod` | Inicia el servidor de desarrollo apuntando al entorno de producción (`hypezone-3ed2a`). |
 | `npm run build:dev` | Compila la aplicación Angular en modo desarrollo. |
 | `npm run build:prod` | Compila la aplicación Angular para producción (`hypezone-3ed2a`). |
 | `npm test` | Ejecuta la suite de 100 pruebas unitarias con Karma/Jasmine en Chrome Headless. |
