@@ -21,6 +21,8 @@
     "deploy:prod:rules": "firebase use prod && firebase deploy --only firestore:rules",
     "deploy:prod:functions": "npm run functions:build && firebase use prod && firebase deploy --only functions",
     "deploy:prod:hosting": "npm run build:prod && firebase use prod && firebase deploy --only hosting",
+    "sync:public-products:dev": "node scripts/sync-public-products.cjs --project hypezone-dev --apply",
+    "sync:public-products:prod": "node scripts/sync-public-products.cjs --project hypezone-3ed2a --apply",
     "emulators": "firebase emulators:start"
   },
   "prettier": {

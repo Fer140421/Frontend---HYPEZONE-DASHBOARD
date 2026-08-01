@@ -1,4 +1,4 @@
-// DEV authorization rules. Sensitive user mutations are Admin SDK-only.
+// DEV & PROD authorization rules with public read access for active store products/catalogs.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -22,56 +22,74 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Internal full products collection (contains private buying costs & internal notes)
     match /productos/{id} {
       allow read: if hasPermission('products.view');
       allow create: if hasPermission('products.create');
       allow update: if hasPermission('products.update');
       allow delete: if hasPermission('products.delete');
     }
+
+    // Public sanitized mirror collection for online store (NO buying prices, NO internal notes)
+    match /productosPublicos/{id} {
+      allow read: if resource.data.activo == true || hasPermission('products.view');
+      allow create: if hasPermission('products.create');
+      allow update: if hasPermission('products.update');
+      allow delete: if hasPermission('products.delete');
+    }
+
     match /clientes/{id} {
       allow read: if hasPermission('clients.view');
       allow create: if hasPermission('clients.create');
       allow update: if hasPermission('clients.update');
       allow delete: if hasPermission('clients.delete');
     }
+
     match /ventas/{id} {
       allow read: if hasPermission('sales.view');
       allow create: if hasPermission('sales.create');
       allow update: if hasPermission('sales.update');
       allow delete: if false;
     }
+
     match /operacionesVenta/{id} {
       allow read: if hasPermission('sales.view');
       allow create: if hasPermission('sales.create');
       allow update: if hasPermission('sales.update');
       allow delete: if false;
     }
+
     match /lotes/{id} {
       allow read: if hasPermission('lots.view');
       allow create: if hasPermission('lots.create');
       allow update: if hasPermission('lots.update');
       allow delete: if hasPermission('lots.delete');
     }
+
     match /proveedores/{id} {
       allow read: if hasPermission('providers.view');
       allow create: if hasPermission('providers.create');
       allow update: if hasPermission('providers.update');
       allow delete: if hasPermission('providers.delete');
     }
+
+    // Public read for catalog filters (online store) + protected administrative CRUD
     match /categorias/{id} {
-      allow read: if hasPermission('catalogs.view');
+      allow read: if resource.data.activo != false || hasPermission('catalogs.view');
       allow create: if hasPermission('catalogs.create');
       allow update: if hasPermission('catalogs.update');
       allow delete: if hasPermission('catalogs.delete');
     }
+
     match /marcas/{id} {
-      allow read: if hasPermission('catalogs.view');
+      allow read: if resource.data.activo != false || hasPermission('catalogs.view');
       allow create: if hasPermission('catalogs.create');
       allow update: if hasPermission('catalogs.update');
       allow delete: if hasPermission('catalogs.delete');
     }
+
     match /tallas/{id} {
-      allow read: if hasPermission('catalogs.view');
+      allow read: if resource.data.activo != false || hasPermission('catalogs.view');
       allow create: if hasPermission('catalogs.create');
       allow update: if hasPermission('catalogs.update');
       allow delete: if hasPermission('catalogs.delete');

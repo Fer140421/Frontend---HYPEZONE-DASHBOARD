@@ -54,6 +54,7 @@ Toda la arquitectura de **autorización dinámica (Authorization V2)** se desarr
 ### 3. Módulos Operativos de Negocio
 
 - **Módulo de Lotes (`/dashboard/lotes`):** CRUD de lotes de prendas, métricas de inversión/ingresos (`LoteAnalyticsService`), asignación de productos y **soporte multi-foto habilitado al crear productos dentro de un lote** (subida simultánea de hasta 5 imágenes).
+- **Colección Espejo Pública de Productos (`productosPublicos`):** Sincronización automática de productos desinfectados (sin `precioCompra` ni `notas`) en la colección pública `/productosPublicos` en Firestore, garantizando lectura pública ultra rápida (50-100ms) para la Tienda Online sin necesidad de suscripciones de pago a Cloud Functions ni riesgo de filtración de costos o datos contables.
 - **Componente de Carga de Imágenes Rediseñado (`ImageUploaderComponent`):**
   - **Soporte Multi-Imagen Habilitado:** Carga múltiple en Productos y Lotes con límites configurables (por defecto 5 fotos) y compresión previa en navegador mantenida.
   - **Indicadores de Estado UI en Tiempo Real:** Estado activo con icono giratorio (`sync` spinner), texto descriptivo ("Comprimiendo y subiendo fotos...") e indicador de progreso/capacidad (ej. `3 / 5 fotos`).
