@@ -14,7 +14,7 @@ import { cloudinaryPreviewUrl } from '../../../core/utils/cloudinary-image.util'
 export class ImageUploaderComponent {
   readonly previewImage = cloudinaryPreviewUrl;
   readonly images = input<string[]>([]);
-  readonly maxImages = input(Number.MAX_SAFE_INTEGER);
+  readonly maxImages = input(5);
   readonly uploading = signal(false);
 
   @Output() uploaded = new EventEmitter<string[]>();
@@ -29,7 +29,7 @@ export class ImageUploaderComponent {
     const invalid = files.find((file) => !this.cloudinaryService.isValidImageType(file));
 
     if (invalid) {
-      this.error.emit('Solo se permiten archivos de imagen validos (JPG, PNG, WEBP, HEIC, etc.).');
+      this.error.emit('Solo se permiten archivos de imagen válidos (JPG, PNG, WEBP, HEIC, etc.).');
       inputElement.value = '';
       return;
     }
@@ -41,11 +41,18 @@ export class ImageUploaderComponent {
     this.uploading.set(true);
     this.cloudinaryService.uploadImages(files).subscribe({
       next: (urls) => this.uploaded.emit([...this.images(), ...urls].slice(0, this.maxImages())),
-      error: () => this.error.emit('No se pudieron subir las imagenes.'),
+      error: () => this.error.emit('No se pudieron subir las imágenes.'),
       complete: () => {
         this.uploading.set(false);
         inputElement.value = '';
       },
     });
+  }
+
+  removeImage(index: number): void {
+    if (this.uploading()) return;
+    const current = [...this.images()];
+    current.splice(index, 1);
+    this.uploaded.emit(current);
   }
 }

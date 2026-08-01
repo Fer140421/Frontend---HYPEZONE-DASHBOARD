@@ -1,17 +1,75 @@
+<div class="image-uploader-wrapper">
+  <div class="uploader-header">
+    <span class="uploader-title">
+      <mat-icon>photo_library</mat-icon>
+      Fotos del producto
+    </span>
+    <span class="uploader-counter">
+      @if (maxImages() < 99) {
+        {{ images().length }} / {{ maxImages() }} fotos
+      } @else {
+        {{ images().length }} {{ images().length === 1 ? 'foto cargada' : 'fotos cargadas' }}
+      }
+    </span>
+  </div>
 
-    <div class="image-uploader">
-      <label class="upload-dropzone">
-        <input type="file" accept="image/*" [multiple]="maxImages() > 1" (change)="onSelect($event)" />
-        <mat-icon>cloud_upload</mat-icon>
-        <span>{{ uploading() ? 'Subiendo imagenes...' : 'Subir imagenes' }}</span>
-      </label>
+  @if (images().length < maxImages()) {
+    <label class="upload-dropzone" [class.is-uploading]="uploading()">
+      <input
+        type="file"
+        accept="image/*"
+        [multiple]="maxImages() > 1"
+        [disabled]="uploading()"
+        (change)="onSelect($event)"
+      />
 
-      @if (images().length) {
-        <div class="image-grid">
-          @for (image of images(); track image) {
-            <img [src]="previewImage(image)" alt="Imagen del producto" loading="lazy" decoding="async" width="96" height="96" />
-          }
+      <div class="dropzone-content">
+        @if (uploading()) {
+          <mat-icon class="spinning-icon">sync</mat-icon>
+          <strong class="status-heading">Comprimiendo y subiendo fotos...</strong>
+          <span class="status-subtext">Optimización automática en curso, por favor espera...</span>
+        } @else {
+          <mat-icon class="upload-icon">cloud_upload</mat-icon>
+          <strong class="status-heading">Haz clic o arrastra fotos aquí</strong>
+          <span class="status-subtext">JPG, PNG, WEBP o fotos pesadas de cámara (HEIC)</span>
+        }
+      </div>
+    </label>
+  } @else {
+    <div class="dropzone-limit-reached">
+      <mat-icon>check_circle</mat-icon>
+      <span>Se alcanzó el límite máximo de fotos ({{ maxImages() }})</span>
+    </div>
+  }
+
+  @if (images().length) {
+    <div class="preview-grid">
+      @for (image of images(); track image; let i = $index) {
+        <div class="preview-card">
+          <img
+            [src]="previewImage(image)"
+            [alt]="'Imagen ' + (i + 1)"
+            loading="lazy"
+            decoding="async"
+            width="120"
+            height="120"
+          />
+
+          <span class="image-badge">
+            {{ i === 0 ? 'Principal' : '#' + (i + 1) }}
+          </span>
+
+          <button
+            type="button"
+            class="remove-button"
+            (click)="removeImage(i)"
+            [disabled]="uploading()"
+            [attr.aria-label]="'Eliminar foto ' + (i + 1)"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
         </div>
       }
     </div>
-  
+  }
+</div>

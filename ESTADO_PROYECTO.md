@@ -53,8 +53,11 @@ Toda la arquitectura de **autorización dinámica (Authorization V2)** se desarr
 
 ### 3. Módulos Operativos de Negocio
 
-- **Resumen (`/dashboard/resumen`):** Métricas clave (ventas del mes, ingresos, ganancia real, alertas de stock).
-- **Lotes (`/dashboard/lotes`):** CRUD de lotes de prendas, métricas de inversión/ingresos (`LoteAnalyticsService`), asignación de productos.
+- **Módulo de Lotes (`/dashboard/lotes`):** CRUD de lotes de prendas, métricas de inversión/ingresos (`LoteAnalyticsService`), asignación de productos y **soporte multi-foto habilitado al crear productos dentro de un lote** (subida simultánea de hasta 5 imágenes).
+- **Componente de Carga de Imágenes Rediseñado (`ImageUploaderComponent`):**
+  - **Soporte Multi-Imagen Habilitado:** Carga múltiple en Productos y Lotes con límites configurables (por defecto 5 fotos) y compresión previa en navegador mantenida.
+  - **Indicadores de Estado UI en Tiempo Real:** Estado activo con icono giratorio (`sync` spinner), texto descriptivo ("Comprimiendo y subiendo fotos...") e indicador de progreso/capacidad (ej. `3 / 5 fotos`).
+  - **Tarjetas de Prevista con Eliminación:** Vista previa en cuadrícula con badges de posición (`Principal`, `#2`, `#3`) y **botón directo para eliminar cualquier foto cargada por error (`delete`)**.
 - **Productos (`/dashboard/productos`):** CRUD completo de inventario, soporte multi-imagen Cloudinary con compresión automática pre-upload en cliente, cambio rápido de precio, borrado lógico, restauración y **rediseño completo del modal de vista de detalle (Galería interactiva con miniaturas, object-fit sin deformación, tarjetas de precios y especificaciones)**.
 - **Estandarización de Listados y Filtros (`.list-card`):** Formato único y unificado para las pantallas de listado (`Productos`, `Lotes`, `Ventas`, `Clientes`, `Proveedores`, `Marcas`, `Tallas`, `Categorías` y `Usuarios/Permisos`), garantizando paddings consistentes (20px), espaciado controlado entre filtros y tablas (16px) y estilos de tabla homogéneos en todo el dashboard.
 - **Flujo Modal Unificado en Catálogos (`Marcas`, `Tallas` y `Categorías`):** Eliminación de formularios inline en listas; la creación y edición de registros se realiza mediante diálogos modales interactivos (`MatDialog`) con botón de acción en el encabezado (`Nueva marca`, `Nueva talla`, `Nueva categoría`), manteniendo coherencia con el flujo global del sistema.
