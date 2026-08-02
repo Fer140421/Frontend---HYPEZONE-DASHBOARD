@@ -66,6 +66,30 @@ function sanitizeFields(fields) {
       sanitized[key] = fields[key];
     }
   }
+
+  if (!('activo' in sanitized)) {
+    sanitized.activo = { booleanValue: true };
+  }
+
+  if (!('estado' in sanitized)) {
+    sanitized.estado = { stringValue: 'disponible' };
+  }
+
+  if (!('imagenes' in sanitized)) {
+    if ('imagen' in fields) {
+      const rawImagen = fields.imagen;
+      if (rawImagen.stringValue) {
+        sanitized.imagenes = { arrayValue: { values: [{ stringValue: rawImagen.stringValue }] } };
+      } else if (rawImagen.arrayValue) {
+        sanitized.imagenes = rawImagen;
+      } else {
+        sanitized.imagenes = { arrayValue: { values: [] } };
+      }
+    } else {
+      sanitized.imagenes = { arrayValue: { values: [] } };
+    }
+  }
+
   return sanitized;
 }
 

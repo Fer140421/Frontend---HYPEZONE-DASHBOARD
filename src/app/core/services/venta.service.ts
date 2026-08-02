@@ -109,6 +109,11 @@ export class VentaService {
           createdAt: timestamp, updatedAt: timestamp,
         }));
         transaction.update(productoRefs[index], { estado: 'vendido', precioVenta, updatedAt: timestamp });
+        transaction.set(
+          doc(this.firestore, `productosPublicos/${snapshots[index].id}`),
+          { estado: 'vendido', precioVenta, updatedAt: timestamp },
+          { merge: true },
+        );
       });
 
       lotesCompletados.forEach((loteId) => {
@@ -144,6 +149,11 @@ export class VentaService {
             notas: input.notas || deleteField(), updatedAt: timestamp,
           }));
           transaction.update(productoRef, { precioVenta: precios[index], updatedAt: timestamp });
+          transaction.set(
+            doc(this.firestore, `productosPublicos/${current.productoId}`),
+            { precioVenta: precios[index], updatedAt: timestamp },
+            { merge: true },
+          );
         });
       if (operacionId) transaction.update(doc(this.firestore, `operacionesVenta/${operacionId}`), removeUndefinedDeep({
         total: totalOperacion, metodoPago: input.metodoPago, fechaVenta: input.fechaVenta,
@@ -190,6 +200,11 @@ export class VentaService {
         if (!nuevosIds.includes(original.productoId)) {
           transaction.delete(doc(this.firestore, `ventas/${original.id}`));
           transaction.update(productoRefs.get(original.productoId)!, { estado:'disponible', updatedAt:timestamp });
+          transaction.set(
+            doc(this.firestore, `productosPublicos/${original.productoId}`),
+            { estado: 'disponible', updatedAt: timestamp },
+            { merge: true },
+          );
         }
       }
       nuevos.forEach((item,index) => {
@@ -199,8 +214,14 @@ export class VentaService {
           nombreProducto:product.nombre, precioCompra:this.readPurchasePrice(product), precioVenta:precios[index],
           ganancia:precios[index]-this.readPurchasePrice(product), activo:true, schemaVersion:3 };
         if (existing?.id) transaction.update(doc(this.firestore, `ventas/${existing.id}`), ventaData);
-        if (existing?.id) transaction.update(productoRefs.get(item.producto.id!)!, { precioVenta: precios[index], updatedAt: timestamp });
-        else {
+        if (existing?.id) {
+          transaction.update(productoRefs.get(item.producto.id!)!, { precioVenta: precios[index], updatedAt: timestamp });
+          transaction.set(
+            doc(this.firestore, `productosPublicos/${item.producto.id!}`),
+            { precioVenta: precios[index], updatedAt: timestamp },
+            { merge: true },
+          );
+        } else {
           transaction.set(nuevosVentaRefs.get(item.producto.id!)!, removeUndefinedDeep({
             ...ventaData,
             loteId: product.loteId || undefined,
@@ -212,6 +233,11 @@ export class VentaService {
             createdAt: timestamp,
           }));
           transaction.update(productoRefs.get(item.producto.id!)!, { estado:'vendido', precioVenta:precios[index], updatedAt:timestamp });
+          transaction.set(
+            doc(this.firestore, `productosPublicos/${item.producto.id!}`),
+            { estado: 'vendido', precioVenta: precios[index], updatedAt: timestamp },
+            { merge: true },
+          );
         }
       });
       transaction.set(operacionRef, { total:totalOperacion, cantidadDetalles:nuevos.length, metodoPago:input.metodoPago,
