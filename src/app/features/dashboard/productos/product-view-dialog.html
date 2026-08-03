@@ -1,25 +1,54 @@
 <div class="product-dialog-header">
-  <div class="header-titles">
-    <span class="product-category-tag">{{ data.producto.categoria || 'Producto' }}</span>
-    <h2 mat-dialog-title>{{ data.producto.nombre }}</h2>
-    @if (data.producto.codigo) {
-      <span class="product-code-badge">SKU: {{ data.producto.codigo }}</span>
-    }
+  <div class="header-main-info">
+    <div class="header-meta-tags">
+      <span class="product-category-tag">
+        <mat-icon class="meta-icon">category</mat-icon>
+        {{ data.producto.categoria || 'Producto' }}
+      </span>
+      @if (data.producto.codigo) {
+        <span class="product-code-badge">
+          <mat-icon class="meta-icon">qr_code</mat-icon>
+          SKU: {{ data.producto.codigo }}
+        </span>
+      }
+    </div>
+    <h2 mat-dialog-title class="product-title">{{ data.producto.nombre }}</h2>
   </div>
-  <app-status-chip [status]="data.producto.estado" />
+
+  <div class="header-actions-right">
+    <app-status-chip [status]="data.producto.estado" />
+    <button mat-icon-button type="button" mat-dialog-close class="close-dialog-btn" aria-label="Cerrar modal">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
 </div>
 
-<mat-dialog-content>
-  <div class="product-view-container">
-    <!-- Gallery Column -->
-    <div class="product-gallery">
-      <div class="main-image-wrapper">
+<mat-dialog-content class="product-dialog-content">
+  <div class="product-view-layout">
+    <!-- Left Column: Gallery -->
+    <div class="product-gallery-section">
+      <div class="main-image-card">
         @if (mainImage(); as activeImage) {
           <img [src]="activeImage" [alt]="data.producto.nombre" class="main-image" loading="eager" decoding="async" />
+
+          @if (rawImages.length > 1) {
+            <div class="gallery-counter">
+              <mat-icon>photo_library</mat-icon>
+              <span>{{ selectedIndex() + 1 }} / {{ rawImages.length }}</span>
+            </div>
+
+            <button type="button" class="nav-arrow prev" (click)="prevImage()" aria-label="Imagen anterior">
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <button type="button" class="nav-arrow next" (click)="nextImage()" aria-label="Imagen siguiente">
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          }
         } @else {
           <div class="gallery-placeholder">
             <mat-icon>image_not_supported</mat-icon>
-            <span>Sin imagen registrada</span>
+            <span class="placeholder-title">Sin imagen registrada</span>
+            <span class="placeholder-sub">No hay fotografías para mostrar</span>
           </div>
         }
       </div>
@@ -41,83 +70,124 @@
       }
     </div>
 
-    <!-- Details Column -->
-    <div class="product-info">
-      <!-- Price Card -->
-      <div class="price-banner">
-        <div class="price-main">
-          <span class="price-label">Precio de venta</span>
-          <strong class="price-value">{{ precioVenta | currency: 'BOB' : 'symbol-narrow' }}</strong>
+    <!-- Right Column: Info & Specs -->
+    <div class="product-details-section">
+
+      <!-- Financial KPI Banner -->
+      <div class="price-kpi-banner">
+        <div class="price-block main-price">
+          <span class="price-label">Precio de Venta</span>
+          <div class="price-val-wrap">
+            <strong class="price-value">{{ precioVenta | currency: 'BOB' : 'symbol-narrow' }}</strong>
+            @if (data.producto.precioOferta !== undefined && data.producto.precioOferta > 0) {
+              <div class="offer-pill">
+                <span class="offer-tag">OFERTA</span>
+                <span class="offer-val">{{ data.producto.precioOferta | currency: 'BOB' : 'symbol-narrow' }}</span>
+              </div>
+            }
+          </div>
         </div>
 
-        @if (data.producto.precioOferta !== undefined) {
-          <div class="price-offer">
-            <span class="offer-tag">OFERTA</span>
-            <span class="offer-value">{{ data.producto.precioOferta | currency: 'BOB' : 'symbol-narrow' }}</span>
-          </div>
-        }
+        <div class="price-divider"></div>
 
-        <div class="price-cost">
-          <span class="price-label">Costo de compra</span>
-          <span class="cost-value">{{ precioCompra | currency: 'BOB' : 'symbol-narrow' }}</span>
+        <div class="price-block cost-price">
+          <span class="price-label">Costo de Compra</span>
+          <strong class="cost-value">{{ precioCompra | currency: 'BOB' : 'symbol-narrow' }}</strong>
+        </div>
+
+        <div class="price-divider"></div>
+
+        <div class="price-block margin-kpi">
+          <span class="price-label">Margen Estimado</span>
+          <div class="margin-val-wrap" [class.negative]="margenBs < 0">
+            <strong class="margin-value">{{ margenBs | currency: 'BOB' : 'symbol-narrow' }}</strong>
+            <span class="margin-percent">({{ margenPorcentaje | number: '1.0-1' }}%)</span>
+          </div>
         </div>
       </div>
 
       <!-- Specs Grid -->
+      <div class="section-title-sm">
+        <mat-icon>inventory_2</mat-icon>
+        <span>Especificaciones del Producto</span>
+      </div>
+
       <div class="specs-grid">
         <div class="spec-card">
-          <mat-icon>straighten</mat-icon>
-          <div class="spec-content">
+          <div class="spec-icon-wrap">
+            <mat-icon>straighten</mat-icon>
+          </div>
+          <div class="spec-info">
             <span class="spec-label">Talla</span>
             <strong class="spec-value">{{ data.producto.talla || 'Única' }}</strong>
           </div>
         </div>
 
         <div class="spec-card">
-          <mat-icon>label</mat-icon>
-          <div class="spec-content">
+          <div class="spec-icon-wrap">
+            <mat-icon>label</mat-icon>
+          </div>
+          <div class="spec-info">
             <span class="spec-label">Marca</span>
             <strong class="spec-value">{{ data.producto.marca || 'Sin marca' }}</strong>
           </div>
         </div>
 
         <div class="spec-card">
-          <mat-icon>palette</mat-icon>
-          <div class="spec-content">
+          <div class="spec-icon-wrap">
+            <mat-icon>palette</mat-icon>
+          </div>
+          <div class="spec-info">
             <span class="spec-label">Color</span>
-            <strong class="spec-value">{{ data.producto.color || 'Sin especificar' }}</strong>
+            <div class="color-val-wrap">
+              @if (colorHex(); as hex) {
+                <span class="color-dot" [style.background]="hex" [class.is-white]="hex === '#ffffff'"></span>
+              }
+              <strong class="spec-value">{{ data.producto.color || 'Sin especificar' }}</strong>
+            </div>
           </div>
         </div>
 
         <div class="spec-card">
-          <mat-icon>wc</mat-icon>
-          <div class="spec-content">
+          <div class="spec-icon-wrap">
+            <mat-icon>wc</mat-icon>
+          </div>
+          <div class="spec-info">
             <span class="spec-label">Género</span>
-            <strong class="spec-value">{{ data.producto.genero || 'Unisex' }}</strong>
+            <strong class="spec-value">{{ (data.producto.genero | titlecase) || 'Unisex' }}</strong>
           </div>
         </div>
       </div>
 
-      <!-- Description & Notes -->
+      <!-- Description Block -->
       @if (data.producto.descripcion) {
-        <div class="text-block">
-          <span class="block-title"><mat-icon>notes</mat-icon> Descripción</span>
-          <p>{{ data.producto.descripcion }}</p>
+        <div class="info-card-block">
+          <div class="block-header">
+            <mat-icon>notes</mat-icon>
+            <span>Descripción</span>
+          </div>
+          <p class="block-body">{{ data.producto.descripcion }}</p>
         </div>
       }
 
+      <!-- Internal Notes Block -->
       @if (data.producto.notas) {
-        <div class="text-block notes-block">
-          <span class="block-title"><mat-icon>sticky_note_2</mat-icon> Notas internas</span>
-          <p>{{ data.producto.notas }}</p>
+        <div class="info-card-block notes-accent">
+          <div class="block-header">
+            <mat-icon>sticky_note_2</mat-icon>
+            <span>Notas Internas</span>
+          </div>
+          <p class="block-body">{{ data.producto.notas }}</p>
         </div>
       }
     </div>
   </div>
 </mat-dialog-content>
 
-<mat-dialog-actions align="end">
+<mat-dialog-actions align="end" class="product-dialog-actions">
   <button mat-flat-button class="primary-action" type="button" mat-dialog-close>
+    <mat-icon>check</mat-icon>
     Cerrar
   </button>
 </mat-dialog-actions>
+

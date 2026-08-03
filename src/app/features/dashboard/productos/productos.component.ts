@@ -1,4 +1,4 @@
-import { AsyncPipe, CurrencyPipe } from '@angular/common';
+import { AsyncPipe, CurrencyPipe, DecimalPipe, TitleCasePipe } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -281,7 +281,8 @@ export class ProductosComponent implements OnInit {
 
   openView(producto: Producto): void {
     this.dialog.open(ProductViewDialogComponent, {
-      width: 'min(760px, 96vw)',
+      width: 'min(920px, 95vw)',
+      maxWidth: '920px',
       maxHeight: '92vh',
       data: {
         producto,
@@ -452,7 +453,15 @@ interface ProductPriceDialogData {
 @Component({
   selector: 'app-product-view-dialog',
   standalone: true,
-  imports: [CurrencyPipe, MatButtonModule, MatIconModule, MatDialogModule, StatusChipComponent],
+  imports: [
+    CurrencyPipe,
+    DecimalPipe,
+    TitleCasePipe,
+    MatButtonModule,
+    MatIconModule,
+    MatDialogModule,
+    StatusChipComponent,
+  ],
   templateUrl: './product-view-dialog.html',
   styleUrl: './product-view-dialog.css',
 })
@@ -463,16 +472,62 @@ export class ProductViewDialogComponent {
 
   readonly mainImage = computed(() => {
     if (!this.rawImages.length) return null;
-    const idx = Math.min(this.selectedIndex(), this.rawImages.length - 1);
+    const idx = Math.min(Math.max(0, this.selectedIndex()), this.rawImages.length - 1);
     return cloudinaryDetailUrl(this.rawImages[idx]);
   });
 
   readonly thumbnails = this.rawImages.map((img) => cloudinaryThumbnailUrl(img));
   readonly precioVenta = precioProducto(this.data.producto);
   readonly precioCompra = precioCompraProducto(this.data.producto);
+  readonly margenBs = this.precioVenta - this.precioCompra;
+  readonly margenPorcentaje =
+    this.precioCompra > 0 ? ((this.precioVenta - this.precioCompra) / this.precioCompra) * 100 : 0;
+
+  readonly colorHex = computed(() => {
+    const colorName = this.data.producto.color;
+    if (!colorName) return null;
+    const name = colorName.toLowerCase().trim();
+    const colorMap: Record<string, string> = {
+      negro: '#18181b',
+      blanco: '#ffffff',
+      gris: '#6b7280',
+      plomo: '#4b5563',
+      rojo: '#ef4444',
+      azul: '#2563eb',
+      'azul marino': '#1e3a8a',
+      verde: '#10b981',
+      'verde olivo': '#556b2f',
+      amarillo: '#eab308',
+      naranja: '#f97316',
+      rosado: '#ec4899',
+      rosa: '#ec4899',
+      morado: '#8b5cf6',
+      beige: '#f5f5dc',
+      marrón: '#78350f',
+      marron: '#78350f',
+      celeste: '#38bdf8',
+    };
+    return colorMap[name] ?? null;
+  });
 
   selectImage(index: number): void {
-    this.selectedIndex.set(index);
+    if (index >= 0 && index < this.rawImages.length) {
+      this.selectedIndex.set(index);
+    }
+  }
+
+  prevImage(): void {
+    if (this.rawImages.length <= 1) return;
+    const current = this.selectedIndex();
+    const prev = current === 0 ? this.rawImages.length - 1 : current - 1;
+    this.selectedIndex.set(prev);
+  }
+
+  nextImage(): void {
+    if (this.rawImages.length <= 1) return;
+    const current = this.selectedIndex();
+    const next = current === this.rawImages.length - 1 ? 0 : current + 1;
+    this.selectedIndex.set(next);
   }
 }
 
