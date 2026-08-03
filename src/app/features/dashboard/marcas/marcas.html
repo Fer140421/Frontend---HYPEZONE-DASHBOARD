@@ -10,13 +10,41 @@
 @if (listViewModel$ | async; as vm) {
   <mat-card class="list-card">
     <mat-card-content>
+      <div class="list-toolbar-row">
+        <span class="muted" style="font-size: 0.85rem; font-weight: 600;">
+          {{ vm.marcas.total }} {{ vm.marcas.total === 1 ? 'marca' : 'marcas' }}
+        </span>
+        <div class="view-toggle-group">
+          <button 
+            type="button" 
+            class="view-toggle-btn" 
+            [class.active]="viewType() === 'table'"
+            (click)="viewType.set('table')"
+            title="Vista de Lista"
+            aria-label="Vista de Lista"
+          >
+            <mat-icon>format_list_bulleted</mat-icon>
+          </button>
+          <button 
+            type="button" 
+            class="view-toggle-btn" 
+            [class.active]="viewType() === 'cards'"
+            (click)="viewType.set('cards')"
+            title="Vista de Tarjetas"
+            aria-label="Vista de Tarjetas"
+          >
+            <mat-icon>grid_view</mat-icon>
+          </button>
+        </div>
+      </div>
+
       @if (vm.marcas.total === 0) {
         <app-empty-state
           icon="label"
           title="Sin marcas"
           description="No hay marcas registradas en el sistema."
         />
-      } @else {
+      } @else if (viewType() === 'table') {
         <div class="catalog-list">
           @for (item of vm.marcas.items; track item.id) {
             <div class="brand-item">
@@ -46,6 +74,38 @@
             </div>
           }
         </div>
+      } @else {
+        <div class="listing-cards-grid">
+          @for (item of vm.marcas.items; track item.id) {
+            <div class="listing-card-item">
+              <div class="card-media-wrap">
+                @if (getMarcaImagen(item); as img) {
+                  <img [src]="thumbnail(img)" [alt]="item.nombre" loading="lazy" decoding="async" />
+                } @else {
+                  <div class="card-media-placeholder">
+                    <mat-icon>label</mat-icon>
+                  </div>
+                }
+              </div>
+              <div class="card-body-content" style="text-align: center; align-items: center;">
+                <h3 class="card-item-title">{{ item.nombre }}</h3>
+              </div>
+              <div class="card-footer-actions">
+                @if (auth.can('catalogs.update')) {
+                  <button mat-icon-button type="button" (click)="openEdit(item)" aria-label="Editar marca">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                }
+                @if (auth.can('catalogs.delete')) {
+                  <button mat-icon-button color="warn" type="button" (click)="removeMarca(item.id!)" aria-label="Eliminar marca">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
 
         <mat-paginator
           [length]="vm.marcas.total"
@@ -54,7 +114,6 @@
           [pageSizeOptions]="pageSizeOptions"
           (page)="updatePage($event)"
         />
-      }
     </mat-card-content>
   </mat-card>
 } @else {

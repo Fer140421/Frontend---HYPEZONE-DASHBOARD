@@ -36,6 +36,7 @@ import { MarcaRepository } from '../../../core/repositories/marca.repository';
 import { TallaRepository } from '../../../core/repositories/talla.repository';
 import { VentaService } from '../../../core/services/venta.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { ViewPreferenceService } from '../../../core/services/view-preference.service';
 import { cloudinaryDetailUrl, cloudinaryThumbnailUrl } from '../../../core/utils/cloudinary-image.util';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
@@ -116,6 +117,7 @@ export class ProductosComponent implements OnInit {
   readonly columns = ['imagen', 'nombre', 'talla', 'precioVenta', 'estado', 'acciones'];
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
   readonly mode = signal<'list' | 'new' | 'detail'>('list');
+  readonly viewType = inject(ViewPreferenceService).getViewSignal('productos', 'table');
   readonly currentId = signal<string | null>(null);
   readonly currentProducto = signal<Producto | null>(null);
   readonly imagenes = signal<string[]>([]);

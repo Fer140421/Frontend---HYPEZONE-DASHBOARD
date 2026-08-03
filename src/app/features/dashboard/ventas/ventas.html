@@ -256,26 +256,54 @@
     <mat-card class="list-card">
       <mat-card-content>
         <form class="filters" [formGroup]="filters">
-        <mat-form-field appearance="outline">
-          <mat-label>Producto</mat-label>
-          <input matInput formControlName="producto" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Metodo de pago</mat-label>
-          <mat-select formControlName="metodoPago">
-            <mat-option value="">Todos</mat-option>
-            @for (metodo of metodos; track metodo) {
-              <mat-option [value]="metodo">{{ metodo }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Desde</mat-label>
-          <input matInput [matDatepicker]="fromPicker" formControlName="desde" />
-          <mat-datepicker-toggle matIconSuffix [for]="fromPicker" />
-          <mat-datepicker #fromPicker />
-        </mat-form-field>
-      </form>
+          <mat-form-field appearance="outline">
+            <mat-label>Producto</mat-label>
+            <input matInput formControlName="producto" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Metodo de pago</mat-label>
+            <mat-select formControlName="metodoPago">
+              <mat-option value="">Todos</mat-option>
+              @for (metodo of metodos; track metodo) {
+                <mat-option [value]="metodo">{{ metodo }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Desde</mat-label>
+            <input matInput [matDatepicker]="fromPicker" formControlName="desde" />
+            <mat-datepicker-toggle matIconSuffix [for]="fromPicker" />
+            <mat-datepicker #fromPicker />
+          </mat-form-field>
+        </form>
+
+        <div class="list-toolbar-row">
+          <span class="muted" style="font-size: 0.85rem; font-weight: 600;">
+            {{ vm.ventas.total }} {{ vm.ventas.total === 1 ? 'venta' : 'ventas' }}
+          </span>
+          <div class="view-toggle-group">
+            <button 
+              type="button" 
+              class="view-toggle-btn" 
+              [class.active]="viewType() === 'table'"
+              (click)="viewType.set('table')"
+              title="Vista de Tabla"
+              aria-label="Vista de Tabla"
+            >
+              <mat-icon>table_chart</mat-icon>
+            </button>
+            <button 
+              type="button" 
+              class="view-toggle-btn" 
+              [class.active]="viewType() === 'cards'"
+              (click)="viewType.set('cards')"
+              title="Vista de Tarjetas"
+              aria-label="Vista de Tarjetas"
+            >
+              <mat-icon>grid_view</mat-icon>
+            </button>
+          </div>
+        </div>
 
       @if (vm.ventas.total === 0) {
         <app-empty-state
@@ -283,7 +311,7 @@
           title="Sin ventas"
           description="No se encontraron registros de ventas con los criterios seleccionados."
         />
-      } @else {
+      } @else if (viewType() === 'table') {
         <div class="table-scroll">
           <table mat-table [dataSource]="vm.ventas.items">
             <ng-container matColumnDef="nombreProducto">
@@ -333,6 +361,43 @@
             <tr mat-row *matRowDef="let row; columns: columns"></tr>
           </table>
         </div>
+      } @else {
+        <div class="listing-cards-grid">
+          @for (venta of vm.ventas.items; track venta.id) {
+            <div class="listing-card-item">
+              <div class="card-body-content">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                  <h3 class="card-item-title">{{ venta.nombreProducto }}</h3>
+                  <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 99px; background: rgba(54, 183, 166, 0.12); color: #2fa394; font-weight: 700; text-transform: uppercase;">
+                    {{ venta.metodoPago || 'Efectivo' }}
+                  </span>
+                </div>
+                <div class="card-item-subtitle">
+                  {{ venta.fechaVenta | date: 'mediumDate' }}
+                  @if (venta.clienteNombre) { · {{ venta.clienteNombre }} }
+                </div>
+                <div class="card-item-price">{{ venta.precioVenta | currency: 'BOB' : 'symbol-narrow' }}</div>
+                <div class="card-item-details">
+                  <span>Ganancia: <strong style="color: #10b981;">{{ venta.ganancia | currency: 'BOB' : 'symbol-narrow' }}</strong></span>
+                  @if (venta.operacionId) {
+                    <span>· Op: #{{ venta.operacionId.slice(0, 6).toUpperCase() }}</span>
+                  }
+                </div>
+              </div>
+              <div class="card-footer-actions">
+                <button mat-icon-button type="button" (click)="viewSale(venta)" aria-label="Ver venta">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+                @if (auth.can('sales.update')) {
+                  <button mat-icon-button type="button" (click)="editSale(venta)" aria-label="Editar venta">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
 
         <mat-paginator
           [length]="vm.ventas.total"
@@ -341,7 +406,6 @@
           [pageSizeOptions]="pageSizeOptions"
           (page)="updatePage($event)"
         />
-      }
       </mat-card-content>
     </mat-card>
   } @else {

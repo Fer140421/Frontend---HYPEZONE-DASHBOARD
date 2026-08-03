@@ -1,0 +1,370 @@
+/* Container layout & Sections */
+.summary-section {
+  margin-bottom: 24px;
+}
+
+.section-title-row {
+  margin-bottom: 12px;
+}
+
+.section-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--hz-gray);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.section-subtitle mat-icon {
+  font-size: 1.1rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--hz-primary);
+}
+
+/* Grids */
+.financial-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.operational-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+
+/* Metric Cards */
+.metric-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px !important;
+  border-radius: 14px !important;
+  background: var(--hz-surface) !important;
+  border: 1px solid var(--hz-border) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  overflow: hidden;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(54, 183, 166, 0.4) !important;
+}
+
+/* Header inside Card */
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.card-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--hz-gray);
+  line-height: 1.25;
+}
+
+/* Icon Badges */
+.icon-badge {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.icon-badge mat-icon {
+  font-size: 1.2rem;
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.image-badge {
+  overflow: hidden;
+  padding: 0 !important;
+  border: 1px solid var(--hz-border);
+}
+
+.image-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* Badge variants */
+.icon-badge[data-type="ganancia"] {
+  background: rgba(54, 183, 166, 0.15);
+  color: #2fa394;
+}
+
+.icon-badge[data-type="top_marca"] {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+}
+
+.icon-badge[data-type="vendido"] {
+  background: rgba(2, 132, 199, 0.12);
+  color: #0284c7;
+}
+
+.icon-badge[data-type="invertido"] {
+  background: rgba(217, 119, 6, 0.12);
+  color: #d97706;
+}
+
+.icon-badge[data-type="productos"] {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+}
+
+.icon-badge[data-type="disponibles"] {
+  background: rgba(14, 165, 233, 0.12);
+  color: #0284c7;
+}
+
+.icon-badge[data-type="vendidos"] {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.icon-badge[data-type="lotes"] {
+  background: rgba(147, 51, 234, 0.12);
+  color: #9333ea;
+}
+
+/* Card Body & Typography */
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.card-value {
+  font-size: clamp(1.2rem, 1.8vw, 1.6rem);
+  font-weight: 800;
+  color: var(--hz-black);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-subtext {
+  font-size: 0.75rem;
+  color: var(--hz-gray-light, #9ca3af);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Hero / Featured Card ("Ganancia Real") */
+.featured-card {
+  background: linear-gradient(135deg, rgba(54, 183, 166, 0.1), rgba(54, 183, 166, 0.02)) !important;
+  border: 1px solid rgba(54, 183, 166, 0.4) !important;
+}
+
+.featured-card .card-value {
+  color: #2fa394;
+  font-size: clamp(1.35rem, 2.2vw, 1.85rem);
+}
+
+.featured-card .card-subtext {
+  color: var(--hz-primary-hover);
+  font-weight: 600;
+}
+
+/* Recent Sales Section Enhancements */
+.recent-sales-section {
+  margin-top: 10px;
+}
+
+.sales-card {
+  border-radius: 14px !important;
+  padding: 12px 16px 16px !important;
+}
+
+.sales-card mat-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 0 !important;
+}
+
+.sales-header-icon {
+  color: var(--hz-primary);
+}
+
+.sales-list {
+  padding: 0 !important;
+}
+
+.sale-item {
+  border-radius: 10px !important;
+  margin-bottom: 4px;
+  transition: background 0.15s ease;
+}
+
+.sale-item:hover {
+  background: var(--hz-background) !important;
+}
+
+.sale-icon-badge {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--hz-primary-soft);
+  color: var(--hz-primary);
+  margin-right: 12px;
+}
+
+.sale-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--hz-black);
+}
+
+.sale-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.82rem;
+  color: var(--hz-gray);
+  margin-top: 2px;
+}
+
+.sale-price {
+  color: var(--hz-primary-hover);
+  font-size: 0.9rem;
+}
+
+.empty-sales {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--hz-gray);
+  gap: 8px;
+}
+
+.empty-sales mat-icon {
+  font-size: 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  opacity: 0.5;
+}
+
+.loading-card {
+  padding: 32px !important;
+}
+
+/* ------------------------------------------------------------- */
+/* RESPONSIVE BREAKPOINTS (MOBILE & TABLET ADJUSTMENTS)          */
+/* ------------------------------------------------------------- */
+
+@media (max-width: 1024px) {
+  .financial-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .operational-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  /* Financial grid on mobile: 2 columns, Hero card spans full width */
+  .financial-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .featured-card {
+    grid-column: 1 / -1; /* Spans full width (2 columns) */
+  }
+
+  /* Operational grid on mobile: STRICTLY 2 BY 2 ALWAYS */
+  .operational-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .metric-card {
+    padding: 12px 14px !important;
+    border-radius: 12px !important;
+  }
+
+  .card-header {
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .icon-badge {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+  }
+
+  .icon-badge mat-icon {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .card-label {
+    font-size: 0.78rem;
+  }
+
+  .card-value {
+    font-size: clamp(1.05rem, 4.2vw, 1.25rem);
+  }
+
+  .featured-card .card-value {
+    font-size: clamp(1.25rem, 5.5vw, 1.55rem);
+  }
+
+  .card-subtext {
+    font-size: 0.7rem;
+  }
+
+  .summary-section {
+    margin-bottom: 18px;
+  }
+}
+
+/* Super small screens (< 360px) extra safety */
+@media (max-width: 360px) {
+  .metric-card {
+    padding: 10px 10px !important;
+  }
+  .card-value {
+    font-size: 0.98rem;
+  }
+  .featured-card .card-value {
+    font-size: 1.15rem;
+  }
+  .card-subtext {
+    display: none; /* Hide subtext on micro screens if space is tight */
+  }
+}

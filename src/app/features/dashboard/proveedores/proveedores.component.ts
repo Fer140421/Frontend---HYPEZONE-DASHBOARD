@@ -15,6 +15,7 @@ import { BehaviorSubject, combineLatest, firstValueFrom, map, shareReplay, start
 import { Proveedor } from '../../../core/models/proveedor.model';
 import { ProveedorRepository } from '../../../core/repositories/proveedor.repository';
 import { AuthService } from '../../../core/services/auth.service';
+import { ViewPreferenceService } from '../../../core/services/view-preference.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
@@ -67,6 +68,7 @@ export class ProveedoresComponent implements OnInit {
     return this.auth.canAny(['providers.update', 'providers.delete']) ? [...base, 'acciones'] : base;
   }
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
+  readonly viewType = inject(ViewPreferenceService).getViewSignal('proveedores', 'table');
   readonly filters = this.fb.nonNullable.group({
     nombre: [''],
     categoria: [''],

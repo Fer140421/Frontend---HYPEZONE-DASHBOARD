@@ -13,6 +13,7 @@ import { BehaviorSubject, combineLatest, firstValueFrom, map, take } from 'rxjs'
 import { Categoria, categoriasIniciales } from '../../../core/models/catalogo.model';
 import { CategoriaRepository } from '../../../core/repositories/categoria.repository';
 import { AuthService } from '../../../core/services/auth.service';
+import { ViewPreferenceService } from '../../../core/services/view-preference.service';
 import {
   DEFAULT_PAGE_SIZE,
   DEFAULT_PAGE_SIZE_OPTIONS,
@@ -53,6 +54,7 @@ export class CatalogosComponent implements OnInit {
   });
 
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
+  readonly viewType = inject(ViewPreferenceService).getViewSignal('categorias', 'cards');
   readonly categorias$ = this.categorias.getAll().pipe(map((items) => [...items].sort((a, b) => a.nombre.localeCompare(b.nombre))));
   readonly listViewModel$ = combineLatest([this.categorias$, this.pagination$]).pipe(
     map(([categorias, pagination]) => ({ categorias: paginateItems(categorias, pagination) })),

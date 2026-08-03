@@ -1,6 +1,7 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { AsyncPipe } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -48,6 +49,18 @@ export class DashboardLayoutComponent {
     shareReplay({ bufferSize: 1, refCount: true }),
   );
 
+  readonly sidebarOpened = signal(true);
+
+  constructor() {
+    this.isHandset$.pipe(takeUntilDestroyed()).subscribe((isHandset) => {
+      this.sidebarOpened.set(!isHandset);
+    });
+  }
+
+  toggleSidebar(): void {
+    this.sidebarOpened.update((opened) => !opened);
+  }
+
   private readonly navItems: NavItem[] = [
     { label: 'Resumen', icon: 'dashboard', route: '/dashboard/resumen', permission: 'dashboard.view' },
     { label: 'Lotes', icon: 'local_shipping', route: '/dashboard/lotes', permission: 'lots.view' },
@@ -66,3 +79,4 @@ export class DashboardLayoutComponent {
     void this.auth.logout();
   }
 }
+

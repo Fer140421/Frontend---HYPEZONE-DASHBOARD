@@ -13,6 +13,7 @@ import { BehaviorSubject, combineLatest, firstValueFrom, map, take } from 'rxjs'
 import { Marca, marcaImagen, marcasIniciales } from '../../../core/models/catalogo.model';
 import { MarcaRepository } from '../../../core/repositories/marca.repository';
 import { AuthService } from '../../../core/services/auth.service';
+import { ViewPreferenceService } from '../../../core/services/view-preference.service';
 import { cloudinaryThumbnailUrl } from '../../../core/utils/cloudinary-image.util';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { ImageUploaderComponent } from '../../../shared/components/image-uploader/image-uploader.component';
@@ -57,6 +58,7 @@ export class MarcasComponent implements OnInit {
   });
 
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
+  readonly viewType = inject(ViewPreferenceService).getViewSignal('marcas', 'cards');
   readonly marcas$ = this.marcas.getAll().pipe(map((items) => [...items].sort((a, b) => a.nombre.localeCompare(b.nombre))));
   readonly listViewModel$ = combineLatest([this.marcas$, this.pagination$]).pipe(
     map(([marcas, pagination]) => ({ marcas: paginateItems(marcas, pagination) })),

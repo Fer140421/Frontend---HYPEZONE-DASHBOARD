@@ -4,7 +4,8 @@
         #sidenav
         class="sidebar"
         [mode]="(isHandset$ | async) ? 'over' : 'side'"
-        [opened]="(isHandset$ | async) === false"
+        [opened]="sidebarOpened()"
+        (openedChange)="sidebarOpened.set($event)"
       >
         <a class="brand" routerLink="/dashboard/resumen">
           <span class="brand-mark">HZ</span>
@@ -20,7 +21,7 @@
               mat-list-item
               [routerLink]="item.route"
               routerLinkActive="active-link"
-              (click)="sidenav.mode === 'over' ? sidenav.close() : undefined"
+              (click)="sidenav.mode === 'over' ? sidebarOpened.set(false) : undefined"
             >
               <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
               <span matListItemTitle>{{ item.label }}</span>
@@ -31,11 +32,15 @@
 
       <mat-sidenav-content>
         <mat-toolbar class="topbar">
-          @if (isHandset$ | async) {
-            <button mat-icon-button type="button" (click)="sidenav.toggle()" aria-label="Abrir menu">
-              <mat-icon>menu</mat-icon>
-            </button>
-          }
+          <button
+            mat-icon-button
+            type="button"
+            (click)="toggleSidebar()"
+            [title]="sidebarOpened() ? 'Ocultar menú' : 'Mostrar menú'"
+            aria-label="Alternar menú lateral"
+          >
+            <mat-icon>{{ sidebarOpened() ? 'menu_open' : 'menu' }}</mat-icon>
+          </button>
           <span class="topbar-title">Panel de control</span>
           @if (showEnvironmentBanner) {
             <span class="environment-badge">ENTORNO DE {{ environmentName }}</span>

@@ -1,46 +1,117 @@
 
-    <app-page-header
-      title="Resumen"
-      description="Lectura rapida del inventario, ventas y margen de la tienda."
-    />
+<app-page-header
+  title="Resumen"
+  description="Lectura rápida del inventario, ventas y margen de la tienda."
+/>
 
-    @if (vm$ | async; as vm) {
-      <section class="metric-grid">
-        @for (card of vm.cards; track card.label) {
-          <mat-card class="metric-card">
-            <mat-icon>{{ card.icon }}</mat-icon>
-            <span>{{ card.label }}</span>
-            <strong>{{ card.currency ? (card.value | currency: 'BOB' : 'symbol-narrow') : card.value }}</strong>
-          </mat-card>
-        }
-      </section>
-
-      <section class="recent-sales-section">
-        <mat-card>
-          <mat-card-header>
-            <mat-card-title>Ultimas ventas (últimos 5 productos vendidos)</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <mat-list>
-              @for (venta of vm.ultimasVentas; track venta.id) {
-                <mat-list-item>
-                  <mat-icon matListItemIcon>receipt_long</mat-icon>
-                  <div matListItemTitle>{{ venta.nombreProducto }}</div>
-                  <div matListItemLine>
-                    {{ venta.fechaVenta | date: 'mediumDate' }} ·
-                    {{ venta.precioVenta | currency: 'BOB' : 'symbol-narrow' }}
-                  </div>
-                </mat-list-item>
-              } @empty {
-                <p class="muted padded">Aun no hay ventas registradas.</p>
-              }
-            </mat-list>
-          </mat-card-content>
+@if (vm$ | async; as vm) {
+  <!-- Financial Section Header / Highlights -->
+  <div class="summary-section">
+    <div class="section-title-row">
+      <h2 class="section-subtitle">
+        <mat-icon>analytics</mat-icon>
+        Finanzas & Rendimiento
+      </h2>
+    </div>
+    
+    <section class="financial-grid">
+      @for (card of vm.financialCards; track card.type) {
+        <mat-card 
+          class="metric-card financial-card" 
+          [class.featured-card]="card.featured"
+          [attr.data-type]="card.type"
+        >
+          <div class="card-header">
+            <div class="icon-badge" [attr.data-type]="card.type">
+              <mat-icon>{{ card.icon }}</mat-icon>
+            </div>
+            <span class="card-label">{{ card.label }}</span>
+          </div>
+          <div class="card-body">
+            <strong class="card-value">
+              {{ card.currency ? (card.value | currency: 'BOB' : 'symbol-narrow') : card.value }}
+            </strong>
+            <span class="card-subtext">{{ card.subtext }}</span>
+          </div>
         </mat-card>
-      </section>
-    } @else {
-      <mat-card>
-        <app-loading text="Cargando resumen..." />
-      </mat-card>
-    }
+      }
+    </section>
+  </div>
+
+  <!-- Operational Section Header / Inventory & Insights -->
+  <div class="summary-section">
+    <div class="section-title-row">
+      <h2 class="section-subtitle">
+        <mat-icon>inventory_2</mat-icon>
+        Inventario & Marcas Destacadas
+      </h2>
+    </div>
+
+    <section class="operational-grid">
+      @for (card of vm.operationalCards; track card.type) {
+        <mat-card 
+          class="metric-card operational-card"
+          [class.featured-card]="card.featured"
+          [attr.data-type]="card.type"
+        >
+          <div class="card-header">
+            @if (card.imageUrl) {
+              <div class="icon-badge image-badge" [attr.data-type]="card.type">
+                <img [src]="card.imageUrl" [alt]="card.value.toString()" />
+              </div>
+            } @else {
+              <div class="icon-badge" [attr.data-type]="card.type">
+                <mat-icon>{{ card.icon }}</mat-icon>
+              </div>
+            }
+            <span class="card-label">{{ card.label }}</span>
+          </div>
+          <div class="card-body">
+            <strong class="card-value">
+              {{ card.currency ? (card.value | currency: 'BOB' : 'symbol-narrow') : card.value }}
+            </strong>
+            <span class="card-subtext">{{ card.subtext }}</span>
+          </div>
+        </mat-card>
+      }
+    </section>
+  </div>
+
+  <!-- Recent Sales Section -->
+  <section class="recent-sales-section">
+    <mat-card class="sales-card">
+      <mat-card-header>
+        <mat-icon class="sales-header-icon">history</mat-icon>
+        <mat-card-title>Últimas ventas</mat-card-title>
+        <mat-card-subtitle>Últimos 5 productos vendidos</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-list class="sales-list">
+          @for (venta of vm.ultimasVentas; track venta.id) {
+            <mat-list-item class="sale-item">
+              <div matListItemIcon class="sale-icon-badge">
+                <mat-icon>receipt_long</mat-icon>
+              </div>
+              <div matListItemTitle class="sale-title">{{ venta.nombreProducto }}</div>
+              <div matListItemLine class="sale-meta">
+                <span>{{ venta.fechaVenta | date: 'mediumDate' }}</span>
+                <strong class="sale-price">{{ venta.precioVenta | currency: 'BOB' : 'symbol-narrow' }}</strong>
+              </div>
+            </mat-list-item>
+          } @empty {
+            <div class="empty-sales">
+              <mat-icon>shopping_bag</mat-icon>
+              <p class="muted">Aún no hay ventas registradas.</p>
+            </div>
+          }
+        </mat-list>
+      </mat-card-content>
+    </mat-card>
+  </section>
+} @else {
+  <mat-card class="loading-card">
+    <app-loading text="Cargando resumen..." />
+  </mat-card>
+}
+
   

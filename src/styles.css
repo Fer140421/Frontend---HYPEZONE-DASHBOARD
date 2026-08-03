@@ -623,3 +623,229 @@ mat-paginator {
     grid-template-columns: 1fr;
   }
 }
+
+/* ------------------------------------------------------------- */
+/* VIEW TOGGLE & LISTING CARDS GRID STYLING                      */
+/* ------------------------------------------------------------- */
+
+/* Toolbar row for View Mode Toggle & extra controls */
+.list-toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.view-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  background: var(--hz-background);
+  padding: 3px;
+  border-radius: 10px;
+  border: 1px solid var(--hz-border);
+  gap: 2px;
+  margin-left: auto;
+}
+
+.view-toggle-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--hz-gray);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.view-toggle-btn:hover {
+  color: var(--hz-black);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.view-toggle-btn.active {
+  background: var(--hz-surface);
+  color: var(--hz-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.view-toggle-btn mat-icon {
+  font-size: 1.25rem;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Universal Listing Cards Grid */
+.listing-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+  margin-bottom: 16px;
+}
+
+.listing-card-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid var(--hz-border) !important;
+  border-radius: 12px !important;
+  background: var(--hz-surface) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  overflow: hidden;
+  padding: 0 !important;
+}
+
+.listing-card-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(54, 183, 166, 0.4) !important;
+}
+
+/* Card Media / Image Container */
+.card-media-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #f1f3f5;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--hz-border);
+}
+
+.card-media-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 0.3s ease;
+}
+
+.listing-card-item:hover .card-media-wrap img {
+  transform: scale(1.04);
+}
+
+.card-media-placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: var(--hz-background);
+  color: var(--hz-gray-light);
+}
+
+.card-media-placeholder mat-icon {
+  font-size: 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  opacity: 0.5;
+}
+
+.card-status-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+}
+
+/* Card Body */
+.card-body-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  flex: 1;
+}
+
+.card-item-title {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--hz-black);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-item-subtitle {
+  font-size: 0.8rem;
+  color: var(--hz-gray);
+  line-height: 1.3;
+}
+
+.card-item-price {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--hz-primary-hover);
+  margin-top: 4px;
+}
+
+.card-item-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--hz-gray);
+  margin-top: 2px;
+}
+
+.card-item-details span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--hz-border);
+  background: rgba(0, 0, 0, 0.015);
+}
+
+@media (max-width: 640px) {
+  .listing-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .card-body-content {
+    padding: 10px 12px;
+    gap: 4px;
+  }
+
+  .card-item-title {
+    font-size: 0.88rem;
+  }
+
+  .card-item-subtitle {
+    font-size: 0.75rem;
+  }
+
+  .card-item-price {
+    font-size: 1rem;
+  }
+
+  .card-footer-actions {
+    padding: 6px 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .listing-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

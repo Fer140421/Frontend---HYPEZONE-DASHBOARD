@@ -13,47 +13,75 @@
       <mat-card class="list-card">
         <mat-card-content>
           <form class="filters" [formGroup]="filters">
-          <mat-form-field appearance="outline">
-            <mat-label>Buscar</mat-label>
-            <input matInput formControlName="search" placeholder="Nombre o marca" />
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Categoria</mat-label>
-            <mat-select formControlName="categoria">
-              <mat-option value="">Todas</mat-option>
-              @for (categoria of vm.categorias; track categoria.id) {
-                <mat-option [value]="categoria.nombre">{{ categoria.nombre }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Talla</mat-label>
-            <mat-select formControlName="talla">
-              <mat-option value="">Todas</mat-option>
-              @for (talla of vm.tallas; track talla.id) {
-                <mat-option [value]="talla.nombre">{{ talla.nombre }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Estado</mat-label>
-            <mat-select formControlName="estado">
-              <mat-option value="">Todos</mat-option>
-              @for (estado of estados; track estado) {
-                <mat-option [value]="estado">{{ estado }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Lote</mat-label>
-            <mat-select formControlName="loteId">
-              <mat-option value="">Todos</mat-option>
-              @for (lote of vm.lotes; track lote.id) {
-                <mat-option [value]="lote.id">{{ lote.nombre }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-        </form>
+            <mat-form-field appearance="outline">
+              <mat-label>Buscar</mat-label>
+              <input matInput formControlName="search" placeholder="Nombre o marca" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Categoria</mat-label>
+              <mat-select formControlName="categoria">
+                <mat-option value="">Todas</mat-option>
+                @for (categoria of vm.categorias; track categoria.id) {
+                  <mat-option [value]="categoria.nombre">{{ categoria.nombre }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Talla</mat-label>
+              <mat-select formControlName="talla">
+                <mat-option value="">Todas</mat-option>
+                @for (talla of vm.tallas; track talla.id) {
+                  <mat-option [value]="talla.nombre">{{ talla.nombre }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Estado</mat-label>
+              <mat-select formControlName="estado">
+                <mat-option value="">Todos</mat-option>
+                @for (estado of estados; track estado) {
+                  <mat-option [value]="estado">{{ estado }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Lote</mat-label>
+              <mat-select formControlName="loteId">
+                <mat-option value="">Todos</mat-option>
+                @for (lote of vm.lotes; track lote.id) {
+                  <mat-option [value]="lote.id">{{ lote.nombre }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </form>
+
+          <div class="list-toolbar-row">
+            <span class="muted" style="font-size: 0.85rem; font-weight: 600;">
+              {{ vm.productos.total }} {{ vm.productos.total === 1 ? 'producto' : 'productos' }}
+            </span>
+            <div class="view-toggle-group">
+              <button 
+                type="button" 
+                class="view-toggle-btn" 
+                [class.active]="viewType() === 'table'"
+                (click)="viewType.set('table')"
+                title="Vista de Tabla"
+                aria-label="Vista de Tabla"
+              >
+                <mat-icon>table_chart</mat-icon>
+              </button>
+              <button 
+                type="button" 
+                class="view-toggle-btn" 
+                [class.active]="viewType() === 'cards'"
+                (click)="viewType.set('cards')"
+                title="Vista de Tarjetas"
+                aria-label="Vista de Tarjetas"
+              >
+                <mat-icon>grid_view</mat-icon>
+              </button>
+            </div>
+          </div>
 
         @if (vm.productos.total === 0) {
           <app-empty-state
@@ -61,7 +89,7 @@
             title="Sin productos"
             description="No se encontraron productos registrados o que coincidan con los filtros."
           />
-        } @else {
+        } @else if (viewType() === 'table') {
           <div class="table-scroll">
             <table mat-table matSort [dataSource]="vm.productos.items" class="product-table">
               <ng-container matColumnDef="imagen">
@@ -129,6 +157,52 @@
               <tr mat-row *matRowDef="let row; columns: columns"></tr>
             </table>
           </div>
+        } @else {
+          <div class="listing-cards-grid">
+            @for (producto of vm.productos.items; track producto.id) {
+              <div class="listing-card-item">
+                <div class="card-media-wrap">
+                  @if (firstImage(producto); as image) {
+                    <img [src]="image" [alt]="producto.nombre" loading="lazy" decoding="async" />
+                  } @else {
+                    <div class="card-media-placeholder">
+                      <mat-icon>inventory_2</mat-icon>
+                    </div>
+                  }
+                  <div class="card-status-badge">
+                    <app-status-chip [status]="producto.estado" />
+                  </div>
+                </div>
+                <div class="card-body-content">
+                  <h3 class="card-item-title">{{ producto.nombre }}</h3>
+                  <div class="card-item-subtitle">{{ producto.marca || 'Sin marca' }} · Talla {{ producto.talla }}</div>
+                  <div class="card-item-price">{{ precio(producto) | currency: 'BOB' : 'symbol-narrow' }}</div>
+                </div>
+                <div class="card-footer-actions">
+                  <button mat-icon-button type="button" (click)="openView(producto)" aria-label="Ver producto">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                  @if (auth.can('products.update')) {
+                    <button mat-icon-button type="button" (click)="openEdit(producto)" aria-label="Editar producto">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  }
+                  @if (auth.can('products.delete')) {
+                    @if (producto.activo !== false) {
+                      <button mat-icon-button type="button" color="warn" (click)="softDelete(producto)" aria-label="Eliminar producto">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    } @else {
+                      <button mat-icon-button type="button" color="primary" (click)="confirmRestore(producto)" aria-label="Restaurar producto">
+                        <mat-icon>restore</mat-icon>
+                      </button>
+                    }
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
           <mat-paginator
             [length]="vm.productos.total"
             [pageIndex]="vm.productos.pageIndex"
@@ -136,7 +210,6 @@
             [pageSizeOptions]="pageSizeOptions"
             (page)="updatePage($event)"
           />
-        }
         </mat-card-content>
       </mat-card>
       } @else {

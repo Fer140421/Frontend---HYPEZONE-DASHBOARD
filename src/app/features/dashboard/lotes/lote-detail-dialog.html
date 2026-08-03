@@ -1,0 +1,146 @@
+<div class="dialog-header">
+  <div class="header-main">
+    <h2 mat-dialog-title class="dialog-title">{{ detail.resumen.lote.nombre }}</h2>
+    <app-status-chip [status]="detail.resumen.lote.activo === false ? (detail.resumen.cantidadDisponibles === 0 && detail.resumen.cantidadProductos > 0 ? 'terminado' : 'inactivo') : 'activo'" />
+  </div>
+  <button mat-icon-button mat-dialog-close aria-label="Cerrar dialogo">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+
+<mat-dialog-content class="detail-dialog-content">
+  <!-- Informacion General -->
+  <div class="detail-section">
+    <h3 class="section-subtitle"><mat-icon>info</mat-icon> Información General</h3>
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-label">Fecha de compra</span>
+        <strong class="info-val">{{ fecha(detail.resumen.lote.fechaCompra) | date: 'mediumDate' }}</strong>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Costo total</span>
+        <strong class="info-val highlight">{{ detail.resumen.lote.costoTotal | currency: 'BOB' : 'symbol-narrow' }}</strong>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Proveedor</span>
+        <strong class="info-val">{{ detail.resumen.lote.proveedor || 'No registrado' }}</strong>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Lugar de compra</span>
+        <strong class="info-val">{{ detail.resumen.lote.lugarCompra || 'No registrado' }}</strong>
+      </div>
+      @if (detail.resumen.lote.descripcion) {
+        <div class="info-item full">
+          <span class="info-label">Descripción</span>
+          <p class="info-text">{{ detail.resumen.lote.descripcion }}</p>
+        </div>
+      }
+      @if (detail.resumen.lote.notas) {
+        <div class="info-item full">
+          <span class="info-label">Notas</span>
+          <p class="info-text">{{ detail.resumen.lote.notas }}</p>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Rendimiento Financiero -->
+  <div class="detail-section">
+    <h3 class="section-subtitle"><mat-icon>analytics</mat-icon> Rendimiento Financiero</h3>
+    <div class="stats-badge-grid">
+      <div class="stat-badge">
+        <span class="stat-lbl">Productos</span>
+        <strong class="stat-num">{{ detail.resumen.cantidadProductos }}</strong>
+      </div>
+      <div class="stat-badge">
+        <span class="stat-lbl">Disponibles</span>
+        <strong class="stat-num color-blue">{{ detail.resumen.cantidadDisponibles }}</strong>
+      </div>
+      <div class="stat-badge">
+        <span class="stat-lbl">Vendidos</span>
+        <strong class="stat-num color-green">{{ detail.resumen.cantidadVendidos }}</strong>
+      </div>
+      <div class="stat-badge">
+        <span class="stat-lbl">Inversión Asignada</span>
+        <strong class="stat-num">{{ detail.resumen.inversionAsignada | currency: 'BOB' : 'symbol-narrow' }}</strong>
+      </div>
+      <div class="stat-badge">
+        <span class="stat-lbl">Valor Esperado</span>
+        <strong class="stat-num">{{ detail.resumen.valorEsperado | currency: 'BOB' : 'symbol-narrow' }}</strong>
+      </div>
+      <div class="stat-badge">
+        <span class="stat-lbl">Ingreso Real</span>
+        <strong class="stat-num color-teal">{{ detail.resumen.ingresoReal | currency: 'BOB' : 'symbol-narrow' }}</strong>
+      </div>
+      <div class="stat-badge highlight-stat">
+        <span class="stat-lbl">Ganancia Real</span>
+        <strong class="stat-num color-emerald">{{ detail.resumen.gananciaReal | currency: 'BOB' : 'symbol-narrow' }}</strong>
+      </div>
+      <div class="stat-badge">
+        <span class="stat-lbl">Recuperación</span>
+        <strong class="stat-num">{{ (detail.resumen.recuperacionInversion || 0) | number: '1.0-1' }}%</strong>
+      </div>
+    </div>
+  </div>
+
+  @if (Math.abs(detail.diferenciaInversion || 0) > 0.01) {
+    <div class="warning-banner">
+      <mat-icon>warning</mat-icon>
+      <span>El costo total del lote no coincide con la suma asignada a los productos (Diferencia: {{ (detail.diferenciaInversion || 0) | currency: 'BOB' : 'symbol-narrow' }}).</span>
+    </div>
+  }
+
+  <!-- Productos Asociados -->
+  <div class="detail-section">
+    <h3 class="section-subtitle"><mat-icon>inventory_2</mat-icon> Productos en este Lote ({{ detail.productos.length }})</h3>
+    <div class="items-mini-list">
+      @for (producto of detail.productos; track producto.id) {
+        <div class="mini-list-item">
+          @if (foto(producto); as img) {
+            <img [src]="img" [alt]="producto.nombre" class="mini-thumb" />
+          } @else {
+            <div class="mini-thumb placeholder"><mat-icon>image</mat-icon></div>
+          }
+          <div class="mini-info">
+            <strong class="mini-name">{{ producto.nombre }}</strong>
+            <span class="mini-sub">Compra: {{ precioCompra(producto) | currency: 'BOB' : 'symbol-narrow' }} | Venta: {{ precio(producto) | currency: 'BOB' : 'symbol-narrow' }}</span>
+          </div>
+          <app-status-chip [status]="producto.estado" />
+        </div>
+      } @empty {
+        <p class="muted">No hay productos asociados a este lote.</p>
+      }
+    </div>
+  </div>
+
+  <!-- Ventas Asociadas -->
+  @if (detail.ventas.length > 0) {
+    <div class="detail-section">
+      <h3 class="section-subtitle"><mat-icon>receipt_long</mat-icon> Ventas del Lote ({{ detail.ventas.length }})</h3>
+      <div class="items-mini-list">
+        @for (venta of detail.ventas; track venta.id) {
+          <div class="mini-list-item">
+            <div class="mini-info">
+              <strong class="mini-name">{{ venta.nombreProducto }}</strong>
+              <span class="mini-sub">{{ fecha(venta.fechaVenta) | date: 'mediumDate' }} · {{ venta.metodoPago || 'Efectivo' }}</span>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-weight: 700;">{{ (venta.precioVenta || 0) | currency: 'BOB' : 'symbol-narrow' }}</div>
+              <div style="font-size: 0.75rem; color: #10b981; font-weight: 600;">+{{ (venta.ganancia || 0) | currency: 'BOB' : 'symbol-narrow' }}</div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="dialog-actions">
+  <button mat-stroked-button type="button" mat-dialog-close>Cerrar</button>
+  @if (canUpdate) {
+    <button mat-flat-button class="primary-action" type="button" (click)="onEdit()">
+      <mat-icon>edit</mat-icon>
+      Editar lote
+    </button>
+  }
+</mat-dialog-actions>

@@ -39,6 +39,7 @@ import { ProveedorRepository } from '../../../core/repositories/proveedor.reposi
 import { TallaRepository } from '../../../core/repositories/talla.repository';
 import { VentaRepository } from '../../../core/repositories/venta.repository';
 import { LoteAnalyticsService } from '../../../core/services/lote-analytics.service';
+import { ViewPreferenceService } from '../../../core/services/view-preference.service';
 import { AuthService } from '../../../core/services/auth.service';
 import {
   LoteDeactivationMode,
@@ -51,6 +52,7 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { ImageUploaderComponent } from '../../../shared/components/image-uploader/image-uploader.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+import { LoteDetailDialogComponent } from './lote-detail-dialog.component';
 import { StatusChipComponent } from '../../../shared/components/status-chip/status-chip.component';
 import {
   DEFAULT_PAGE_SIZE,
@@ -65,7 +67,7 @@ interface LotesData {
   ventas: Venta[];
 }
 
-interface LoteDetail {
+export interface LoteDetail {
   resumen: LoteResumen;
   productos: Producto[];
   ventas: Venta[];
@@ -130,6 +132,7 @@ export class LotesComponent implements OnInit {
   }
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
   readonly mode = signal<'list' | 'new' | 'detail' | 'edit'>('list');
+  readonly viewType = inject(ViewPreferenceService).getViewSignal('lotes', 'table');
   readonly currentId = signal<string | null>(null);
 
   private readonly lotesSource$ = this.lotes.getAll(true).pipe(
@@ -284,6 +287,28 @@ export class LotesComponent implements OnInit {
     } catch (error) {
       this.showError(error);
     }
+  }
+
+  async openDetailModal(id: string): Promise<void> {
+    const data = await firstValueFrom(this.data$);
+    const detail = this.buildDetail(data, id);
+    if (!detail) return;
+
+    const ref = this.dialog.open(LoteDetailDialogComponent, {
+      data: {
+        detail,
+        canUpdate: this.auth.can('lots.update'),
+      },
+      width: '92vw',
+      maxWidth: '820px',
+      maxHeight: '90vh',
+    });
+
+    ref.afterClosed().subscribe((res) => {
+      if (res?.action === 'edit' && res.id) {
+        this.router.navigate(['/dashboard/lotes', res.id, 'editar']);
+      }
+    });
   }
 
   openProductDialog(lote: Lote): void {

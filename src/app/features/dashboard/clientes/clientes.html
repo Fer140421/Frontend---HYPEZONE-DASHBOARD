@@ -14,27 +14,55 @@
   <mat-card class="list-card">
     <mat-card-content>
       <form class="filters" [formGroup]="filters">
-      <mat-form-field appearance="outline">
-        <mat-label>Nombre</mat-label>
-        <input matInput formControlName="nombre" />
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Celular</mat-label>
-        <input matInput formControlName="celular" />
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>CI</mat-label>
-        <input matInput formControlName="ci" />
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Estado</mat-label>
-        <mat-select formControlName="estado">
-          <mat-option value="activos">Activos</mat-option>
-          <mat-option value="inactivos">Inactivos</mat-option>
-          <mat-option value="todos">Todos</mat-option>
-        </mat-select>
-      </mat-form-field>
-    </form>
+        <mat-form-field appearance="outline">
+          <mat-label>Nombre</mat-label>
+          <input matInput formControlName="nombre" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Celular</mat-label>
+          <input matInput formControlName="celular" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>CI</mat-label>
+          <input matInput formControlName="ci" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Estado</mat-label>
+          <mat-select formControlName="estado">
+            <mat-option value="activos">Activos</mat-option>
+            <mat-option value="inactivos">Inactivos</mat-option>
+            <mat-option value="todos">Todos</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </form>
+
+      <div class="list-toolbar-row">
+        <span class="muted" style="font-size: 0.85rem; font-weight: 600;">
+          {{ vm.clientes.total }} {{ vm.clientes.total === 1 ? 'cliente' : 'clientes' }}
+        </span>
+        <div class="view-toggle-group">
+          <button 
+            type="button" 
+            class="view-toggle-btn" 
+            [class.active]="viewType() === 'table'"
+            (click)="viewType.set('table')"
+            title="Vista de Tabla"
+            aria-label="Vista de Tabla"
+          >
+            <mat-icon>table_chart</mat-icon>
+          </button>
+          <button 
+            type="button" 
+            class="view-toggle-btn" 
+            [class.active]="viewType() === 'cards'"
+            (click)="viewType.set('cards')"
+            title="Vista de Tarjetas"
+            aria-label="Vista de Tarjetas"
+          >
+            <mat-icon>grid_view</mat-icon>
+          </button>
+        </div>
+      </div>
 
     @if (vm.clientes.total === 0) {
       <app-empty-state
@@ -42,7 +70,7 @@
         title="Sin clientes"
         description="No se encontraron clientes registrados o que coincidan con los filtros."
       />
-    } @else {
+    } @else if (viewType() === 'table') {
       <div class="table-scroll">
         <table mat-table [dataSource]="vm.clientes.items">
           <ng-container matColumnDef="nombreCompleto">
@@ -89,6 +117,46 @@
           <tr mat-row *matRowDef="let row; columns: columns"></tr>
         </table>
       </div>
+    } @else {
+      <div class="listing-cards-grid">
+        @for (cliente of vm.clientes.items; track cliente.id) {
+          <div class="listing-card-item">
+            <div class="card-body-content">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <h3 class="card-item-title">{{ cliente.nombreCompleto }}</h3>
+                <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 99px; font-weight: 700;"
+                      [style.background]="cliente.activo === false ? 'rgba(239, 68, 68, 0.12)' : 'rgba(34, 197, 94, 0.12)'"
+                      [style.color]="cliente.activo === false ? '#dc2626' : '#16a34a'">
+                  {{ cliente.activo === false ? 'Inactivo' : 'Activo' }}
+                </span>
+              </div>
+              <div class="card-item-subtitle" style="margin-top: 4px;">
+                Celular: <strong>{{ cliente.celular }}</strong>
+              </div>
+              <div class="card-item-subtitle">
+                CI: {{ cliente.ci || 'Sin CI' }}
+              </div>
+            </div>
+            <div class="card-footer-actions">
+              @if (auth.can('clients.update')) {
+                <button mat-icon-button type="button" (click)="openEdit(cliente)" aria-label="Editar cliente">
+                  <mat-icon>edit</mat-icon>
+                </button>
+              }
+              @if (auth.can('clients.delete') && cliente.activo === false) {
+                <button mat-icon-button type="button" (click)="confirmRestore(cliente)" aria-label="Reactivar cliente">
+                  <mat-icon>restore</mat-icon>
+                </button>
+              } @else if (auth.can('clients.delete')) {
+                <button mat-icon-button type="button" color="warn" (click)="confirmDelete(cliente)" aria-label="Eliminar cliente">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
 
       <mat-paginator
         [length]="vm.clientes.total"
@@ -97,7 +165,6 @@
         [pageSizeOptions]="pageSizeOptions"
         (page)="updatePage($event)"
       />
-    }
     </mat-card-content>
   </mat-card>
 } @else {

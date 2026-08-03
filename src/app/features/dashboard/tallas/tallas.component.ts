@@ -13,6 +13,7 @@ import { BehaviorSubject, combineLatest, firstValueFrom, map, take } from 'rxjs'
 import { Talla, tallasIniciales } from '../../../core/models/catalogo.model';
 import { TallaRepository } from '../../../core/repositories/talla.repository';
 import { AuthService } from '../../../core/services/auth.service';
+import { ViewPreferenceService } from '../../../core/services/view-preference.service';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -53,6 +54,7 @@ export class TallasComponent implements OnInit {
   });
 
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
+  readonly viewType = inject(ViewPreferenceService).getViewSignal('tallas', 'cards');
   readonly tallas$ = this.tallas.getAll().pipe(map((items) => [...items].sort((a, b) => a.nombre.localeCompare(b.nombre))));
   readonly listViewModel$ = combineLatest([this.tallas$, this.pagination$]).pipe(
     map(([tallas, pagination]) => ({ tallas: paginateItems(tallas, pagination) })),

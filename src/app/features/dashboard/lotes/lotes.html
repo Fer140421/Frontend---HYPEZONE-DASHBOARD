@@ -11,13 +11,41 @@
   @if (data$ | async; as data) {
     <mat-card class="list-card wide-table">
       <mat-card-content>
+        <div class="list-toolbar-row">
+          <span class="muted" style="font-size: 0.85rem; font-weight: 600;">
+            {{ data.resumenesPaginados.total }} {{ data.resumenesPaginados.total === 1 ? 'lote' : 'lotes' }}
+          </span>
+          <div class="view-toggle-group">
+            <button 
+              type="button" 
+              class="view-toggle-btn" 
+              [class.active]="viewType() === 'table'"
+              (click)="viewType.set('table')"
+              title="Vista de Tabla"
+              aria-label="Vista de Tabla"
+            >
+              <mat-icon>table_chart</mat-icon>
+            </button>
+            <button 
+              type="button" 
+              class="view-toggle-btn" 
+              [class.active]="viewType() === 'cards'"
+              (click)="viewType.set('cards')"
+              title="Vista de Tarjetas"
+              aria-label="Vista de Tarjetas"
+            >
+              <mat-icon>grid_view</mat-icon>
+            </button>
+          </div>
+        </div>
+
         @if (data.resumenesPaginados.total === 0) {
         <app-empty-state
           icon="inventory_2"
           title="Sin lotes"
           description="No hay lotes de compra registrados en el sistema."
         />
-      } @else {
+      } @else if (viewType() === 'table') {
         <div class="table-scroll">
           <table mat-table [dataSource]="data.resumenesPaginados.items">
             <ng-container matColumnDef="nombre">
@@ -81,7 +109,7 @@
             <ng-container matColumnDef="acciones">
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let r">
-                <button mat-icon-button [routerLink]="['/dashboard/lotes', r.lote.id]" aria-label="Ver lote">
+                <button mat-icon-button type="button" (click)="openDetailModal(r.lote.id!)" aria-label="Ver lote">
                   <mat-icon>visibility</mat-icon>
                 </button>
                 @if (auth.can('lots.update')) {
@@ -95,6 +123,46 @@
             <tr mat-row *matRowDef="let row; columns: columns"></tr>
           </table>
         </div>
+      } @else {
+        <div class="listing-cards-grid">
+          @for (r of data.resumenesPaginados.items; track r.lote.id) {
+            <div class="listing-card-item">
+              <div class="card-body-content">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                  <h3 class="card-item-title">{{ r.lote.nombre }}</h3>
+                  @if (r.lote.activo === false) {
+                    @if (r.cantidadDisponibles === 0 && r.cantidadProductos > 0) {
+                      <app-status-chip status="terminado" />
+                    } @else {
+                      <app-status-chip status="inactivo" />
+                    }
+                  } @else {
+                    <app-status-chip status="activo" />
+                  }
+                </div>
+                <div class="card-item-subtitle">Comprado: {{ fecha(r.lote.fechaCompra) | date: 'mediumDate' }}</div>
+                <div class="card-item-price">{{ r.lote.costoTotal | currency: 'BOB' : 'symbol-narrow' }}</div>
+                <div class="card-item-details" style="margin-top: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                  <div>Prods: <strong>{{ r.cantidadProductos }}</strong> ({{ r.cantidadDisponibles }} disp)</div>
+                  <div>Ganancia: <strong>{{ r.gananciaReal | currency: 'BOB' : 'symbol-narrow' }}</strong></div>
+                  <div>Ingreso: <strong>{{ r.ingresoReal | currency: 'BOB' : 'symbol-narrow' }}</strong></div>
+                  <div>Recup: <strong>{{ r.recuperacionInversion | number: '1.0-1' }}%</strong></div>
+                </div>
+              </div>
+              <div class="card-footer-actions">
+                <button mat-icon-button type="button" (click)="openDetailModal(r.lote.id!)" aria-label="Ver lote">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+                @if (auth.can('lots.update')) {
+                  <button mat-icon-button [routerLink]="['/dashboard/lotes', r.lote.id, 'editar']" aria-label="Modificar lote">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
         <mat-paginator
           [length]="data.resumenesPaginados.total"
           [pageIndex]="data.resumenesPaginados.pageIndex"
@@ -102,7 +170,6 @@
           [pageSizeOptions]="pageSizeOptions"
           (page)="updatePage($event)"
         />
-      }
       </mat-card-content>
     </mat-card>
   } @else {

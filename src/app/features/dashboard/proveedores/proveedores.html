@@ -14,23 +14,51 @@
   <mat-card class="list-card">
     <mat-card-content>
       <form class="filters" [formGroup]="filters">
-      <mat-form-field appearance="outline">
-        <mat-label>Buscar por nombre</mat-label>
-        <input matInput formControlName="nombre" placeholder="Nombre, direccion, celular o red social" />
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Categoria</mat-label>
-        <input matInput formControlName="categoria" placeholder="Categoria que vende" />
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Estado</mat-label>
-        <mat-select formControlName="estado">
-          <mat-option value="activos">Activos</mat-option>
-          <mat-option value="inactivos">Inactivos</mat-option>
-          <mat-option value="todos">Todos</mat-option>
-        </mat-select>
-      </mat-form-field>
-    </form>
+        <mat-form-field appearance="outline">
+          <mat-label>Buscar por nombre</mat-label>
+          <input matInput formControlName="nombre" placeholder="Nombre, direccion, celular o red social" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Categoria</mat-label>
+          <input matInput formControlName="categoria" placeholder="Categoria que vende" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Estado</mat-label>
+          <mat-select formControlName="estado">
+            <mat-option value="activos">Activos</mat-option>
+            <mat-option value="inactivos">Inactivos</mat-option>
+            <mat-option value="todos">Todos</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </form>
+
+      <div class="list-toolbar-row">
+        <span class="muted" style="font-size: 0.85rem; font-weight: 600;">
+          {{ vm.proveedores.total }} {{ vm.proveedores.total === 1 ? 'proveedor' : 'proveedores' }}
+        </span>
+        <div class="view-toggle-group">
+          <button 
+            type="button" 
+            class="view-toggle-btn" 
+            [class.active]="viewType() === 'table'"
+            (click)="viewType.set('table')"
+            title="Vista de Tabla"
+            aria-label="Vista de Tabla"
+          >
+            <mat-icon>table_chart</mat-icon>
+          </button>
+          <button 
+            type="button" 
+            class="view-toggle-btn" 
+            [class.active]="viewType() === 'cards'"
+            (click)="viewType.set('cards')"
+            title="Vista de Tarjetas"
+            aria-label="Vista de Tarjetas"
+          >
+            <mat-icon>grid_view</mat-icon>
+          </button>
+        </div>
+      </div>
 
     @if (vm.proveedores.total === 0) {
       <app-empty-state
@@ -38,7 +66,7 @@
         title="Sin proveedores"
         description="No se encontraron proveedores registrados o que coincidan con los filtros."
       />
-    } @else {
+    } @else if (viewType() === 'table') {
       <div class="table-scroll">
         <table mat-table [dataSource]="vm.proveedores.items">
           <ng-container matColumnDef="nombreCompleto">
@@ -95,6 +123,56 @@
           <tr mat-row *matRowDef="let row; columns: columns"></tr>
         </table>
       </div>
+    } @else {
+      <div class="listing-cards-grid">
+        @for (proveedor of vm.proveedores.items; track proveedor.id) {
+          <div class="listing-card-item">
+            <div class="card-body-content">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <h3 class="card-item-title">{{ proveedor.nombreCompleto }}</h3>
+                <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 99px; font-weight: 700;"
+                      [style.background]="proveedor.activo === false ? 'rgba(239, 68, 68, 0.12)' : 'rgba(34, 197, 94, 0.12)'"
+                      [style.color]="proveedor.activo === false ? '#dc2626' : '#16a34a'">
+                  {{ proveedor.activo === false ? 'Inactivo' : 'Activo' }}
+                </span>
+              </div>
+              <div class="card-item-subtitle" style="margin-top: 4px;">
+                Celular: <strong>{{ proveedor.celular }}</strong>
+              </div>
+              <div class="card-item-subtitle">
+                Dirección: {{ proveedor.direccion || 'Sin dirección' }}
+              </div>
+              @if (categoriesLabel(proveedor); as cat) {
+                <div class="card-item-subtitle" style="color: var(--hz-primary-hover);">
+                  Categorías: {{ cat }}
+                </div>
+              }
+              @if (redesLabel(proveedor); as redes) {
+                <div class="card-item-subtitle" style="font-size: 0.75rem;">
+                  Redes: {{ redes }}
+                </div>
+              }
+            </div>
+            <div class="card-footer-actions">
+              @if (auth.can('providers.update')) {
+                <button mat-icon-button type="button" (click)="openEdit(proveedor)" aria-label="Editar proveedor">
+                  <mat-icon>edit</mat-icon>
+                </button>
+              }
+              @if (auth.can('providers.delete') && proveedor.activo === false) {
+                <button mat-icon-button type="button" (click)="confirmRestore(proveedor)" aria-label="Reactivar proveedor">
+                  <mat-icon>restore</mat-icon>
+                </button>
+              } @else if (auth.can('providers.delete')) {
+                <button mat-icon-button type="button" color="warn" (click)="confirmDelete(proveedor)" aria-label="Eliminar proveedor">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
 
       <mat-paginator
         [length]="vm.proveedores.total"
@@ -103,7 +181,6 @@
         [pageSizeOptions]="pageSizeOptions"
         (page)="updatePage($event)"
       />
-    }
     </mat-card-content>
   </mat-card>
 } @else {

@@ -15,6 +15,7 @@ import { BehaviorSubject, combineLatest, firstValueFrom, map, shareReplay, start
 import { Cliente } from '../../../core/models/cliente.model';
 import { ClienteRepository } from '../../../core/repositories/cliente.repository';
 import { AuthService } from '../../../core/services/auth.service';
+import { ViewPreferenceService } from '../../../core/services/view-preference.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
@@ -62,6 +63,7 @@ export class ClientesComponent implements OnInit {
     pageSize: DEFAULT_PAGE_SIZE,
   });
 
+  readonly viewType = inject(ViewPreferenceService).getViewSignal('clientes', 'table');
   get columns(): string[] {
     const base = ['nombreCompleto', 'celular', 'ci', 'estado'];
     return this.auth.canAny(['clients.update', 'clients.delete']) ? [...base, 'acciones'] : base;

@@ -29,6 +29,7 @@ import {
   cloudinaryPreviewUrl,
   cloudinaryThumbnailUrl,
 } from '../../../core/utils/cloudinary-image.util';
+import { ViewPreferenceService } from '../../../core/services/view-preference.service';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -89,6 +90,7 @@ export class VentasComponent implements OnInit {
   readonly columns = ['nombreProducto', 'operacion', 'fechaVenta', 'precioVenta', 'ganancia', 'metodoPago', 'acciones'];
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
   readonly mode = signal<'list' | 'new' | 'edit'>('list');
+  readonly viewType = inject(ViewPreferenceService).getViewSignal('ventas', 'table');
   readonly procesandoVenta = signal(false);
   readonly searchControl = this.fb.nonNullable.control('');
   readonly clienteSearchControl = this.fb.nonNullable.control('');
