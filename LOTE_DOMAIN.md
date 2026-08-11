@@ -7,7 +7,7 @@
 | Productos asociados | Productos activos cuyo `loteId` coincide con el ID del lote |
 | Cantidad de productos | Conteo dinámico de esos productos; nunca `lote.cantidadProductos` |
 | Disponibles y reservados | Estado de los productos activos asociados |
-| Productos vendidos | Ventas activas cuyo `loteId` coincide con el lote |
+| Productos vendidos | Ventas activas cuyo `loteId` coincide con el lote; si una venta histórica no tiene `loteId`, se resuelve mediante el `loteId` actual de su producto |
 | Inversión asignada | Suma de `producto.precioCompra` de productos activos asociados |
 | Valor esperado | Suma de `producto.precioVenta` de productos activos asociados |
 | Ingreso real | Suma de `venta.precioVenta` de ventas activas del lote |
@@ -24,8 +24,9 @@ compatibilidad. No es editable ni participa en cálculos. Las métricas no se pe
 
 Un producto pertenece a un lote mediante `producto.loteId`. Una venta conserva el `loteId` que tenía
 el producto cuando se vendió como parte de su snapshot histórico. Desvincular posteriormente el
-producto no modifica la venta. Las ventas antiguas sin `loteId` no se asignan automáticamente aunque
-su `productoId` todavía exista, porque el producto podría haber cambiado de lote.
+producto no modifica la venta. Como compatibilidad para ventas antiguas sin `loteId`, las métricas
+usan el `loteId` actual del producto solo cuando la venta no tiene ese snapshot; si la venta ya tiene
+`loteId`, ese valor tiene prioridad.
 
 ## Asociación y desvinculación
 
@@ -75,7 +76,8 @@ venta de Bs 350, 400 y 500. Dos ventas activas registran Bs 350/Bs 150 de gananc
 - La combinación se hace en memoria y está pensada para el volumen actual. La pantalla abre como
   máximo un listener por cada colección: lotes, productos y ventas.
 - No se crean índices ni se cambian reglas de Firestore en esta fase.
-- Las ventas sin `loteId` quedan fuera de las métricas de lote.
+- Las ventas sin `loteId` se resuelven por `productoId` y el lote actual del producto; si el producto
+  tampoco existe o no tiene lote, no pueden asignarse automáticamente.
 - Un precio de compra ausente o no numérico aporta cero; la vista destaca precios de compra en cero.
 - `precio` e `imagen` se conservan por compatibilidad con el esquema anterior.
 

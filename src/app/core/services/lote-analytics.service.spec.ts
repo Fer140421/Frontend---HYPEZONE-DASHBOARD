@@ -57,6 +57,29 @@ describe('LoteAnalyticsService', () => {
     expect(result.cantidadVendidos).toBe(1);
   });
 
+  it('incluye ventas antiguas sin loteId usando el lote actual del producto', () => {
+    const result = service.getResumenLote(
+      lote(),
+      [producto({ estado: 'vendido' })],
+      [venta({ loteId: undefined })],
+    );
+
+    expect(result.cantidadVendidos).toBe(1);
+    expect(result.ingresoReal).toBe(40);
+    expect(result.gananciaReal).toBe(20);
+  });
+
+  it('no reasigna una venta antigua si el producto pertenece a otro lote', () => {
+    const result = service.getResumenLote(
+      lote(),
+      [producto({ loteId: 'l2', estado: 'vendido' })],
+      [venta({ loteId: undefined })],
+    );
+
+    expect(result.cantidadVendidos).toBe(0);
+    expect(result.ingresoReal).toBe(0);
+  });
+
   it('calcula porcentaje de recuperacion', () => {
     expect(service.getResumenLote(lote({ costoTotal: 80 }), [], [venta()]).recuperacionInversion).toBe(50);
   });

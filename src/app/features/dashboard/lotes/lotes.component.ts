@@ -424,7 +424,9 @@ export class LotesComponent implements OnInit {
       return null;
     }
     const productos = data.productos.filter((producto) => producto.activo !== false && producto.loteId === id);
-    const ventas = data.ventas.filter((venta) => venta.activo !== false && venta.loteId === id);
+    const ventas = data.ventas.filter(
+      (venta) => venta.activo !== false && this.analytics.ventaPerteneceAlLote(venta, id, data.productos),
+    );
     return {
       resumen,
       productos,

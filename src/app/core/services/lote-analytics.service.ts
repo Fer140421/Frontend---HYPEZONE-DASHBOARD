@@ -11,7 +11,7 @@ export class LoteAnalyticsService {
       (producto) => producto.activo !== false && producto.loteId === lote.id,
     );
     const ventasLote = ventas.filter(
-      (venta) => venta.activo !== false && venta.loteId === lote.id,
+      (venta) => venta.activo !== false && this.ventaPerteneceAlLote(venta, lote.id, productos),
     );
     const costoTotal = this.number(lote.costoTotal);
     const ingresoReal = this.sum(ventasLote, (venta) => venta.precioVenta);
@@ -60,6 +60,20 @@ export class LoteAnalyticsService {
 
   getResumenesLotes(lotes: Lote[], productos: Producto[], ventas: Venta[]): LoteResumen[] {
     return lotes.map((lote) => this.getResumenLote(lote, productos, ventas));
+  }
+
+  ventaPerteneceAlLote(venta: Venta, loteId: string | null | undefined, productos: Producto[]): boolean {
+    if (!loteId) {
+      return false;
+    }
+
+    if (venta.loteId) {
+      return venta.loteId === loteId;
+    }
+
+    return productos.some(
+      (producto) => producto.id === venta.productoId && producto.loteId === loteId,
+    );
   }
 
   private sum<T>(items: T[], selector: (item: T) => unknown): number {
