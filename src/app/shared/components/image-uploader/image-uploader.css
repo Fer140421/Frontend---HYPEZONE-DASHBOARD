@@ -156,6 +156,30 @@
   background: var(--hz-background);
   border: 1px solid var(--hz-border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  cursor: grab;
+  touch-action: none;
+}
+
+.preview-card:active {
+  cursor: grabbing;
+}
+
+.preview-card.cdk-drag-preview {
+  box-sizing: border-box;
+  border-color: var(--hz-primary);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+  opacity: 0.95;
+}
+
+.preview-card.cdk-drag-placeholder {
+  border: 2px dashed var(--hz-primary);
+  background: var(--hz-primary-soft);
+  box-shadow: none;
+}
+
+.preview-card.cdk-drag-animating,
+.preview-grid.cdk-drop-list-dragging .preview-card:not(.cdk-drag-placeholder) {
+  transition: transform 180ms ease;
 }
 
 .preview-card img {
@@ -175,6 +199,30 @@
   background: rgba(0, 0, 0, 0.7);
   color: #ffffff;
   backdrop-filter: blur(4px);
+}
+
+.drag-handle {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.7);
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.drag-handle mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
 }
 
 .remove-button {

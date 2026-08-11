@@ -1,0 +1,33 @@
+@if (open) {
+  <div class="filter-drawer-backdrop" (click)="close()" aria-hidden="true"></div>
+}
+
+<aside
+  class="filter-drawer"
+  [class.is-open]="open"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-hidden]="!open"
+  [attr.aria-label]="title"
+>
+  <header class="filter-drawer-header">
+    <div>
+      <span class="filter-drawer-eyebrow">Listado</span>
+      <h2>{{ title }}</h2>
+    </div>
+    <button mat-icon-button type="button" (click)="close()" aria-label="Cerrar filtros" matTooltip="Cerrar filtros">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <div class="filter-drawer-content">
+    <ng-content></ng-content>
+  </div>
+
+  <footer class="filter-drawer-footer">
+    <button mat-stroked-button type="button" (click)="close()">
+      <mat-icon>check</mat-icon>
+      Aplicar filtros
+    </button>
+  </footer>
+</aside>

@@ -41,6 +41,7 @@ import {
 } from '../../../core/services/user-authorization-admin.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { FilterDrawerComponent } from '../../../shared/components/filter-drawer/filter-drawer.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import {
@@ -77,6 +78,7 @@ import { CreateUserCommand } from '../../../core/services/user-authorization-adm
     MatTableModule,
     MatTooltipModule,
     EmptyStateComponent,
+    FilterDrawerComponent,
     LoadingComponent,
     PageHeaderComponent,
   ],
@@ -92,6 +94,7 @@ export class UsuariosPermisosComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
 
   readonly search = signal('');
+  readonly filtersOpen = signal(false);
   readonly roleFilter = signal<string>('');
   readonly activeFilter = signal<'all' | 'active' | 'inactive'>('all');
   readonly selected = signal<UserProfile | null>(null);

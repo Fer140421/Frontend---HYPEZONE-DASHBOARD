@@ -32,6 +32,7 @@ import {
 } from '../../../core/utils/cloudinary-image.util';
 import { ViewPreferenceService } from '../../../core/services/view-preference.service';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { FilterDrawerComponent } from '../../../shared/components/filter-drawer/filter-drawer.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import {
@@ -65,6 +66,7 @@ import { ClienteFormDialogComponent } from '../clientes/clientes.component';
     MatTableModule,
     MatTooltipModule,
     EmptyStateComponent,
+    FilterDrawerComponent,
     LoadingComponent,
     PageHeaderComponent,
   ],
@@ -93,6 +95,7 @@ export class VentasComponent implements OnInit {
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
   readonly mode = signal<'list' | 'new' | 'edit'>('list');
   readonly viewType = inject(ViewPreferenceService).getViewSignal('ventas', 'table');
+  readonly filtersOpen = signal(false);
   readonly procesandoVenta = signal(false);
   readonly searchControl = this.fb.nonNullable.control('');
   readonly clienteSearchControl = this.fb.nonNullable.control('');
@@ -173,6 +176,7 @@ export class VentasComponent implements OnInit {
     producto: [''],
     metodoPago: [''],
     desde: [null as Date | null],
+    hasta: [null as Date | null],
   });
 
   readonly ventasFiltradas$ = combineLatest([
@@ -182,12 +186,18 @@ export class VentasComponent implements OnInit {
     map(([ventas, filters]) => {
       this.ventasActuales = ventas;
       const producto = (filters.producto ?? '').toLowerCase().trim();
-      const desde = filters.desde ? new Date(filters.desde).getTime() : 0;
+      const desde = filters.desde
+        ? new Date(filters.desde).setHours(0, 0, 0, 0)
+        : 0;
+      const hasta = filters.hasta
+        ? new Date(filters.hasta).setHours(23, 59, 59, 999)
+        : Number.POSITIVE_INFINITY;
       return ventas.filter(
         (venta) =>
           (!producto || venta.nombreProducto.toLowerCase().includes(producto)) &&
           (!filters.metodoPago || venta.metodoPago === filters.metodoPago) &&
-          (!desde || new Date(venta.fechaVenta).getTime() >= desde),
+          new Date(venta.fechaVenta).getTime() >= desde &&
+          new Date(venta.fechaVenta).getTime() <= hasta,
       );
     }),
     shareReplay({ bufferSize: 1, refCount: true }),

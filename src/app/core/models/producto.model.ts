@@ -12,7 +12,7 @@ export type CategoriaProducto =
   | 'otro';
 
 export type GeneroProducto = 'hombre' | 'mujer' | 'unisex' | 'nino' | 'nina';
-export type EstadoProducto = 'disponible' | 'reservado' | 'vendido' | 'agotado';
+export type EstadoProducto = 'disponible' | 'reservado' | 'vendido';
 
 export interface Producto extends AuditableEntity {
   schemaVersion?: number;
@@ -76,7 +76,7 @@ export const categoriasProducto: CategoriaProducto[] = [
   'otro',
 ];
 
-export const estadosProducto: EstadoProducto[] = ['disponible', 'reservado', 'vendido', 'agotado'];
+export const estadosProducto: EstadoProducto[] = ['disponible', 'reservado', 'vendido'];
 export const generosProducto: GeneroProducto[] = ['hombre', 'mujer', 'unisex', 'nino', 'nina'];
 
 export const coloresProducto: string[] = [

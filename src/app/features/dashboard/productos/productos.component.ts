@@ -41,6 +41,7 @@ import { ViewPreferenceService } from '../../../core/services/view-preference.se
 import { cloudinaryDetailUrl, cloudinaryThumbnailUrl } from '../../../core/utils/cloudinary-image.util';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { FilterDrawerComponent } from '../../../shared/components/filter-drawer/filter-drawer.component';
 import { ImageUploaderComponent } from '../../../shared/components/image-uploader/image-uploader.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -73,6 +74,7 @@ import {
     MatTableModule,
     MatTooltipModule,
     EmptyStateComponent,
+    FilterDrawerComponent,
     ImageUploaderComponent,
     LoadingComponent,
     PageHeaderComponent,
@@ -122,6 +124,7 @@ export class ProductosComponent implements OnInit {
   readonly viewType = inject(ViewPreferenceService).getViewSignal('productos', 'table');
   readonly currentId = signal<string | null>(null);
   readonly currentProducto = signal<Producto | null>(null);
+  readonly filtersOpen = signal(false);
   readonly imagenes = signal<string[]>([]);
   readonly procesandoVenta = signal(false);
 
@@ -365,7 +368,12 @@ export class ProductosComponent implements OnInit {
   }
 
   softDelete(producto: Producto): void {
-    if (!this.auth.can('products.delete')) return;
+    if (!this.auth.can('products.delete') || producto.activo === false) return;
+    if (producto.estado !== 'disponible') {
+      this.snack('Los productos vendidos o reservados no se pueden eliminar.');
+      return;
+    }
+
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Eliminar producto',

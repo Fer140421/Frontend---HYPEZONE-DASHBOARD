@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { deleteDoc, doc, serverTimestamp, setDoc } from '@angular/fire/firestore';
+import { deleteDoc, doc, getDoc, serverTimestamp, setDoc } from '@angular/fire/firestore';
 import { Observable, map } from 'rxjs';
 import { Producto, normalizeProducto } from '../models/producto.model';
 import { FirestoreRepository, removeUndefinedDeep } from './firestore.repository';
@@ -77,6 +77,24 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
     } catch (err) {
       console.warn('No se pudo actualizar el espejo en productosPublicos:', err);
     }
+  }
+
+  override async delete(id: string): Promise<void> {
+    const snapshot = await getDoc(doc(this.firestore, `productos/${id}`));
+    if (!snapshot.exists()) {
+      throw new Error('El producto no existe.');
+    }
+
+    const producto = snapshot.data() as Producto;
+    if (producto.activo === false) {
+      throw new Error('El producto ya esta inactivo.');
+    }
+
+    if (producto.estado !== 'disponible') {
+      throw new Error('Los productos vendidos o reservados no se pueden eliminar.');
+    }
+
+    await super.delete(id);
   }
 
   override async hardDelete(id: string): Promise<void> {

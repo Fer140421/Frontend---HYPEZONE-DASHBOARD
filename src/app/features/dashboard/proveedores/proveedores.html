@@ -13,24 +13,38 @@
 @if (listViewModel$ | async; as vm) {
   <mat-card class="list-card">
     <mat-card-content>
-      <form class="filters" [formGroup]="filters">
-        <mat-form-field appearance="outline">
+      <div class="list-filter-bar">
+        <mat-form-field appearance="outline" class="list-search">
           <mat-label>Buscar por nombre</mat-label>
-          <input matInput formControlName="nombre" placeholder="Nombre, direccion, celular o red social" />
+          <input matInput [formControl]="filters.controls.nombre" placeholder="Nombre, direccion, celular o red social" />
         </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Categoria</mat-label>
-          <input matInput formControlName="categoria" placeholder="Categoria que vende" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Estado</mat-label>
-          <mat-select formControlName="estado">
-            <mat-option value="activos">Activos</mat-option>
-            <mat-option value="inactivos">Inactivos</mat-option>
-            <mat-option value="todos">Todos</mat-option>
-          </mat-select>
-        </mat-form-field>
-      </form>
+        <button mat-stroked-button type="button" class="filter-trigger" (click)="filtersOpen.set(true)">
+          <mat-icon>tune</mat-icon>
+          <span>Filtros</span>
+        </button>
+      </div>
+
+      <app-filter-drawer [open]="filtersOpen()" (closed)="filtersOpen.set(false)">
+        <div class="filter-drawer-form">
+          <mat-form-field appearance="outline">
+            <mat-label>Categoria</mat-label>
+            <mat-select [formControl]="filters.controls.categoria">
+              <mat-option value="">Todas las categorias</mat-option>
+              @for (categoria of categorias$ | async; track categoria.id) {
+                <mat-option [value]="categoria.nombre">{{ categoria.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Estado</mat-label>
+            <mat-select [formControl]="filters.controls.estado">
+              <mat-option value="activos">Activos</mat-option>
+              <mat-option value="inactivos">Inactivos</mat-option>
+              <mat-option value="todos">Todos</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </app-filter-drawer>
 
       <div class="list-toolbar-row">
         <span class="muted" style="font-size: 0.85rem; font-weight: 600;">
@@ -68,35 +82,81 @@
       />
     } @else if (viewType() === 'table') {
       <div class="table-scroll">
-        <table mat-table [dataSource]="vm.proveedores.items">
+        <table mat-table [dataSource]="vm.proveedores.items" class="providers-table">
           <ng-container matColumnDef="nombreCompleto">
             <th mat-header-cell *matHeaderCellDef>Proveedor</th>
             <td mat-cell *matCellDef="let proveedor">
-              <div class="main-cell">
-                <strong>{{ proveedor.nombreCompleto }}</strong>
-                <span>{{ proveedor.direccion || 'Sin direccion' }}</span>
+              <div class="provider-table-name">
+                <span class="provider-avatar provider-avatar-small" aria-hidden="true"><mat-icon>business</mat-icon></span>
+                <div class="main-cell">
+                  <strong>{{ proveedor.nombreCompleto }}</strong>
+                  <span>{{ proveedor.direccion || 'Sin direccion' }}</span>
+                </div>
               </div>
             </td>
           </ng-container>
 
           <ng-container matColumnDef="celular">
             <th mat-header-cell *matHeaderCellDef>Celular</th>
-            <td mat-cell *matCellDef="let proveedor">{{ proveedor.celular }}</td>
+            <td mat-cell *matCellDef="let proveedor">
+              <div class="provider-phone-value">
+                <span class="provider-phone"><mat-icon>phone</mat-icon>{{ proveedor.celular }}</span>
+                @if (whatsappUrl(proveedor.celular); as whatsapp) {
+                  <a
+                    mat-icon-button
+                    class="provider-whatsapp-button"
+                    [href]="whatsapp"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    (click)="$event.stopPropagation()"
+                    [attr.aria-label]="'Escribir por WhatsApp a ' + proveedor.nombreCompleto"
+                    matTooltip="Escribir por WhatsApp"
+                  >
+                    <mat-icon>chat</mat-icon>
+                  </a>
+                }
+              </div>
+            </td>
           </ng-container>
 
           <ng-container matColumnDef="categorias">
             <th mat-header-cell *matHeaderCellDef>Categorias</th>
-            <td mat-cell *matCellDef="let proveedor">{{ categoriesLabel(proveedor) }}</td>
+            <td mat-cell *matCellDef="let proveedor">
+              <div class="provider-chip-list">
+                @for (categoria of proveedor.categorias; track categoria) {
+                  <span class="provider-chip">{{ categoria }}</span>
+                } @empty {
+                  <span class="provider-empty-value">Sin categorias</span>
+                }
+              </div>
+            </td>
           </ng-container>
 
           <ng-container matColumnDef="redes">
             <th mat-header-cell *matHeaderCellDef>Redes</th>
-            <td mat-cell *matCellDef="let proveedor">{{ redesLabel(proveedor) }}</td>
+            <td mat-cell *matCellDef="let proveedor">
+              <div class="provider-social-list">
+                @if (proveedor.instagram) {
+                  <span><mat-icon>photo_camera</mat-icon>{{ proveedor.instagram }}</span>
+                }
+                @if (proveedor.tiktok) {
+                  <span><mat-icon>music_note</mat-icon>{{ proveedor.tiktok }}</span>
+                }
+                @if (!proveedor.instagram && !proveedor.tiktok) {
+                  <span class="provider-empty-value">Sin redes</span>
+                }
+              </div>
+            </td>
           </ng-container>
 
           <ng-container matColumnDef="estado">
             <th mat-header-cell *matHeaderCellDef>Estado</th>
-            <td mat-cell *matCellDef="let proveedor">{{ proveedor.activo === false ? 'Inactivo' : 'Activo' }}</td>
+            <td mat-cell *matCellDef="let proveedor">
+              <span class="provider-status" [class.provider-status-inactive]="proveedor.activo === false">
+                <span class="provider-status-dot"></span>
+                {{ proveedor.activo === false ? 'Inactivo' : 'Activo' }}
+              </span>
+            </td>
           </ng-container>
 
           <ng-container matColumnDef="acciones">
@@ -124,32 +184,80 @@
         </table>
       </div>
     } @else {
-      <div class="listing-cards-grid">
+      <div class="listing-cards-grid providers-grid">
         @for (proveedor of vm.proveedores.items; track proveedor.id) {
-          <div class="listing-card-item">
-            <div class="card-body-content">
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                <h3 class="card-item-title">{{ proveedor.nombreCompleto }}</h3>
-                <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 99px; font-weight: 700;"
-                      [style.background]="proveedor.activo === false ? 'rgba(239, 68, 68, 0.12)' : 'rgba(34, 197, 94, 0.12)'"
-                      [style.color]="proveedor.activo === false ? '#dc2626' : '#16a34a'">
+          <div class="listing-card-item provider-card">
+            <div class="provider-card-body">
+              <div class="provider-card-header">
+                <span class="provider-avatar" aria-hidden="true"><mat-icon>business</mat-icon></span>
+                <div class="provider-title-block">
+                  <span class="provider-kicker">Proveedor</span>
+                  <h3>{{ proveedor.nombreCompleto }}</h3>
+                </div>
+                <span class="provider-status" [class.provider-status-inactive]="proveedor.activo === false">
+                  <span class="provider-status-dot"></span>
                   {{ proveedor.activo === false ? 'Inactivo' : 'Activo' }}
                 </span>
               </div>
-              <div class="card-item-subtitle" style="margin-top: 4px;">
-                Celular: <strong>{{ proveedor.celular }}</strong>
-              </div>
-              <div class="card-item-subtitle">
-                Dirección: {{ proveedor.direccion || 'Sin dirección' }}
-              </div>
-              @if (categoriesLabel(proveedor); as cat) {
-                <div class="card-item-subtitle" style="color: var(--hz-primary-hover);">
-                  Categorías: {{ cat }}
+
+              <div class="provider-contact-grid">
+                <div class="provider-contact-item">
+                  <mat-icon>phone</mat-icon>
+                  <div>
+                    <span>Celular</span>
+                    <div class="provider-contact-value">
+                      <strong>{{ proveedor.celular }}</strong>
+                      @if (whatsappUrl(proveedor.celular); as whatsapp) {
+                        <a
+                          mat-icon-button
+                          class="provider-whatsapp-button"
+                          [href]="whatsapp"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          (click)="$event.stopPropagation()"
+                          [attr.aria-label]="'Escribir por WhatsApp a ' + proveedor.nombreCompleto"
+                          matTooltip="Escribir por WhatsApp"
+                        >
+                          <mat-icon>chat</mat-icon>
+                        </a>
+                      }
+                    </div>
+                  </div>
                 </div>
+                <div class="provider-contact-item">
+                  <mat-icon>location_on</mat-icon>
+                  <div><span>Direccion</span><strong>{{ proveedor.direccion || 'Sin direccion' }}</strong></div>
+                </div>
+              </div>
+
+              <section class="provider-section">
+                <span class="provider-section-label">Categorias que vende</span>
+                <div class="provider-chip-list">
+                  @for (categoria of proveedor.categorias; track categoria) {
+                    <span class="provider-chip">{{ categoria }}</span>
+                  } @empty {
+                    <span class="provider-empty-value">Sin categorias registradas</span>
+                  }
+                </div>
+              </section>
+
+              @if (proveedor.instagram || proveedor.tiktok) {
+                <section class="provider-section">
+                  <span class="provider-section-label">Redes sociales</span>
+                  <div class="provider-social-list">
+                    @if (proveedor.instagram) {
+                      <span><mat-icon>photo_camera</mat-icon>{{ proveedor.instagram }}</span>
+                    }
+                    @if (proveedor.tiktok) {
+                      <span><mat-icon>music_note</mat-icon>{{ proveedor.tiktok }}</span>
+                    }
+                  </div>
+                </section>
               }
-              @if (redesLabel(proveedor); as redes) {
-                <div class="card-item-subtitle" style="font-size: 0.75rem;">
-                  Redes: {{ redes }}
+              @if (proveedor.detalles) {
+                <div class="provider-notes">
+                  <span class="provider-section-label">Detalles</span>
+                  <p>{{ proveedor.detalles }}</p>
                 </div>
               }
             </div>

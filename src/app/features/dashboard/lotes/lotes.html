@@ -124,7 +124,7 @@
       } @else {
         <div class="listing-cards-grid">
           @for (r of data.resumenesPaginados.items; track r.lote.id) {
-            <div class="listing-card-item">
+            <div class="listing-card-item detail-card" role="button" tabindex="0" (click)="openDetailModal(r.lote.id!)" (keydown.enter)="openDetailModal(r.lote.id!)" (keydown.space)="$event.preventDefault(); openDetailModal(r.lote.id!)">
               <div class="card-body-content">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
                   <h3 class="card-item-title">{{ r.lote.nombre }}</h3>
@@ -146,11 +146,11 @@
                 </div>
               </div>
               <div class="card-footer-actions">
-                <button mat-icon-button type="button" (click)="openDetailModal(r.lote.id!)" matTooltip="Ver detalle del lote" aria-label="Ver lote">
+                <button mat-icon-button type="button" (click)="$event.stopPropagation(); openDetailModal(r.lote.id!)" (keydown)="$event.stopPropagation()" matTooltip="Ver detalle del lote" aria-label="Ver lote">
                   <mat-icon>visibility</mat-icon>
                 </button>
                 @if (auth.can('lots.update')) {
-                  <button mat-icon-button [routerLink]="['/dashboard/lotes', r.lote.id, 'editar']" matTooltip="Modificar lote" aria-label="Modificar lote">
+                  <button mat-icon-button (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" [routerLink]="['/dashboard/lotes', r.lote.id, 'editar']" matTooltip="Modificar lote" aria-label="Modificar lote">
                     <mat-icon>edit</mat-icon>
                   </button>
                 }

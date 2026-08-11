@@ -1,6 +1,7 @@
 import { AuditableEntity } from './base.model';
 
-export type MetodoPago = 'efectivo' | 'qr' | 'transferencia' | 'otro';
+export type MetodoPago = 'efectivo' | 'qr';
+export type MetodoPagoHistorico = MetodoPago | 'transferencia' | 'otro';
 
 export interface Venta extends AuditableEntity {
   schemaVersion?: number;
@@ -17,9 +18,9 @@ export interface Venta extends AuditableEntity {
   clienteNombre?: string;
   clienteTelefono?: string;
   clienteCi?: string;
-  metodoPago?: MetodoPago;
+  metodoPago?: MetodoPagoHistorico;
   fechaVenta: string;
   notas?: string;
 }
 
-export const metodosPago: MetodoPago[] = ['efectivo', 'qr', 'transferencia', 'otro'];
+export const metodosPago: MetodoPago[] = ['efectivo', 'qr'];

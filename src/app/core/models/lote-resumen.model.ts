@@ -6,7 +6,6 @@ export interface LoteResumen {
   cantidadDisponibles: number;
   cantidadReservados: number;
   cantidadVendidos: number;
-  cantidadAgotados: number;
   inversionAsignada: number;
   valorEsperado: number;
   ingresoReal: number;

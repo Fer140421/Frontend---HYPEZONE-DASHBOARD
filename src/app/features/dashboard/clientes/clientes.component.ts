@@ -19,6 +19,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ViewPreferenceService } from '../../../core/services/view-preference.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { FilterDrawerComponent } from '../../../shared/components/filter-drawer/filter-drawer.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import {
@@ -48,6 +49,7 @@ type EstadoFiltro = 'todos' | 'activos' | 'inactivos';
     MatTableModule,
     MatTooltipModule,
     EmptyStateComponent,
+    FilterDrawerComponent,
     LoadingComponent,
     PageHeaderComponent,
   ],
@@ -66,6 +68,7 @@ export class ClientesComponent implements OnInit {
   });
 
   readonly viewType = inject(ViewPreferenceService).getViewSignal('clientes', 'table');
+  readonly filtersOpen = signal(false);
   get columns(): string[] {
     const base = ['nombreCompleto', 'celular', 'ci', 'estado'];
     return this.auth.canAny(['clients.update', 'clients.delete']) ? [...base, 'acciones'] : base;

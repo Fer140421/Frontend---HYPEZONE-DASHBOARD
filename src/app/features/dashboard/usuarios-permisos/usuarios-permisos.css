@@ -19,9 +19,9 @@
 }
 
 .users-filters {
-  grid-template-columns: minmax(240px, 2fr) repeat(2, minmax(150px, 1fr)) auto;
+  grid-template-columns: 1fr;
   align-items: start;
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 
 .users-filters mat-form-field {

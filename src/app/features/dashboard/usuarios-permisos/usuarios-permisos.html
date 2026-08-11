@@ -13,8 +13,8 @@
 <div class="users-layout">
   <mat-card class="users-card">
     <mat-card-content>
-      <div class="filters users-filters" aria-label="Filtros de usuarios">
-        <mat-form-field appearance="outline" class="search-filter">
+      <div class="list-filter-bar">
+        <mat-form-field appearance="outline" class="list-search">
           <mat-label>Buscar usuario</mat-label>
           <mat-icon matPrefix>search</mat-icon>
           <input
@@ -24,41 +24,49 @@
             (input)="onSearch($event)"
           />
         </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Rol</mat-label>
-          <mat-select
-            [value]="roleFilter()"
-            (selectionChange)="setRoleFilter($event.value)"
-          >
-            <mat-option value="">Todos</mat-option>
-            @for (role of availableRoles(); track role) {
-              <mat-option [value]="role">{{ role }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Estado</mat-label>
-          <mat-select
-            [value]="activeFilter()"
-            (selectionChange)="setActiveFilter($event.value)"
-          >
-            <mat-option value="all">Todos</mat-option>
-            <mat-option value="active">Activos</mat-option>
-            <mat-option value="inactive">Inactivos</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <div class="filter-actions">
-          @if (filtersActive()) {
-            <button mat-button type="button" (click)="clearFilters()">
-              <mat-icon>filter_alt_off</mat-icon>
-              Limpiar filtros
-            </button>
-          }
-        </div>
+        <button mat-stroked-button type="button" class="filter-trigger" (click)="filtersOpen.set(true)">
+          <mat-icon>tune</mat-icon>
+          <span>Filtros</span>
+        </button>
       </div>
+
+      <app-filter-drawer [open]="filtersOpen()" (closed)="filtersOpen.set(false)">
+        <div class="filters users-filters filter-drawer-form" aria-label="Filtros de usuarios">
+          <mat-form-field appearance="outline">
+            <mat-label>Rol</mat-label>
+            <mat-select
+              [value]="roleFilter()"
+              (selectionChange)="setRoleFilter($event.value)"
+            >
+              <mat-option value="">Todos</mat-option>
+              @for (role of availableRoles(); track role) {
+                <mat-option [value]="role">{{ role }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Estado</mat-label>
+            <mat-select
+              [value]="activeFilter()"
+              (selectionChange)="setActiveFilter($event.value)"
+            >
+              <mat-option value="all">Todos</mat-option>
+              <mat-option value="active">Activos</mat-option>
+              <mat-option value="inactive">Inactivos</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <div class="filter-actions">
+            @if (filtersActive()) {
+              <button mat-button type="button" (click)="clearFilters()">
+                <mat-icon>filter_alt_off</mat-icon>
+                Limpiar filtros
+              </button>
+            }
+          </div>
+        </div>
+      </app-filter-drawer>
 
       @if (admin.loading()) {
         <app-loading text="Cargando usuarios..." />

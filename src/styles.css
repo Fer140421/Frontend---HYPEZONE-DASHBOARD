@@ -362,6 +362,42 @@ mat-paginator {
   display: none !important;
 }
 
+.list-filter-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.list-filter-bar .list-search {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.list-filter-bar .filter-trigger {
+  flex: 0 0 auto;
+  min-height: 56px;
+}
+
+.filter-drawer-form {
+  display: grid;
+  gap: 14px;
+}
+
+.filter-drawer-form mat-form-field {
+  width: 100%;
+}
+
+@media (max-width: 520px) {
+  .list-filter-bar {
+    gap: 8px;
+  }
+
+  .list-filter-bar .filter-trigger {
+    padding-inline: 10px;
+  }
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -476,7 +512,6 @@ mat-paginator {
   font-weight: 700;
 }
 
-.status-agotado,
 .status-terminado {
   --mdc-chip-elevated-container-color: #f0f0f0 !important;
   --mdc-chip-label-text-color: var(--hz-gray) !important;
@@ -736,6 +771,15 @@ mat-paginator {
   border-color: rgba(54, 183, 166, 0.4) !important;
 }
 
+.listing-card-item.detail-card {
+  cursor: pointer;
+}
+
+.listing-card-item.detail-card:focus-visible {
+  outline: 3px solid var(--hz-primary);
+  outline-offset: 3px;
+}
+
 /* Card Media / Image Container */
 .card-media-wrap {
   position: relative;
@@ -888,4 +932,3 @@ mat-paginator {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
-

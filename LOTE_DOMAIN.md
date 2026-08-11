@@ -6,7 +6,7 @@
 |---|---|
 | Productos asociados | Productos activos cuyo `loteId` coincide con el ID del lote |
 | Cantidad de productos | Conteo dinámico de esos productos; nunca `lote.cantidadProductos` |
-| Disponibles, reservados y agotados | Estado de los productos activos asociados |
+| Disponibles y reservados | Estado de los productos activos asociados |
 | Productos vendidos | Ventas activas cuyo `loteId` coincide con el lote |
 | Inversión asignada | Suma de `producto.precioCompra` de productos activos asociados |
 | Valor esperado | Suma de `producto.precioVenta` de productos activos asociados |
@@ -78,3 +78,10 @@ venta de Bs 350, 400 y 500. Dos ventas activas registran Bs 350/Bs 150 de gananc
 - Las ventas sin `loteId` quedan fuera de las métricas de lote.
 - Un precio de compra ausente o no numérico aporta cero; la vista destaca precios de compra en cero.
 - `precio` e `imagen` se conservan por compatibilidad con el esquema anterior.
+
+## Proteccion de productos
+
+Los productos `disponibles` pueden ocultarse mediante baja logica. Los productos `reservados` y
+`vendidos` no se eliminan, porque sus referencias deben conservarse para evitar inconsistencias en
+reservas, lotes y ventas historicas. Un producto inactivo conserva sus referencias y puede restaurarse
+sin modificar su estado ni sus ventas.

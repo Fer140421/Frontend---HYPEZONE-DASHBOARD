@@ -82,3 +82,7 @@ El sistema migró de roles estáticos hardcodeados a un modelo de **Autorizació
 
 - Ningún cliente Angular puede modificar directamente `/users/{uid}` (denegado en `firestore.rules`).
 - Las mutaciones de rol, estado y permisos se realizan exclusivamente mediante las Cloud Functions `createUser` y `updateUserAuthorization` en `functions/src/index.ts` ejecutadas con Firebase Admin SDK.
+
+El permiso `products.delete` permite ocultar productos `disponibles` mediante baja logica y gestionar
+la restauracion de productos inactivos. Los productos `reservados` o `vendidos` estan protegidos y no
+se pueden eliminar.

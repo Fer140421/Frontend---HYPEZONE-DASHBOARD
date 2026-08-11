@@ -1,4 +1,11 @@
 import { Component, EventEmitter, Output, input, signal } from '@angular/core';
+import {
+  CdkDrag,
+  CdkDragDrop,
+  CdkDragHandle,
+  CdkDropList,
+  moveItemInArray,
+} from '@angular/cdk/drag-drop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { CloudinaryService } from '../../../core/services/cloudinary.service';
@@ -7,7 +14,7 @@ import { cloudinaryPreviewUrl } from '../../../core/utils/cloudinary-image.util'
 @Component({
   selector: 'app-image-uploader',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule],
+  imports: [CdkDrag, CdkDragHandle, CdkDropList, MatButtonModule, MatIconModule],
   templateUrl: './image-uploader.html',
   styleUrl: './image-uploader.css',
 })
@@ -53,6 +60,16 @@ export class ImageUploaderComponent {
     if (this.uploading()) return;
     const current = [...this.images()];
     current.splice(index, 1);
+    this.uploaded.emit(current);
+  }
+
+  reorderImages(event: CdkDragDrop<string[]>): void {
+    if (this.uploading() || event.previousIndex === event.currentIndex) {
+      return;
+    }
+
+    const current = [...this.images()];
+    moveItemInArray(current, event.previousIndex, event.currentIndex);
     this.uploaded.emit(current);
   }
 }

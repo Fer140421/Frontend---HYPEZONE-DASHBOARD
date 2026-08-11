@@ -94,7 +94,7 @@ erDiagram
 | `precioCompra` | `number` | Sí | Costo de adquisición en Bs. |
 | `precioVenta` | `number` | Sí | Precio de venta al público en Bs. |
 | `precioOferta` | `number` | No | Precio promocional con descuento (opcional). |
-| `estado` | `string` | Sí | Estado operativo (`disponible`, `reservado`, `vendido`, `agotado`). |
+| `estado` | `string` | Sí | Estado operativo (`disponible`, `reservado`, `vendido`). |
 | `imagenes` | `array<string>` | Sí | Array de URLs públicas de imágenes alojadas en Cloudinary. |
 | `codigo` | `string` | No | Código interno o SKU. |
 | `notas` | `string` | No | Observaciones internas. |
@@ -198,3 +198,13 @@ erDiagram
 | `/clientes/{id}` | `read` / `create` / `update` / `delete` | `clients.view`, `clients.create`, `clients.update`, `clients.delete` |
 | `/proveedores/{id}` | `read` / `create` / `update` / `delete` | `providers.view`, `providers.create`, `providers.update`, `providers.delete` |
 | `/categorias`, `/marcas`, `/tallas` | `read` / `create` / `update` / `delete` | `catalogs.view`, `catalogs.create`, `catalogs.update`, `catalogs.delete` |
+
+## Politica de eliminacion de productos
+
+- Los productos `disponibles` pueden ocultarse mediante baja logica (`activo: false`).
+- Los productos `reservados` y `vendidos` no se eliminan para proteger las referencias de lotes,
+  reservas, ventas, inventario e imagenes.
+- Los productos que ya estan inactivos pueden restaurarse; restaurar no modifica su estado ni sus
+  ventas historicas.
+- Las ventas historicas nunca se eliminan como consecuencia de una accion sobre el producto.
+- `hardDelete()` queda reservado para recuperacion tecnica y no se expone en la UI.

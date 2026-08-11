@@ -43,9 +43,15 @@
   }
 
   @if (images().length) {
-    <div class="preview-grid">
+    <div
+      class="preview-grid"
+      cdkDropList
+      cdkDropListOrientation="mixed"
+      [cdkDropListData]="images()"
+      (cdkDropListDropped)="reorderImages($event)"
+    >
       @for (image of images(); track image; let i = $index) {
-        <div class="preview-card">
+        <div class="preview-card" cdkDrag [cdkDragDisabled]="uploading()">
           <img
             [src]="previewImage(image)"
             [alt]="'Imagen ' + (i + 1)"
@@ -57,6 +63,15 @@
 
           <span class="image-badge">
             {{ i === 0 ? 'Principal' : '#' + (i + 1) }}
+          </span>
+
+          <span
+            class="drag-handle"
+            cdkDragHandle
+            title="Arrastrar para cambiar el orden"
+            [attr.aria-label]="'Arrastrar para cambiar el orden de la imagen ' + (i + 1)"
+          >
+            <mat-icon>drag_indicator</mat-icon>
           </span>
 
           <button

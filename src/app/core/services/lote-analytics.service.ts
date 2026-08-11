@@ -25,7 +25,7 @@ export class LoteAnalyticsService {
 
     if (lote.activo === false || (cantidadDisponibles === 0 && productosLote.length > 0)) {
       estadoOperativo = 'inactivo';
-      estadoColor = 'rojo'; // Lote agotado / inactivo -> ROJO
+      estadoColor = 'rojo';
     } else if (productosLote.length === 0) {
       estadoOperativo = 'sin_productos';
       estadoColor = 'verde';
@@ -45,7 +45,6 @@ export class LoteAnalyticsService {
       cantidadDisponibles,
       cantidadReservados,
       cantidadVendidos,
-      cantidadAgotados: productosLote.filter((p) => p.estado === 'agotado').length,
       inversionAsignada: this.sum(productosLote, (producto) => producto.precioCompra),
       valorEsperado: this.sum(
         productosLote,

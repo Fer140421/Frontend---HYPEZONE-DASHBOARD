@@ -21,35 +21,94 @@
       <div class="full category-box">
         <div class="category-header">
           <h3>Categorias que vende</h3>
-          <p>Puedes agregarlas una por una.</p>
-        </div>
-        <div class="category-input">
-          <mat-form-field appearance="outline">
-            <mat-label>Nueva categoria</mat-label>
-            <input
-              matInput
-              formControlName="categoriaNueva"
-              (keydown.enter)="$event.preventDefault(); addCategoria()"
-            />
-          </mat-form-field>
-          <button mat-stroked-button type="button" (click)="addCategoria()">
-            <mat-icon>add</mat-icon>
-            Agregar
-          </button>
         </div>
 
-        <div class="category-table">
-          @for (control of categorias.controls; track $index; let i = $index) {
-            <div class="category-row">
-              <span>{{ control.getRawValue() }}</span>
-              <button mat-icon-button type="button" color="warn" (click)="removeCategoria(i)" aria-label="Quitar categoria">
-                <mat-icon>close</mat-icon>
-              </button>
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Categorias del sistema</mat-label>
+          <mat-select formControlName="categorias" multiple>
+            @for (categoria of categorias$ | async; track categoria.id || categoria.nombre) {
+              <mat-option [value]="categoria.nombre">{{ categoria.nombre }}</mat-option>
+            } @empty {
+              <mat-option disabled>No hay categorias registradas</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        @if (form.controls.categorias.value.length) {
+          <div class="selected-category-list">
+            <span class="selected-category-label">Categorias seleccionadas</span>
+            <div class="selected-category-table-wrap">
+              <table class="selected-category-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Categoria</th>
+                    <th scope="col">Origen</th>
+                    <th scope="col">Accion</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (categoria of form.controls.categorias.value; track categoria) {
+                    <tr>
+                      <td>{{ categoria }}</td>
+                      <td>
+                        <span class="selected-category-status" [class.pending]="isPendingCategoria(categoria)">
+                          {{ isPendingCategoria(categoria) ? 'Pendiente' : 'Catalogo' }}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          mat-icon-button
+                          type="button"
+                          (click)="removeCategoria(categoria)"
+                          [attr.aria-label]="'Quitar ' + categoria"
+                          matTooltip="Quitar categoria"
+                        >
+                          <mat-icon>delete_outline</mat-icon>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
             </div>
-          } @empty {
-            <p class="muted">Todavia no agregaste categorias.</p>
+          </div>
+        }
+
+        @if (auth.can('catalogs.create')) {
+          <button mat-stroked-button type="button" class="category-create-trigger" (click)="openCategoryCreate()">
+            <mat-icon>add</mat-icon>
+            Registrar categoria
+          </button>
+
+          @if (showCategoryCreate()) {
+            <div class="category-create-box">
+              <div class="category-header">
+                <h3>Registrar categoria nueva</h3>
+                <p>Usa esta opcion solo si no existe en el catalogo.</p>
+              </div>
+              <div class="category-input">
+                <mat-form-field appearance="outline">
+                  <mat-label>Nueva categoria</mat-label>
+                  <input
+                    matInput
+                    formControlName="categoriaNueva"
+                    (keydown.enter)="$event.preventDefault(); addCategoria()"
+                  />
+                </mat-form-field>
+                <div class="category-create-actions">
+                  <button mat-button type="button" (click)="cancelCategoryCreate()">Cancelar</button>
+                  <button mat-stroked-button type="button" (click)="addCategoria()" [disabled]="creatingCategoria()">
+                    <mat-icon>add</mat-icon>
+                    {{ creatingCategoria() ? 'Registrando...' : 'Registrar y seleccionar' }}
+                  </button>
+                </div>
+              </div>
+              @if (categoryError(); as error) {
+                <div class="form-error">{{ error }}</div>
+              }
+            </div>
           }
-        </div>
+        }
       </div>
 
       <mat-form-field appearance="outline">

@@ -12,48 +12,57 @@
       @if (listViewModel$ | async; as vm) {
       <mat-card class="list-card">
         <mat-card-content>
-          <form class="filters" [formGroup]="filters">
-            <mat-form-field appearance="outline">
+          <div class="list-filter-bar">
+            <mat-form-field appearance="outline" class="list-search">
               <mat-label>Buscar</mat-label>
-              <input matInput formControlName="search" placeholder="Nombre o marca" />
+              <input matInput [formControl]="filters.controls.search" placeholder="Nombre o marca" />
             </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Categoria</mat-label>
-              <mat-select formControlName="categoria">
-                <mat-option value="">Todas</mat-option>
-                @for (categoria of vm.categorias; track categoria.id) {
-                  <mat-option [value]="categoria.nombre">{{ categoria.nombre }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Talla</mat-label>
-              <mat-select formControlName="talla">
-                <mat-option value="">Todas</mat-option>
-                @for (talla of vm.tallas; track talla.id) {
-                  <mat-option [value]="talla.nombre">{{ talla.nombre }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Estado</mat-label>
-              <mat-select formControlName="estado">
-                <mat-option value="">Todos</mat-option>
-                @for (estado of estados; track estado) {
-                  <mat-option [value]="estado">{{ estado }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Lote</mat-label>
-              <mat-select formControlName="loteId">
-                <mat-option value="">Todos</mat-option>
-                @for (lote of vm.lotes; track lote.id) {
-                  <mat-option [value]="lote.id">{{ lote.nombre }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-          </form>
+            <button mat-stroked-button type="button" class="filter-trigger" (click)="filtersOpen.set(true)">
+              <mat-icon>tune</mat-icon>
+              <span>Filtros</span>
+            </button>
+          </div>
+
+          <app-filter-drawer [open]="filtersOpen()" (closed)="filtersOpen.set(false)">
+            <div class="filter-drawer-form">
+              <mat-form-field appearance="outline">
+                <mat-label>Categoria</mat-label>
+                <mat-select [formControl]="filters.controls.categoria">
+                  <mat-option value="">Todas</mat-option>
+                  @for (categoria of vm.categorias; track categoria.id) {
+                    <mat-option [value]="categoria.nombre">{{ categoria.nombre }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Talla</mat-label>
+                <mat-select [formControl]="filters.controls.talla">
+                  <mat-option value="">Todas</mat-option>
+                  @for (talla of vm.tallas; track talla.id) {
+                    <mat-option [value]="talla.nombre">{{ talla.nombre }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Estado</mat-label>
+                <mat-select [formControl]="filters.controls.estado">
+                  <mat-option value="">Todos</mat-option>
+                  @for (estado of estados; track estado) {
+                    <mat-option [value]="estado">{{ estado }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Lote</mat-label>
+                <mat-select [formControl]="filters.controls.loteId">
+                  <mat-option value="">Todos</mat-option>
+                  @for (lote of vm.lotes; track lote.id) {
+                    <mat-option [value]="lote.id">{{ lote.nombre }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+          </app-filter-drawer>
 
           <div class="list-toolbar-row">
             <span class="muted" style="font-size: 0.85rem; font-weight: 600;">
@@ -145,7 +154,11 @@
                     <button mat-icon-button (click)="openEdit(producto)" matTooltip="Editar producto" aria-label="Editar producto"><mat-icon>edit</mat-icon></button>
                     }
                     @if (producto.activo !== false) {
-                      <button mat-icon-button color="warn" (click)="softDelete(producto)" matTooltip="Eliminar producto" aria-label="Eliminar producto"><mat-icon>delete</mat-icon></button>
+                      @if (producto.estado === 'disponible') {
+                        <button mat-icon-button color="warn" (click)="softDelete(producto)" matTooltip="Eliminar producto" aria-label="Eliminar producto"><mat-icon>delete</mat-icon></button>
+                      } @else {
+                        <mat-icon matTooltip="Los productos vendidos o reservados no se pueden eliminar" aria-label="Producto protegido">lock</mat-icon>
+                      }
                     } @else {
                       <button mat-icon-button color="primary" (click)="confirmRestore(producto)" matTooltip="Restaurar producto" aria-label="Restaurar producto"><mat-icon>restore</mat-icon></button>
                     }
@@ -160,7 +173,7 @@
         } @else {
           <div class="listing-cards-grid">
             @for (producto of vm.productos.items; track producto.id) {
-              <div class="listing-card-item">
+              <div class="listing-card-item detail-card" role="button" tabindex="0" (click)="openView(producto)" (keydown.enter)="openView(producto)" (keydown.space)="$event.preventDefault(); openView(producto)">
                 <div class="card-media-wrap">
                   @if (firstImage(producto); as image) {
                     <img [src]="image" [alt]="producto.nombre" loading="lazy" decoding="async" />
@@ -176,21 +189,25 @@
                   <div class="card-item-price">{{ precio(producto) | currency: 'BOB' : 'symbol-narrow' }}</div>
                 </div>
                 <div class="card-footer-actions">
-                  <button mat-icon-button type="button" (click)="openView(producto)" matTooltip="Ver detalle del producto" aria-label="Ver producto">
+                  <button mat-icon-button type="button" (click)="$event.stopPropagation(); openView(producto)" (keydown)="$event.stopPropagation()" matTooltip="Ver detalle del producto" aria-label="Ver producto">
                     <mat-icon>visibility</mat-icon>
                   </button>
                   @if (auth.can('products.update')) {
-                    <button mat-icon-button type="button" (click)="openEdit(producto)" matTooltip="Editar producto" aria-label="Editar producto">
+                    <button mat-icon-button type="button" (click)="$event.stopPropagation(); openEdit(producto)" (keydown)="$event.stopPropagation()" matTooltip="Editar producto" aria-label="Editar producto">
                       <mat-icon>edit</mat-icon>
                     </button>
                   }
                   @if (auth.can('products.delete')) {
                     @if (producto.activo !== false) {
-                      <button mat-icon-button type="button" color="warn" (click)="softDelete(producto)" matTooltip="Eliminar producto" aria-label="Eliminar producto">
-                        <mat-icon>delete</mat-icon>
-                      </button>
+                      @if (producto.estado === 'disponible') {
+                        <button mat-icon-button type="button" color="warn" (click)="$event.stopPropagation(); softDelete(producto)" (keydown)="$event.stopPropagation()" matTooltip="Eliminar producto" aria-label="Eliminar producto">
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      } @else {
+                        <mat-icon matTooltip="Los productos vendidos o reservados no se pueden eliminar" aria-label="Producto protegido">lock</mat-icon>
+                      }
                     } @else {
-                      <button mat-icon-button type="button" color="primary" (click)="confirmRestore(producto)" matTooltip="Restaurar producto" aria-label="Restaurar producto">
+                      <button mat-icon-button type="button" color="primary" (click)="$event.stopPropagation(); confirmRestore(producto)" (keydown)="$event.stopPropagation()" matTooltip="Restaurar producto" aria-label="Restaurar producto">
                         <mat-icon>restore</mat-icon>
                       </button>
                     }

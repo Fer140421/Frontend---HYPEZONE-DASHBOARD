@@ -11,7 +11,7 @@ import {
   where,
 } from '@angular/fire/firestore';
 import { Producto } from '../models/producto.model';
-import { MetodoPago, Venta } from '../models/venta.model';
+import { MetodoPago, Venta, metodosPago } from '../models/venta.model';
 import { removeUndefinedDeep } from '../repositories/firestore.repository';
 
 export type VentaInput = Pick<
@@ -38,6 +38,7 @@ export class VentaService {
 
   async registrarVentaMultiple(detalles: VentaDetalleInput[], input: Omit<VentaInput, 'precioVenta'>): Promise<string[]> {
     if (!detalles.length) throw new Error('Agrega al menos un producto a la venta.');
+    this.validateMetodoPago(input.metodoPago);
     const ids = detalles.map(({ producto }) => producto.id);
     if (ids.some((id) => !id)) throw new Error('Uno de los productos no tiene un ID válido.');
     if (new Set(ids).size !== ids.length) throw new Error('Hay productos repetidos en la venta.');
@@ -126,6 +127,7 @@ export class VentaService {
 
   async editarVenta(detalles: Venta[], input: Omit<VentaInput, 'precioVenta'> & { precios: Record<string, number> }): Promise<void> {
     if (!detalles.length || detalles.some((detalle) => !detalle.id)) throw new Error('La venta no tiene detalles válidos.');
+    this.validateMetodoPago(input.metodoPago);
     const precios = detalles.map((detalle) => Number(input.precios[detalle.id!]));
     if (precios.some((precio) => !Number.isFinite(precio) || precio < 0)) throw new Error('Precio de venta inválido.');
     const totalOperacion = precios.reduce((total, precio) => total + precio, 0);
@@ -168,6 +170,7 @@ export class VentaService {
 
   async editarVentaCompleta(originales: Venta[], nuevos: VentaDetalleInput[], input: Omit<VentaInput, 'precioVenta'>): Promise<void> {
     if (!originales.length || !nuevos.length) throw new Error('La venta debe conservar al menos un producto.');
+    this.validateMetodoPago(input.metodoPago);
     const nuevosIds = nuevos.map(item => item.producto.id).filter((id): id is string => !!id);
     if (nuevosIds.length !== nuevos.length || new Set(nuevosIds).size !== nuevosIds.length) throw new Error('La selección de productos no es válida.');
     const originalesPorProducto = new Map(originales.map(item => [item.productoId, item]));
@@ -259,10 +262,14 @@ export class VentaService {
         throw new Error('Producto ya vendido.');
       case 'reservado':
         throw new Error('Producto reservado.');
-      case 'agotado':
-        throw new Error('Producto agotado.');
       default:
         throw new Error('El producto no está disponible.');
+    }
+  }
+
+  private validateMetodoPago(metodoPago: MetodoPago): void {
+    if (!metodosPago.includes(metodoPago)) {
+      throw new Error('El metodo de pago debe ser efectivo o QR.');
     }
   }
 

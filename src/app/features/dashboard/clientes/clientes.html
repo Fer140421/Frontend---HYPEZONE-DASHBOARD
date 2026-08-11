@@ -13,28 +13,37 @@
 @if (listViewModel$ | async; as vm) {
   <mat-card class="list-card">
     <mat-card-content>
-      <form class="filters" [formGroup]="filters">
-        <mat-form-field appearance="outline">
+      <div class="list-filter-bar">
+        <mat-form-field appearance="outline" class="list-search">
           <mat-label>Nombre</mat-label>
-          <input matInput formControlName="nombre" />
+          <input matInput [formControl]="filters.controls.nombre" placeholder="Nombre completo" />
         </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Celular</mat-label>
-          <input matInput formControlName="celular" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>CI</mat-label>
-          <input matInput formControlName="ci" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Estado</mat-label>
-          <mat-select formControlName="estado">
-            <mat-option value="activos">Activos</mat-option>
-            <mat-option value="inactivos">Inactivos</mat-option>
-            <mat-option value="todos">Todos</mat-option>
-          </mat-select>
-        </mat-form-field>
-      </form>
+        <button mat-stroked-button type="button" class="filter-trigger" (click)="filtersOpen.set(true)">
+          <mat-icon>tune</mat-icon>
+          <span>Filtros</span>
+        </button>
+      </div>
+
+      <app-filter-drawer [open]="filtersOpen()" (closed)="filtersOpen.set(false)">
+        <div class="filter-drawer-form">
+          <mat-form-field appearance="outline">
+            <mat-label>Celular</mat-label>
+            <input matInput [formControl]="filters.controls.celular" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>CI</mat-label>
+            <input matInput [formControl]="filters.controls.ci" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Estado</mat-label>
+            <mat-select [formControl]="filters.controls.estado">
+              <mat-option value="activos">Activos</mat-option>
+              <mat-option value="inactivos">Inactivos</mat-option>
+              <mat-option value="todos">Todos</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </app-filter-drawer>
 
       <div class="list-toolbar-row">
         <span class="muted" style="font-size: 0.85rem; font-weight: 600;">
