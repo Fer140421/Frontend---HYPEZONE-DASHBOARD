@@ -1,12 +1,22 @@
-
-    <section class="page-header">
-      <div>
-        <p class="eyebrow">{{ eyebrow() }}</p>
-        <h1>{{ title() }}</h1>
-        @if (description()) {
-          <p class="muted">{{ description() }}</p>
-        }
+<section class="page-header" [class.has-back]="!!backUrl()">
+  <div class="header-content">
+    @if (backUrl(); as url) {
+      <div class="back-button-wrapper">
+        <a mat-button [routerLink]="url" class="btn-back">
+          <mat-icon>arrow_back</mat-icon>
+          <span>{{ backLabel() }}</span>
+        </a>
       </div>
-      <ng-content />
-    </section>
-  
+    }
+    <div>
+      <p class="eyebrow">{{ eyebrow() }}</p>
+      <h1>{{ title() }}</h1>
+      @if (description()) {
+        <p class="muted">{{ description() }}</p>
+      }
+    </div>
+  </div>
+  <div class="header-actions">
+    <ng-content />
+  </div>
+</section>

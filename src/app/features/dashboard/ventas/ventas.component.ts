@@ -14,6 +14,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BehaviorSubject, combineLatest, firstValueFrom, map, shareReplay, startWith, take } from 'rxjs';
 import { Cliente } from '../../../core/models/cliente.model';
@@ -62,6 +63,7 @@ import { ClienteFormDialogComponent } from '../clientes/clientes.component';
     MatSelectModule,
     MatSnackBarModule,
     MatTableModule,
+    MatTooltipModule,
     EmptyStateComponent,
     LoadingComponent,
     PageHeaderComponent,

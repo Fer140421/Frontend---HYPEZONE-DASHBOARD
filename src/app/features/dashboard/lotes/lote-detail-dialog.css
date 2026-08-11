@@ -15,7 +15,14 @@
 .dialog-title {
   margin: 0 !important;
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 800;
+  color: var(--hz-black);
+}
+
+.dialog-subtitle {
+  margin: 2px 0 0 0;
+  font-size: 0.8rem;
+  color: var(--hz-gray);
 }
 
 .detail-dialog-content {
@@ -181,9 +188,19 @@
   font-size: 0.85rem;
 }
 
-.mini-sub {
-  font-size: 0.75rem;
+.mini-sub,
+.mini-attributes {
+  font-size: 0.78rem;
   color: var(--hz-gray);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.mini-attributes strong {
+  color: var(--hz-black);
 }
 
 .dialog-actions {

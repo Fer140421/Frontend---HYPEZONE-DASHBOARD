@@ -13,6 +13,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSortModule } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable, BehaviorSubject, combineLatest, map, of, shareReplay, startWith, switchMap } from 'rxjs';
 import { Lote } from '../../../core/models/lote.model';
@@ -70,6 +71,7 @@ import {
     MatSnackBarModule,
     MatSortModule,
     MatTableModule,
+    MatTooltipModule,
     EmptyStateComponent,
     ImageUploaderComponent,
     LoadingComponent,

@@ -212,50 +212,93 @@
   color: var(--hz-primary);
 }
 
+/* List of Top 5 Recent Sales with Product Thumbnails */
 .sales-list {
-  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .sale-item {
-  border-radius: 10px !important;
-  margin-bottom: 4px;
-  transition: background 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--hz-background);
+  border: 1px solid var(--hz-border);
+  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .sale-item:hover {
-  background: var(--hz-background) !important;
+  background: var(--hz-surface);
+  border-color: rgba(54, 183, 166, 0.4);
+  transform: translateX(4px);
 }
 
-.sale-icon-badge {
+.sale-product-media {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid var(--hz-border);
+  background: var(--hz-surface);
+}
+
+.sale-product-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.sale-product-placeholder {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--hz-primary-soft);
-  color: var(--hz-primary);
-  margin-right: 12px;
+  width: 100%;
+  height: 100%;
+  color: var(--hz-gray-light);
+  background: var(--hz-background);
+}
+
+.sale-product-placeholder mat-icon {
+  font-size: 1.5rem;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.sale-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
 }
 
 .sale-title {
-  font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
+  font-weight: 700;
   color: var(--hz-black);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.sale-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 0.82rem;
+.sale-date {
+  font-size: 0.78rem;
   color: var(--hz-gray);
-  margin-top: 2px;
+}
+
+.sale-price-tag {
+  text-align: right;
+  flex-shrink: 0;
 }
 
 .sale-price {
+  font-size: 1.05rem;
+  font-weight: 800;
   color: var(--hz-primary-hover);
-  font-size: 0.9rem;
 }
 
 .empty-sales {

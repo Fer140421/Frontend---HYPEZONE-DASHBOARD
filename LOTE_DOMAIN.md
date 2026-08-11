@@ -14,6 +14,8 @@
 | Ganancia real | Suma de `venta.ganancia` de ventas activas del lote |
 | Recuperación | `(ingresoReal / costoTotal) * 100`, o cero cuando `costoTotal` es cero |
 
+| Lotes activos (Resumen) | Conteo de lotes cuyo `activo !== false` que poseen al menos un producto activo con `estado === 'disponible'` |
+
 `cantidadProductos` permanece en documentos antiguos y se inicializa en cero en lotes nuevos por
 compatibilidad. No es editable ni participa en cálculos. Las métricas no se persisten en Firestore;
 `LoteAnalyticsService` las calcula con funciones puras a partir de lotes, productos y ventas.

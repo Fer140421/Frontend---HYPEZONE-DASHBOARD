@@ -45,59 +45,51 @@
           description="No hay marcas registradas en el sistema."
         />
       } @else if (viewType() === 'table') {
-        <div class="catalog-list">
-          @for (item of vm.marcas.items; track item.id) {
-            <div class="brand-item">
-              <div class="brand-info">
-                @if (getMarcaImagen(item); as img) {
-                  <img [src]="thumbnail(img)" [alt]="item.nombre" class="brand-logo" loading="lazy" decoding="async" />
-                } @else {
-                  <div class="brand-logo placeholder">
-                    <mat-icon>label</mat-icon>
-                  </div>
-                }
-                <span class="brand-name">{{ item.nombre }}</span>
-              </div>
+        <div class="table-scroll">
+          <table mat-table [dataSource]="vm.marcas.items">
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Marca</th>
+              <td mat-cell *matCellDef="let item"><strong>{{ item.nombre }}</strong></td>
+            </ng-container>
 
-              <div class="brand-actions">
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="sticky-actions">Acciones</th>
+              <td mat-cell *matCellDef="let item" class="actions-cell sticky-actions">
                 @if (auth.can('catalogs.update')) {
-                  <button mat-icon-button type="button" (click)="openEdit(item)" aria-label="Editar marca">
+                  <button mat-icon-button type="button" (click)="openEdit(item)" matTooltip="Editar marca" aria-label="Editar marca">
                     <mat-icon>edit</mat-icon>
                   </button>
                 }
                 @if (auth.can('catalogs.delete')) {
-                  <button mat-icon-button color="warn" type="button" (click)="removeMarca(item.id!)" aria-label="Eliminar marca">
+                  <button mat-icon-button color="warn" type="button" (click)="removeMarca(item.id!)" matTooltip="Eliminar marca" aria-label="Eliminar marca">
                     <mat-icon>delete</mat-icon>
                   </button>
                 }
-              </div>
-            </div>
-          }
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="['nombre', 'acciones']"></tr>
+            <tr mat-row *matRowDef="let row; columns: ['nombre', 'acciones'];"></tr>
+          </table>
         </div>
       } @else {
-        <div class="listing-cards-grid">
+        <div class="listing-cards-grid" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));">
           @for (item of vm.marcas.items; track item.id) {
             <div class="listing-card-item">
-              <div class="card-media-wrap">
-                @if (getMarcaImagen(item); as img) {
-                  <img [src]="thumbnail(img)" [alt]="item.nombre" loading="lazy" decoding="async" />
-                } @else {
-                  <div class="card-media-placeholder">
-                    <mat-icon>label</mat-icon>
-                  </div>
-                }
-              </div>
-              <div class="card-body-content" style="text-align: center; align-items: center;">
+              <div class="card-body-content" style="text-align: center; align-items: center; padding: 24px 16px;">
+                <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(54, 183, 166, 0.12); color: #2fa394; display: grid; place-items: center; margin-bottom: 8px;">
+                  <mat-icon>label</mat-icon>
+                </div>
                 <h3 class="card-item-title">{{ item.nombre }}</h3>
               </div>
               <div class="card-footer-actions">
                 @if (auth.can('catalogs.update')) {
-                  <button mat-icon-button type="button" (click)="openEdit(item)" aria-label="Editar marca">
+                  <button mat-icon-button type="button" (click)="openEdit(item)" matTooltip="Editar marca" aria-label="Editar marca">
                     <mat-icon>edit</mat-icon>
                   </button>
                 }
                 @if (auth.can('catalogs.delete')) {
-                  <button mat-icon-button color="warn" type="button" (click)="removeMarca(item.id!)" aria-label="Eliminar marca">
+                  <button mat-icon-button color="warn" type="button" (click)="removeMarca(item.id!)" matTooltip="Eliminar marca" aria-label="Eliminar marca">
                     <mat-icon>delete</mat-icon>
                   </button>
                 }

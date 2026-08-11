@@ -45,24 +45,32 @@
           description="No hay categorías registradas en el sistema."
         />
       } @else if (viewType() === 'table') {
-        <div class="catalog-list">
-          @for (item of vm.categorias.items; track item.id) {
-            <div class="catalog-item">
-              <span class="item-name">{{ item.nombre }}</span>
-              <div class="item-actions">
+        <div class="table-scroll">
+          <table mat-table [dataSource]="vm.categorias.items">
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Categoría</th>
+              <td mat-cell *matCellDef="let item"><strong>{{ item.nombre }}</strong></td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="sticky-actions">Acciones</th>
+              <td mat-cell *matCellDef="let item" class="actions-cell sticky-actions">
                 @if (auth.can('catalogs.update')) {
-                  <button mat-icon-button type="button" (click)="openEdit(item)" aria-label="Editar categoría">
+                  <button mat-icon-button type="button" (click)="openEdit(item)" matTooltip="Editar categoría" aria-label="Editar categoría">
                     <mat-icon>edit</mat-icon>
                   </button>
                 }
                 @if (auth.can('catalogs.delete')) {
-                  <button mat-icon-button color="warn" type="button" (click)="removeCategoria(item.id!)" aria-label="Eliminar categoría">
+                  <button mat-icon-button color="warn" type="button" (click)="removeCategoria(item.id!)" matTooltip="Eliminar categoría" aria-label="Eliminar categoría">
                     <mat-icon>delete</mat-icon>
                   </button>
                 }
-              </div>
-            </div>
-          }
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="['nombre', 'acciones']"></tr>
+            <tr mat-row *matRowDef="let row; columns: ['nombre', 'acciones'];"></tr>
+          </table>
         </div>
       } @else {
         <div class="listing-cards-grid" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));">
@@ -76,12 +84,12 @@
               </div>
               <div class="card-footer-actions">
                 @if (auth.can('catalogs.update')) {
-                  <button mat-icon-button type="button" (click)="openEdit(item)" aria-label="Editar categoría">
+                  <button mat-icon-button type="button" (click)="openEdit(item)" matTooltip="Editar categoría" aria-label="Editar categoría">
                     <mat-icon>edit</mat-icon>
                   </button>
                 }
                 @if (auth.can('catalogs.delete')) {
-                  <button mat-icon-button color="warn" type="button" (click)="removeCategoria(item.id!)" aria-label="Eliminar categoría">
+                  <button mat-icon-button color="warn" type="button" (click)="removeCategoria(item.id!)" matTooltip="Eliminar categoría" aria-label="Eliminar categoría">
                     <mat-icon>delete</mat-icon>
                   </button>
                 }

@@ -51,12 +51,12 @@
               <span class="item-name">{{ item.nombre }}</span>
               <div class="item-actions">
                 @if (auth.can('catalogs.update')) {
-                  <button mat-icon-button type="button" (click)="openEdit(item)" aria-label="Editar talla">
+                  <button mat-icon-button type="button" (click)="openEdit(item)" matTooltip="Editar talla" aria-label="Editar talla">
                     <mat-icon>edit</mat-icon>
                   </button>
                 }
                 @if (auth.can('catalogs.delete')) {
-                  <button mat-icon-button color="warn" type="button" (click)="removeTalla(item.id!)" aria-label="Eliminar talla">
+                  <button mat-icon-button color="warn" type="button" (click)="removeTalla(item.id!)" matTooltip="Eliminar talla" aria-label="Eliminar talla">
                     <mat-icon>delete</mat-icon>
                   </button>
                 }
@@ -76,12 +76,12 @@
               </div>
               <div class="card-footer-actions">
                 @if (auth.can('catalogs.update')) {
-                  <button mat-icon-button type="button" (click)="openEdit(item)" aria-label="Editar talla">
+                  <button mat-icon-button type="button" (click)="openEdit(item)" matTooltip="Editar talla" aria-label="Editar talla">
                     <mat-icon>edit</mat-icon>
                   </button>
                 }
                 @if (auth.can('catalogs.delete')) {
-                  <button mat-icon-button color="warn" type="button" (click)="removeTalla(item.id!)" aria-label="Eliminar talla">
+                  <button mat-icon-button color="warn" type="button" (click)="removeTalla(item.id!)" matTooltip="Eliminar talla" aria-label="Eliminar talla">
                     <mat-icon>delete</mat-icon>
                   </button>
                 }

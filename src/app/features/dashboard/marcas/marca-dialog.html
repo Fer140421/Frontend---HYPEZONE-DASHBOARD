@@ -9,15 +9,6 @@
       <mat-label>Nombre de la marca</mat-label>
       <input matInput formControlName="nombre" placeholder="Ej. Nike, Adidas, Puma" />
     </mat-form-field>
-
-    <div class="uploader-field">
-      <label class="field-label">Foto / Logo de la marca</label>
-      <app-image-uploader
-        [maxImages]="1"
-        [images]="imagenes()"
-        (uploaded)="onImagesUploaded($event)"
-      />
-    </div>
   </form>
 </mat-dialog-content>
 <mat-dialog-actions align="end">

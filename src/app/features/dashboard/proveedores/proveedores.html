@@ -100,19 +100,19 @@
           </ng-container>
 
           <ng-container matColumnDef="acciones">
-            <th mat-header-cell *matHeaderCellDef>Acciones</th>
-            <td mat-cell *matCellDef="let proveedor" class="actions-cell">
+            <th mat-header-cell *matHeaderCellDef class="sticky-actions">Acciones</th>
+            <td mat-cell *matCellDef="let proveedor" class="actions-cell sticky-actions">
               @if (auth.can('providers.update')) {
-                <button mat-icon-button type="button" (click)="openEdit(proveedor)" aria-label="Editar proveedor">
+                <button mat-icon-button type="button" (click)="openEdit(proveedor)" matTooltip="Editar proveedor" aria-label="Editar proveedor">
                   <mat-icon>edit</mat-icon>
                 </button>
               }
               @if (auth.can('providers.delete') && proveedor.activo === false) {
-                <button mat-icon-button type="button" (click)="confirmRestore(proveedor)" aria-label="Reactivar proveedor">
+                <button mat-icon-button type="button" (click)="confirmRestore(proveedor)" matTooltip="Reactivar proveedor" aria-label="Reactivar proveedor">
                   <mat-icon>restore</mat-icon>
                 </button>
               } @else if (auth.can('providers.delete')) {
-                <button mat-icon-button type="button" color="warn" (click)="confirmDelete(proveedor)" aria-label="Eliminar proveedor">
+                <button mat-icon-button type="button" color="warn" (click)="confirmDelete(proveedor)" matTooltip="Eliminar proveedor" aria-label="Eliminar proveedor">
                   <mat-icon>delete</mat-icon>
                 </button>
               }
@@ -155,16 +155,16 @@
             </div>
             <div class="card-footer-actions">
               @if (auth.can('providers.update')) {
-                <button mat-icon-button type="button" (click)="openEdit(proveedor)" aria-label="Editar proveedor">
+                <button mat-icon-button type="button" (click)="openEdit(proveedor)" matTooltip="Editar proveedor" aria-label="Editar proveedor">
                   <mat-icon>edit</mat-icon>
                 </button>
               }
               @if (auth.can('providers.delete') && proveedor.activo === false) {
-                <button mat-icon-button type="button" (click)="confirmRestore(proveedor)" aria-label="Reactivar proveedor">
+                <button mat-icon-button type="button" (click)="confirmRestore(proveedor)" matTooltip="Reactivar proveedor" aria-label="Reactivar proveedor">
                   <mat-icon>restore</mat-icon>
                 </button>
               } @else if (auth.can('providers.delete')) {
-                <button mat-icon-button type="button" color="warn" (click)="confirmDelete(proveedor)" aria-label="Eliminar proveedor">
+                <button mat-icon-button type="button" color="warn" (click)="confirmDelete(proveedor)" matTooltip="Eliminar proveedor" aria-label="Eliminar proveedor">
                   <mat-icon>delete</mat-icon>
                 </button>
               }

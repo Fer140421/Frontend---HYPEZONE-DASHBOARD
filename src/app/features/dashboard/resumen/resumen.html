@@ -81,30 +81,37 @@
   <section class="recent-sales-section">
     <mat-card class="sales-card">
       <mat-card-header>
-        <mat-icon class="sales-header-icon">history</mat-icon>
         <mat-card-title>Últimas ventas</mat-card-title>
-        <mat-card-subtitle>Últimos 5 productos vendidos</mat-card-subtitle>
+        <mat-card-subtitle>Últimos 5 productos vendidos con su fotografía</mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
-        <mat-list class="sales-list">
+        <div class="sales-list">
           @for (venta of vm.ultimasVentas; track venta.id) {
-            <mat-list-item class="sale-item">
-              <div matListItemIcon class="sale-icon-badge">
-                <mat-icon>receipt_long</mat-icon>
+            <div class="sale-item">
+              <div class="sale-product-media">
+                @if (venta.imagenProducto) {
+                  <img [src]="venta.imagenProducto" [alt]="venta.nombreProducto" class="sale-product-img" />
+                } @else {
+                  <div class="sale-product-placeholder">
+                    <mat-icon>checkroom</mat-icon>
+                  </div>
+                }
               </div>
-              <div matListItemTitle class="sale-title">{{ venta.nombreProducto }}</div>
-              <div matListItemLine class="sale-meta">
-                <span>{{ venta.fechaVenta | date: 'mediumDate' }}</span>
+              <div class="sale-details">
+                <span class="sale-title">{{ venta.nombreProducto }}</span>
+                <span class="sale-date">{{ venta.fechaVenta | date: 'mediumDate' }}</span>
+              </div>
+              <div class="sale-price-tag">
                 <strong class="sale-price">{{ venta.precioVenta | currency: 'BOB' : 'symbol-narrow' }}</strong>
               </div>
-            </mat-list-item>
+            </div>
           } @empty {
             <div class="empty-sales">
               <mat-icon>shopping_bag</mat-icon>
               <p class="muted">Aún no hay ventas registradas.</p>
             </div>
           }
-        </mat-list>
+        </div>
       </mat-card-content>
     </mat-card>
   </section>

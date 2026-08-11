@@ -1,10 +1,251 @@
 
-    .wide-table { overflow-x: auto; } table { min-width: 1500px; } .detail-actions { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
-    .warning-card { margin:16px 0; border:1px solid var(--mat-sys-error); } .warning-card mat-card-content { display:flex; gap:10px; align-items:center; }
-    .inline-form { display:flex; align-items:center; gap:12px; flex-wrap:wrap; } .inline-form mat-form-field { min-width:280px; flex:1; }
-    .linked-row { display:grid; grid-template-columns:56px minmax(180px,2fr) repeat(2,minmax(120px,1fr)) auto; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--mat-sys-outline-variant); }
-    .product-thumb { width:48px; height:48px; border-radius:8px; object-fit:cover; display:grid; place-items:center; background:var(--mat-sys-surface-container-high); }
-    .overview-card { border-top:4px solid var(--mat-sys-primary); } .info-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; padding-top:20px; }
-    .info-grid div { display:flex; flex-direction:column; gap:5px; } .info-grid span { color:var(--mat-sys-on-surface-variant); font-size:.82rem; } .info-grid .full { grid-column:1/-1; } .product-name { font-weight:600; }
-    @media (max-width: 760px) { .linked-row, .info-grid { grid-template-columns:1fr; } .info-grid .full { grid-column:auto; } }
+    .wide-table { overflow-x: auto; } 
+table { min-width: 1500px; } 
+
+.lote-edit-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .lote-edit-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.compact-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.compact-stats span {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.86rem;
+  color: var(--hz-gray);
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--hz-border);
+}
+
+.compact-stats span:last-child {
+  border-bottom: none;
+}
+
+.compact-stats strong {
+  color: var(--hz-black);
+  font-size: 0.95rem;
+}
+
+.section-header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.associate-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--hz-background);
+  border: 1px solid var(--hz-border);
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.associate-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--hz-black);
+}
+
+.associate-bar .inline-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.associate-bar mat-form-field {
+  min-width: 220px;
+  max-width: 340px;
+}
+
+.form-grid.compact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+.form-grid.compact-grid .full {
+  grid-column: 1 / -1;
+}
+
+.form-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--hz-border);
+}
+
+.page-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 14px;
+  margin-top: 28px;
+  padding: 20px 24px;
+  background: var(--hz-surface);
+  border: 1px solid var(--hz-border);
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+}
+
+.lote-prendas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.prenda-card-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--hz-surface);
+  border: 1px solid var(--hz-border);
+  border-radius: 10px;
+  gap: 10px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.prenda-card-item:hover {
+  border-color: var(--hz-gray-light);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.prenda-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.prenda-card-title {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.prenda-card-title strong {
+  font-size: 0.9rem;
+  color: var(--hz-black);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prenda-card-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--hz-background);
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.price-chip {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.76rem;
+  color: var(--hz-gray);
+}
+
+.price-chip strong {
+  font-size: 0.85rem;
+  color: var(--hz-black);
+}
+
+.prenda-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -4px;
+}
+
+.lote-ventas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.venta-card-item {
+  padding: 12px 14px;
+  background: var(--hz-background);
+  border: 1px solid var(--hz-border);
+  border-radius: 8px;
+}
+
+.warning-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--hz-warning-soft);
+  color: var(--hz-warning);
+  font-size: 0.88rem;
+  font-weight: 600;
+  border: 1px solid rgba(164, 119, 22, 0.2);
+}
+
+.linked-row { 
+  display: grid; 
+  grid-template-columns: 48px minmax(160px, 2fr) minmax(180px, 1.5fr) auto auto; 
+  align-items: center; 
+  gap: 14px; 
+  padding: 10px 0; 
+  border-bottom: 1px solid var(--hz-border); 
+}
+
+.product-thumb { 
+  width: 44px; 
+  height: 44px; 
+  border-radius: 8px; 
+  object-fit: cover; 
+  display: grid; 
+  place-items: center; 
+  background: var(--hz-background); 
+  border: 1px solid var(--hz-border);
+}
+
+.product-name { 
+  font-weight: 600; 
+  color: var(--hz-black);
+}
+
+@media (max-width: 760px) { 
+  .linked-row { grid-template-columns: 1fr; } 
+  .form-grid.compact-grid { grid-template-columns: 1fr; }
+  .associate-bar { flex-direction: column; align-items: stretch; }
+  .associate-bar .inline-form { flex-direction: column; align-items: stretch; }
+  .associate-bar mat-form-field { max-width: none; }
+}
   

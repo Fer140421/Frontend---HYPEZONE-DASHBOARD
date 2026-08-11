@@ -9,6 +9,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { PageEvent, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { BehaviorSubject, combineLatest, firstValueFrom, map, take } from 'rxjs';
 import { Categoria, categoriasIniciales } from '../../../core/models/catalogo.model';
 import { CategoriaRepository } from '../../../core/repositories/categoria.repository';
@@ -35,6 +37,8 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
     MatIconModule,
     MatPaginatorModule,
     MatSnackBarModule,
+    MatTableModule,
+    MatTooltipModule,
     EmptyStateComponent,
     LoadingComponent,
     PageHeaderComponent,

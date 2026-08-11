@@ -14,6 +14,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BehaviorSubject, combineLatest, firstValueFrom, map, shareReplay, take } from 'rxjs';
 import { Lote, emptyLote, loteFechaCompra } from '../../../core/models/lote.model';
@@ -98,6 +99,7 @@ export interface LoteDetail {
     MatSelectModule,
     MatSnackBarModule,
     MatTableModule,
+    MatTooltipModule,
     EmptyStateComponent,
     LoadingComponent,
     PageHeaderComponent,
@@ -294,20 +296,11 @@ export class LotesComponent implements OnInit {
     const detail = this.buildDetail(data, id);
     if (!detail) return;
 
-    const ref = this.dialog.open(LoteDetailDialogComponent, {
-      data: {
-        detail,
-        canUpdate: this.auth.can('lots.update'),
-      },
+    this.dialog.open(LoteDetailDialogComponent, {
+      data: { detail },
       width: '92vw',
       maxWidth: '820px',
       maxHeight: '90vh',
-    });
-
-    ref.afterClosed().subscribe((res) => {
-      if (res?.action === 'edit' && res.id) {
-        this.router.navigate(['/dashboard/lotes', res.id, 'editar']);
-      }
     });
   }
 
@@ -349,9 +342,9 @@ export class LotesComponent implements OnInit {
     this.dialog
       .open(ConfirmDialogComponent, {
         data: {
-          title: 'Desvincular producto',
-          message: `Se quitara "${producto.nombre}" del lote sin borrar el producto.`,
-          confirmText: 'Desvincular',
+          title: 'Quitar producto del lote',
+          message: `Se quitará "${producto.nombre}" del lote sin eliminar el producto del sistema.`,
+          confirmText: 'Quitar del lote',
         },
       })
       .afterClosed()
@@ -361,7 +354,7 @@ export class LotesComponent implements OnInit {
         }
         try {
           await this.management.unlinkProduct(lote.id!, producto.id!);
-          this.message('Producto desvinculado del lote.');
+          this.message('Producto quitado del lote.');
         } catch (error) {
           this.showError(error);
         }

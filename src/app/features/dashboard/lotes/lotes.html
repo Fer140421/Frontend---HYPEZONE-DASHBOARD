@@ -95,25 +95,23 @@
             <ng-container matColumnDef="estado">
               <th mat-header-cell *matHeaderCellDef>Estado</th>
               <td mat-cell *matCellDef="let r">
-                @if (r.lote.activo === false) {
-                  @if (r.cantidadDisponibles === 0 && r.cantidadProductos > 0) {
-                    <app-status-chip status="terminado" />
-                  } @else {
-                    <app-status-chip status="inactivo" />
-                  }
+                @if (r.estadoColor === 'rojo') {
+                  <app-status-chip status="inactivo" />
+                } @else if (r.estadoColor === 'amarillo') {
+                  <app-status-chip status="amarillo" label="activo" />
                 } @else {
                   <app-status-chip status="activo" />
                 }
               </td>
             </ng-container>
             <ng-container matColumnDef="acciones">
-              <th mat-header-cell *matHeaderCellDef></th>
-              <td mat-cell *matCellDef="let r">
-                <button mat-icon-button type="button" (click)="openDetailModal(r.lote.id!)" aria-label="Ver lote">
+              <th mat-header-cell *matHeaderCellDef class="sticky-actions"></th>
+              <td mat-cell *matCellDef="let r" class="sticky-actions">
+                <button mat-icon-button type="button" (click)="openDetailModal(r.lote.id!)" matTooltip="Ver detalle del lote" aria-label="Ver lote">
                   <mat-icon>visibility</mat-icon>
                 </button>
                 @if (auth.can('lots.update')) {
-                  <button mat-icon-button [routerLink]="['/dashboard/lotes', r.lote.id, 'editar']" aria-label="Modificar lote">
+                  <button mat-icon-button [routerLink]="['/dashboard/lotes', r.lote.id, 'editar']" matTooltip="Modificar lote" aria-label="Modificar lote">
                     <mat-icon>edit</mat-icon>
                   </button>
                 }
@@ -130,12 +128,10 @@
               <div class="card-body-content">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
                   <h3 class="card-item-title">{{ r.lote.nombre }}</h3>
-                  @if (r.lote.activo === false) {
-                    @if (r.cantidadDisponibles === 0 && r.cantidadProductos > 0) {
-                      <app-status-chip status="terminado" />
-                    } @else {
-                      <app-status-chip status="inactivo" />
-                    }
+                  @if (r.estadoColor === 'rojo') {
+                    <app-status-chip status="inactivo" />
+                  } @else if (r.estadoColor === 'amarillo') {
+                    <app-status-chip status="amarillo" label="activo" />
                   } @else {
                     <app-status-chip status="activo" />
                   }
@@ -150,11 +146,11 @@
                 </div>
               </div>
               <div class="card-footer-actions">
-                <button mat-icon-button type="button" (click)="openDetailModal(r.lote.id!)" aria-label="Ver lote">
+                <button mat-icon-button type="button" (click)="openDetailModal(r.lote.id!)" matTooltip="Ver detalle del lote" aria-label="Ver lote">
                   <mat-icon>visibility</mat-icon>
                 </button>
                 @if (auth.can('lots.update')) {
-                  <button mat-icon-button [routerLink]="['/dashboard/lotes', r.lote.id, 'editar']" aria-label="Modificar lote">
+                  <button mat-icon-button [routerLink]="['/dashboard/lotes', r.lote.id, 'editar']" matTooltip="Modificar lote" aria-label="Modificar lote">
                     <mat-icon>edit</mat-icon>
                   </button>
                 }
@@ -178,213 +174,271 @@
     </mat-card>
   }
 } @else {
-  <app-page-header [title]="mode() === 'new' ? 'Nuevo lote' : mode() === 'edit' ? 'Modificar lote' : 'Detalle de lote'">
-    <button mat-button routerLink="/dashboard/lotes">Volver</button>
-  </app-page-header>
+  <app-page-header 
+    [title]="mode() === 'new' ? 'Nuevo lote' : mode() === 'edit' ? 'Modificar lote' : 'Detalle de lote'"
+    backUrl="/dashboard/lotes"
+  />
 
   @if (mode() === 'new') {
-    <ng-container *ngTemplateOutlet="loteForm" />
-  } @else if (detail$ | async; as detail) {
-    @if (mode() === 'edit' && auth.can('lots.update')) {
-      <section class="detail-actions">
-        <button
-          mat-flat-button
-          class="primary-action"
-          type="button"
-          (click)="openProductDialog(detail.resumen.lote)"
-          [disabled]="detail.resumen.lote.activo === false"
-        >
-          <mat-icon>add</mat-icon>
-          Registrar producto
-        </button>
-        @if (auth.can('lots.delete') && detail.resumen.lote.activo === false) {
-          <button mat-stroked-button type="button" (click)="restore(detail.resumen.lote)">
-            <mat-icon>restore</mat-icon>
-            Restaurar lote
-          </button>
-        } @else if (auth.can('lots.delete')) {
-          <button mat-stroked-button color="warn" type="button" (click)="deactivate(detail)">
-            <mat-icon>archive</mat-icon>
-            Desactivar lote
-          </button>
-        }
-      </section>
-    }
-
-    <section class="detail-grid">
-      @if (mode() === 'edit') {
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Registro de nuevo lote</mat-card-title>
+        <mat-card-subtitle>Ingresa la información básica y el costo total de la compra</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content style="padding-top: 16px;">
         <ng-container *ngTemplateOutlet="loteForm" />
-      } @else {
-        <mat-card class="overview-card">
-          <mat-card-header>
-            <mat-card-title>{{ detail.resumen.lote.nombre }}</mat-card-title>
-            <mat-card-subtitle>Informacion general del lote</mat-card-subtitle>
-          </mat-card-header>
-          <mat-card-content class="info-grid">
-            <div><span>Fecha de compra</span><strong>{{ fecha(detail.resumen.lote.fechaCompra) | date: 'longDate' }}</strong></div>
-            <div><span>Costo total</span><strong>{{ detail.resumen.lote.costoTotal | currency: 'BOB' : 'symbol-narrow' }}</strong></div>
-            <div><span>Proveedor</span><strong>{{ detail.resumen.lote.proveedor || 'No registrado' }}</strong></div>
-            <div><span>Lugar de compra</span><strong>{{ detail.resumen.lote.lugarCompra || 'No registrado' }}</strong></div>
-            <div class="full"><span>Descripcion</span><strong>{{ detail.resumen.lote.descripcion || 'Sin descripcion' }}</strong></div>
-            <div class="full"><span>Notas</span><strong>{{ detail.resumen.lote.notas || 'Sin notas' }}</strong></div>
-          </mat-card-content>
-        </mat-card>
-      }
+      </mat-card-content>
+    </mat-card>
+  } @else if (detail$ | async; as detail) {
+    <!-- VISTA EDICIÓN O DETALLE DE LOTE -->
+    <div class="lote-edit-layout">
+      <!-- Formulario de datos del Lote -->
+      <mat-card class="form-card">
+        <mat-card-header>
+          <mat-card-title>Datos del lote</mat-card-title>
+        </mat-card-header>
+        <mat-card-content style="padding-top: 16px;">
+          <ng-container *ngTemplateOutlet="loteForm" />
+        </mat-card-content>
+      </mat-card>
 
-      <mat-card>
-        <mat-card-header><mat-card-title>Metricas financieras</mat-card-title></mat-card-header>
+      <!-- Métricas financieras del lote (Solo en edición/detalle) -->
+      <mat-card class="metrics-card">
+        <mat-card-header>
+          <mat-card-title>Rendimiento financiero</mat-card-title>
+        </mat-card-header>
         <mat-card-content>
-          <div class="stat-list">
-            <span>Productos reales <strong>{{ detail.resumen.cantidadProductos }}</strong></span>
-            <span>Disponibles <strong>{{ detail.resumen.cantidadDisponibles }}</strong></span>
-            <span>Reservados <strong>{{ detail.resumen.cantidadReservados }}</strong></span>
-            <span>Vendidos <strong>{{ detail.resumen.cantidadVendidos }}</strong></span>
-            <span>Agotados <strong>{{ detail.resumen.cantidadAgotados }}</strong></span>
-            <span>Inversion asignada <strong>{{ detail.resumen.inversionAsignada | currency: 'BOB' : 'symbol-narrow' }}</strong></span>
+          <div class="stat-list compact-stats">
+            <span>Prendas registradas <strong>{{ detail.resumen.cantidadProductos }}</strong></span>
+            <span>Prendas disponibles <strong>{{ detail.resumen.cantidadDisponibles }}</strong></span>
+            <span>Prendas vendidas <strong>{{ detail.resumen.cantidadVendidos }}</strong></span>
+            <span>Inversión asignada <strong>{{ detail.resumen.inversionAsignada | currency: 'BOB' : 'symbol-narrow' }}</strong></span>
             <span>Valor esperado <strong>{{ detail.resumen.valorEsperado | currency: 'BOB' : 'symbol-narrow' }}</strong></span>
             <span>Ingreso real <strong>{{ detail.resumen.ingresoReal | currency: 'BOB' : 'symbol-narrow' }}</strong></span>
-            <span>Ganancia real <strong>{{ detail.resumen.gananciaReal | currency: 'BOB' : 'symbol-narrow' }}</strong></span>
-            <span>Recuperacion <strong>{{ detail.resumen.recuperacionInversion | number: '1.0-1' }}%</strong></span>
-            <span>Diferencia costo/asignado <strong>{{ detail.diferenciaInversion | currency: 'BOB' : 'symbol-narrow' }}</strong></span>
+            <span>Ganancia neta <strong style="color: #10b981;">{{ detail.resumen.gananciaReal | currency: 'BOB' : 'symbol-narrow' }}</strong></span>
+            <span>Recuperación <strong>{{ detail.resumen.recuperacionInversion | number: '1.0-1' }}%</strong></span>
           </div>
         </mat-card-content>
       </mat-card>
-    </section>
+    </div>
 
     @if (Math.abs(detail.diferenciaInversion) > 0.01) {
-      <mat-card class="warning-card">
-        <mat-card-content>
-          <mat-icon>warning</mat-icon>
-          El costo total del lote no coincide con la suma de precios de compra de los productos asociados.
-        </mat-card-content>
-      </mat-card>
+      <div class="warning-banner" style="margin-top: 16px;">
+        <mat-icon>warning</mat-icon>
+        <span>El costo total declarado no coincide con la suma asignada a las prendas (Diferencia: {{ detail.diferenciaInversion | currency: 'BOB' : 'symbol-narrow' }}).</span>
+      </div>
     }
 
-    @if (mode() === 'edit' && auth.can('lots.update')) {
-      <mat-card>
-        <mat-card-header><mat-card-title>Asociar producto existente sin lote</mat-card-title></mat-card-header>
-        <mat-card-content>
-          <form class="inline-form" [formGroup]="associateForm" (ngSubmit)="associate(detail.resumen.lote)">
-            <mat-form-field appearance="outline">
-              <mat-label>Producto</mat-label>
-              <mat-select formControlName="productoId">
-                @for (producto of detail.productosSinLote; track producto.id) {
-                  <mat-option [value]="producto.id">{{ producto.nombre }}</mat-option>
+    <!-- Gestión de Prendas del Lote (Tabla) -->
+    <mat-card style="margin-top: 16px;">
+      <mat-card-header class="section-header-actions">
+        <div>
+          <mat-card-title>Prendas asociadas a este lote ({{ detail.productos.length }})</mat-card-title>
+        </div>
+        @if (mode() === 'edit' && auth.can('products.create')) {
+          <button
+            mat-flat-button
+            class="primary-action"
+            type="button"
+            (click)="openProductDialog(detail.resumen.lote)"
+            [disabled]="detail.resumen.lote.activo === false"
+            matTooltip="Registrar prenda directamente en este lote"
+          >
+            <mat-icon>add</mat-icon>
+            Registrar prenda nueva
+          </button>
+        }
+      </mat-card-header>
+      <mat-card-content>
+        <!-- Barra de asociación de producto existente -->
+        @if (mode() === 'edit' && auth.can('lots.update') && detail.productosSinLote.length > 0) {
+          <div class="associate-bar">
+            <span class="associate-label"><mat-icon>link</mat-icon> Asociar prenda existente sin lote:</span>
+            <form class="inline-form" [formGroup]="associateForm" (ngSubmit)="associate(detail.resumen.lote)">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Seleccionar prenda sin lote</mat-label>
+                <mat-select formControlName="productoId">
+                  @for (producto of detail.productosSinLote; track producto.id) {
+                    <mat-option [value]="producto.id">{{ producto.nombre }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <button mat-stroked-button type="submit" [disabled]="associateForm.invalid || detail.resumen.lote.activo === false">
+                <mat-icon>add_link</mat-icon>
+                Asociar
+              </button>
+            </form>
+          </div>
+        }
+
+        <!-- Vista adaptada de prendas del lote (Sin scroll horizontal) -->
+        @if (detail.productos.length > 0) {
+          <div class="lote-prendas-grid">
+            @for (p of detail.productos; track p.id) {
+              <div class="prenda-card-item">
+                <div class="prenda-card-header">
+                  @if (foto(p); as imagen) {
+                    <img class="product-thumb" [src]="imagen" [alt]="p.nombre" loading="lazy" decoding="async" width="48" height="48" />
+                  } @else {
+                    <span class="product-thumb placeholder"><mat-icon>image</mat-icon></span>
+                  }
+                  <div class="prenda-card-title">
+                    <strong>{{ p.nombre }}</strong>
+                    @if (p.codigo) {
+                      <span class="cell-subtitle">{{ p.codigo }}</span>
+                    }
+                  </div>
+                  <app-status-chip [status]="p.estado" />
+                </div>
+                <div class="prenda-card-body">
+                  <div class="price-chip">
+                    <span>Compra:</span>
+                    <strong>{{ precioCompra(p) | currency: 'BOB' : 'symbol-narrow' }}</strong>
+                  </div>
+                  <div class="price-chip">
+                    <span>Venta:</span>
+                    <strong>{{ precio(p) | currency: 'BOB' : 'symbol-narrow' }}</strong>
+                  </div>
+                </div>
+                @if (mode() === 'edit' && auth.can('lots.update')) {
+                  <div class="prenda-card-actions">
+                    <button 
+                      mat-icon-button 
+                      type="button" 
+                      color="warn"
+                      (click)="confirmUnlink(detail.resumen.lote, p)" 
+                      matTooltip="Quitar prenda del lote"
+                      aria-label="Quitar prenda del lote"
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
                 }
-              </mat-select>
-            </mat-form-field>
-            <button mat-flat-button type="submit" [disabled]="associateForm.invalid || detail.resumen.lote.activo === false">
-              Asociar
-            </button>
-          </form>
-          @if (detail.resumen.lote.activo === false) {
-            <p class="muted">El lote esta inactivo.</p>
-          }
-        </mat-card-content>
-      </mat-card>
-    }
-
-    <mat-card>
-      <mat-card-header><mat-card-title>Productos asociados</mat-card-title></mat-card-header>
-      <mat-card-content>
-        <div class="product-list">
-          @for (producto of detail.productos; track producto.id) {
-            <div class="linked-row">
-              @if (foto(producto); as imagen) {
-                <img class="product-thumb" [src]="imagen" [alt]="producto.nombre" loading="lazy" decoding="async" width="160" height="160" />
-              } @else {
-                <span class="product-thumb placeholder"><mat-icon>image</mat-icon></span>
-              }
-              <span class="product-name">{{ producto.nombre }}</span>
-              <span>{{ precioCompra(producto) | currency: 'BOB' : 'symbol-narrow' }} / {{ precio(producto) | currency: 'BOB' : 'symbol-narrow' }}</span>
-              <app-status-chip [status]="producto.estado" />
-              @if (mode() === 'edit' && auth.can('lots.update')) {
-                <button mat-icon-button type="button" (click)="confirmUnlink(detail.resumen.lote, producto)" aria-label="Desvincular producto">
-                  <mat-icon>link_off</mat-icon>
-                </button>
-              }
-            </div>
-          } @empty {
-            <p class="muted">Este lote no tiene productos activos asociados.</p>
-          }
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card>
-      <mat-card-header><mat-card-title>Ventas asociadas</mat-card-title></mat-card-header>
-      <mat-card-content>
-        <div class="product-list">
-          @for (venta of detail.ventas; track venta.id) {
-            <div class="linked-row">
-              <span>{{ venta.nombreProducto }}</span>
-              <span>{{ venta.fechaVenta | date: 'mediumDate' }}</span>
-              <strong>{{ venta.precioVenta | currency: 'BOB' : 'symbol-narrow' }}</strong>
-              <span>Ganancia {{ venta.ganancia | currency: 'BOB' : 'symbol-narrow' }}</span>
-            </div>
-          } @empty {
-            <p class="muted">No hay ventas activas asociadas por loteId.</p>
-          }
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card>
-      <mat-card-header><mat-card-title>Productos sin precio de compra</mat-card-title></mat-card-header>
-      <mat-card-content>
-        @for (producto of detail.productosSinPrecioCompra; track producto.id) {
-          <p><a [routerLink]="['/dashboard/productos', producto.id]">{{ producto.nombre }}</a></p>
-        } @empty {
-          <p class="muted">Todos los productos tienen precio de compra mayor a cero.</p>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="muted" style="padding: 16px 0; text-align: center;">No hay prendas asociadas a este lote.</p>
         }
       </mat-card-content>
     </mat-card>
+
+    <!-- Productos sin precio de compra -->
+    @if (detail.productosSinPrecioCompra.length > 0) {
+      <div class="warning-banner" style="margin-top: 16px;">
+        <mat-icon>info</mat-icon>
+        <span>Existen {{ detail.productosSinPrecioCompra.length }} prendas sin precio de compra asignado en este lote.</span>
+      </div>
+    }
+
+    <!-- Ventas registradas (Sin scroll horizontal) -->
+    @if (detail.ventas.length > 0) {
+      <mat-card style="margin-top: 16px;">
+        <mat-card-header><mat-card-title>Ventas de prendas de este lote ({{ detail.ventas.length }})</mat-card-title></mat-card-header>
+        <mat-card-content>
+          <div class="lote-ventas-grid">
+            @for (v of detail.ventas; track v.id) {
+              <div class="venta-card-item">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <strong>{{ v.nombreProducto }}</strong>
+                  <strong style="color: #10b981;">+{{ v.ganancia | currency: 'BOB' : 'symbol-narrow' }}</strong>
+                </div>
+                <div class="muted" style="font-size: 0.82rem; margin-top: 4px;">
+                  <span>{{ fecha(v.fechaVenta) | date: 'mediumDate' }}</span> · 
+                  <span>Pago: {{ v.metodoPago || 'Efectivo' }}</span> · 
+                  <span>Venta: {{ v.precioVenta | currency: 'BOB' : 'symbol-narrow' }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+
+    <!-- BOTONES PRINCIPALES DE ACCIÓN AL FINAL DE TODA LA PANTALLA -->
+    <div class="page-footer-actions">
+      <button 
+        mat-stroked-button 
+        type="button" 
+        routerLink="/dashboard/lotes"
+      >
+        Cancelar
+      </button>
+      <button 
+        mat-flat-button 
+        class="primary-action" 
+        type="button" 
+        (click)="save()"
+        [disabled]="form.invalid || !auth.can('lots.update')"
+      >
+        <mat-icon>check_circle</mat-icon>
+        Guardar cambios del lote
+      </button>
+    </div>
   }
 }
 
+<!-- Template Reutilizable del Formulario del Lote -->
 <ng-template #loteForm>
-  <mat-card>
-    <mat-card-content>
-      <form class="form-grid" [formGroup]="form" (ngSubmit)="save()">
-        <mat-form-field appearance="outline">
-          <mat-label>Nombre</mat-label>
-          <input matInput formControlName="nombre" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Fecha de compra</mat-label>
-          <input matInput [matDatepicker]="picker" formControlName="fechaCompra" />
-          <mat-datepicker-toggle matIconSuffix [for]="picker" />
-          <mat-datepicker #picker />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Proveedor</mat-label>
-          <mat-select formControlName="proveedorId">
-            <mat-option value="">Sin proveedor</mat-option>
-            @for (proveedor of proveedoresSource$ | async; track proveedor.id) {
-              <mat-option [value]="proveedor.id">{{ proveedorLabel(proveedor) }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Lugar de compra</mat-label>
-          <input matInput formControlName="lugarCompra" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Costo total</mat-label>
-          <input matInput type="number" formControlName="costoTotal" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="full">
-          <mat-label>Descripcion</mat-label>
-          <textarea matInput rows="3" formControlName="descripcion"></textarea>
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="full">
-          <mat-label>Notas</mat-label>
-          <textarea matInput rows="3" formControlName="notas"></textarea>
-        </mat-form-field>
-        <button mat-flat-button class="primary-action" type="submit" [disabled]="form.invalid || (currentId() ? !auth.can('lots.update') : !auth.can('lots.create'))">
-          {{ currentId() ? 'Guardar cambios' : 'Guardar lote' }}
+  <form [formGroup]="form" (ngSubmit)="save()" class="lote-form-container">
+    <div class="form-grid compact-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Nombre del lote</mat-label>
+        <input matInput formControlName="nombre" placeholder="Ej: Lote Ropa Verano 2026" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de compra</mat-label>
+        <input matInput [matDatepicker]="picker" formControlName="fechaCompra" />
+        <mat-datepicker-toggle matIconSuffix [for]="picker" />
+        <mat-datepicker #picker />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Proveedor</mat-label>
+        <mat-select formControlName="proveedorId">
+          <mat-option value="">Sin proveedor</mat-option>
+          @for (proveedor of proveedoresSource$ | async; track proveedor.id) {
+            <mat-option [value]="proveedor.id">{{ proveedorLabel(proveedor) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Lugar de compra</mat-label>
+        <input matInput formControlName="lugarCompra" placeholder="Ej: Importadora X" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Costo total (Bs)</mat-label>
+        <input matInput type="number" min="0" formControlName="costoTotal" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Descripción</mat-label>
+        <textarea matInput rows="2" formControlName="descripcion" placeholder="Detalles del paquete de prendas..."></textarea>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Notas adicionales</mat-label>
+        <textarea matInput rows="2" formControlName="notas" placeholder="Observaciones internas..."></textarea>
+      </mat-form-field>
+    </div>
+
+    <!-- Si es pantalla de NUEVO lote, se muestran los botones aquí dentro -->
+    @if (mode() === 'new') {
+      <div class="form-footer-actions">
+        <button 
+          mat-stroked-button 
+          type="button" 
+          routerLink="/dashboard/lotes"
+        >
+          Cancelar
         </button>
-      </form>
-    </mat-card-content>
-  </mat-card>
+        <button 
+          mat-flat-button 
+          class="primary-action" 
+          type="submit" 
+          [disabled]="form.invalid || !auth.can('lots.create')"
+        >
+          <mat-icon>check_circle</mat-icon>
+          Guardar lote
+        </button>
+      </div>
+    }
+  </form>
 </ng-template>

@@ -16,12 +16,35 @@ export class LoteAnalyticsService {
     const costoTotal = this.number(lote.costoTotal);
     const ingresoReal = this.sum(ventasLote, (venta) => venta.precioVenta);
 
+    const cantidadDisponibles = productosLote.filter((p) => p.estado === 'disponible').length;
+    const cantidadReservados = productosLote.filter((p) => p.estado === 'reservado').length;
+    const cantidadVendidos = ventasLote.length;
+
+    let estadoOperativo: 'activo' | 'inactivo' | 'sin_productos' = 'activo';
+    let estadoColor: 'verde' | 'amarillo' | 'rojo' = 'verde';
+
+    if (lote.activo === false || (cantidadDisponibles === 0 && productosLote.length > 0)) {
+      estadoOperativo = 'inactivo';
+      estadoColor = 'rojo'; // Lote agotado / inactivo -> ROJO
+    } else if (productosLote.length === 0) {
+      estadoOperativo = 'sin_productos';
+      estadoColor = 'verde';
+    } else {
+      // Si se ha vendido más de la mitad (50%) de los productos -> AMARILLO, de lo contrario VERDE
+      const porcentajeVendido = (cantidadVendidos / productosLote.length) * 100;
+      if (porcentajeVendido > 50) {
+        estadoColor = 'amarillo';
+      } else {
+        estadoColor = 'verde';
+      }
+    }
+
     return {
       lote,
       cantidadProductos: productosLote.length,
-      cantidadDisponibles: productosLote.filter((p) => p.estado === 'disponible').length,
-      cantidadReservados: productosLote.filter((p) => p.estado === 'reservado').length,
-      cantidadVendidos: ventasLote.length,
+      cantidadDisponibles,
+      cantidadReservados,
+      cantidadVendidos,
       cantidadAgotados: productosLote.filter((p) => p.estado === 'agotado').length,
       inversionAsignada: this.sum(productosLote, (producto) => producto.precioCompra),
       valorEsperado: this.sum(
@@ -31,6 +54,8 @@ export class LoteAnalyticsService {
       ingresoReal,
       gananciaReal: this.sum(ventasLote, (venta) => venta.ganancia),
       recuperacionInversion: costoTotal > 0 ? (ingresoReal / costoTotal) * 100 : 0,
+      estadoOperativo,
+      estadoColor,
     };
   }
 

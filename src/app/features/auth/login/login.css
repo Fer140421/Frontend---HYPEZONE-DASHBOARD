@@ -1,0 +1,345 @@
+/* -------------------------------------------------------------------------- */
+/* REDISEÑO MINIMALISTA DE LOGIN - HYPEZONE DASHBOARD                        */
+/* -------------------------------------------------------------------------- */
+
+:host {
+  display: block;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.login-page {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+  padding: 24px;
+  background-color: var(--hz-dark);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* -------------------------------------------------------------------------- */
+/* FONDO SUTIL & DECORATIVO                                                   */
+/* -------------------------------------------------------------------------- */
+.login-bg-decor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.fashion-mesh {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(circle at 10% 20%, rgba(54, 183, 166, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(54, 183, 166, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(20, 20, 20, 0.95) 0%, var(--hz-dark) 100%);
+}
+
+.glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.4;
+}
+
+.orb-1 {
+  width: 400px;
+  height: 400px;
+  top: -120px;
+  left: -120px;
+  background: var(--hz-primary);
+}
+
+.orb-2 {
+  width: 350px;
+  height: 350px;
+  bottom: -100px;
+  right: -100px;
+  background: var(--hz-primary-hover);
+}
+
+/* -------------------------------------------------------------------------- */
+/* CONTENEDOR PRINCIPAL DUAL-PANEL                                            */
+/* -------------------------------------------------------------------------- */
+.login-container {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: min(920px, 100%);
+  min-height: 520px;
+  border-radius: 20px;
+  background: var(--hz-surface);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.3),
+    0 4px 16px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+/* -------------------------------------------------------------------------- */
+/* PANEL IZQUIERDO: MINIMAL HERO WITH BRAND LOGO                              */
+/* -------------------------------------------------------------------------- */
+.login-hero-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 44px 40px;
+  background: linear-gradient(150deg, #141618 0%, var(--hz-dark) 100%);
+  color: var(--hz-surface);
+  position: relative;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Header Marca Hero con Logo HZ global */
+.hero-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.hero-brand .brand-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 1.1rem;
+  background: linear-gradient(135deg, var(--hz-primary), var(--hz-primary-hover));
+  box-shadow: 0 4px 12px rgba(54, 183, 166, 0.3);
+  flex-shrink: 0;
+}
+
+.hero-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.hero-brand-title {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #ffffff;
+  line-height: 1.1;
+}
+
+.hero-brand-subtitle {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--hz-gray-light);
+  font-weight: 600;
+}
+
+/* Hero Content */
+.hero-content {
+  margin: 36px 0;
+}
+
+.hero-title {
+  margin: 0 0 12px 0;
+  font-size: 1.85rem;
+  font-weight: 800;
+  line-height: 1.25;
+  color: #ffffff;
+  letter-spacing: -0.4px;
+}
+
+.hero-description {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--hz-gray-light);
+  max-width: 320px;
+}
+
+.hero-footer {
+  font-size: 0.75rem;
+  color: var(--hz-gray);
+}
+
+/* -------------------------------------------------------------------------- */
+/* PANEL DERECHO: FORMULARIO ANGULAR MATERIAL                                  */
+/* -------------------------------------------------------------------------- */
+.login-form-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 44px 40px;
+  background: var(--hz-surface);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 340px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.login-card-header {
+  padding: 0 0 24px 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Logo visible solo en móvil */
+.mobile-brand {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.mobile-brand .brand-mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 1.05rem;
+  background: linear-gradient(135deg, var(--hz-primary), var(--hz-primary-hover));
+  box-shadow: 0 4px 12px rgba(54, 183, 166, 0.3);
+}
+
+.mobile-brand-name {
+  font-size: 1.2rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: var(--hz-black);
+}
+
+.login-title {
+  font-size: 1.6rem !important;
+  font-weight: 800 !important;
+  color: var(--hz-black) !important;
+  line-height: 1.2 !important;
+  letter-spacing: -0.4px;
+  margin-bottom: 6px !important;
+}
+
+.login-subtitle {
+  font-size: 0.85rem !important;
+  color: var(--hz-gray) !important;
+  font-weight: 500 !important;
+}
+
+.login-card-content {
+  padding: 0 !important;
+}
+
+.login-card-content form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Form Fields Clean Styling */
+.full-width-field {
+  width: 100%;
+}
+
+.password-toggle-btn {
+  color: var(--hz-gray) !important;
+}
+
+.password-toggle-btn:hover {
+  color: var(--hz-black) !important;
+}
+
+/* Mensaje de error formateado sin íconos recargados */
+.form-error-box {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--hz-danger-soft);
+  border: 1px solid rgba(122, 36, 36, 0.15);
+  color: var(--hz-danger);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* Botón de Submit Limpio */
+.login-submit-btn {
+  width: 100%;
+  min-height: 48px !important;
+  border-radius: 10px !important;
+  font-size: 0.92rem !important;
+  font-weight: 700 !important;
+  background-color: var(--hz-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(54, 183, 166, 0.25) !important;
+  margin-top: 6px;
+  transition: all 0.2s ease !important;
+}
+
+.login-submit-btn:hover:not([disabled]) {
+  background-color: var(--hz-primary-hover) !important;
+  box-shadow: 0 6px 18px rgba(54, 183, 166, 0.38) !important;
+}
+
+.login-submit-btn[disabled] {
+  opacity: 0.6;
+  box-shadow: none !important;
+}
+
+.btn-loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+
+/* -------------------------------------------------------------------------- */
+/* RESPONSIVE DESIGN (TABLET & MOBILE)                                        */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 840px) {
+  .login-container {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    max-width: 420px;
+    border-radius: 18px;
+  }
+
+  .login-hero-panel {
+    display: none;
+  }
+
+  .mobile-brand {
+    display: flex;
+  }
+
+  .login-form-panel {
+    padding: 36px 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-page {
+    padding: 16px;
+  }
+
+  .login-container {
+    border-radius: 16px;
+  }
+
+  .login-form-panel {
+    padding: 28px 20px;
+  }
+
+  .login-title {
+    font-size: 1.4rem !important;
+  }
+}
+

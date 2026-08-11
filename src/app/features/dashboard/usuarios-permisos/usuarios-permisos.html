@@ -109,12 +109,13 @@
               </ng-container>
 
               <ng-container matColumnDef="select">
-                <th mat-header-cell *matHeaderCellDef class="edit-column">Editar</th>
-                <td mat-cell *matCellDef="let user" class="edit-column">
+                <th mat-header-cell *matHeaderCellDef class="edit-column sticky-actions">Editar</th>
+                <td mat-cell *matCellDef="let user" class="edit-column sticky-actions">
                   <button
                     mat-icon-button
                     type="button"
                     (click)="select(user)"
+                    matTooltip="Editar permisos del usuario"
                     [attr.aria-label]="'Editar permisos de ' + user.displayName"
                     [attr.aria-pressed]="selected()?.uid === user.uid"
                   >

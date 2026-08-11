@@ -123,7 +123,7 @@
                   <div class="price-cell">
                     <span>{{ precio(producto) | currency: 'BOB' : 'symbol-narrow' }}</span>
                     @if (auth.can('products.update')) {
-                      <button mat-icon-button type="button" (click)="openPriceEdit(producto)" aria-label="Editar precio"><mat-icon>edit</mat-icon></button>
+                      <button mat-icon-button type="button" (click)="openPriceEdit(producto)" matTooltip="Cambiar precio" aria-label="Editar precio"><mat-icon>edit</mat-icon></button>
                     }
                   </div>
                 </td>
@@ -135,19 +135,19 @@
               </ng-container>
 
               <ng-container matColumnDef="acciones">
-                <th mat-header-cell *matHeaderCellDef></th>
-                <td mat-cell *matCellDef="let producto" class="table-actions">
-                  <button mat-icon-button type="button" (click)="openView(producto)" aria-label="Ver producto">
+                <th mat-header-cell *matHeaderCellDef class="sticky-actions"></th>
+                <td mat-cell *matCellDef="let producto" class="table-actions sticky-actions">
+                  <button mat-icon-button type="button" (click)="openView(producto)" matTooltip="Ver detalle del producto" aria-label="Ver producto">
                     <mat-icon>visibility</mat-icon>
                   </button>
                   @if (auth.can('products.update') || auth.can('products.delete')) {
                     @if (auth.can('products.update')) {
-                    <button mat-icon-button (click)="openEdit(producto)" aria-label="Editar producto"><mat-icon>edit</mat-icon></button>
+                    <button mat-icon-button (click)="openEdit(producto)" matTooltip="Editar producto" aria-label="Editar producto"><mat-icon>edit</mat-icon></button>
                     }
                     @if (producto.activo !== false) {
-                      <button mat-icon-button color="warn" (click)="softDelete(producto)" aria-label="Eliminar producto"><mat-icon>delete</mat-icon></button>
+                      <button mat-icon-button color="warn" (click)="softDelete(producto)" matTooltip="Eliminar producto" aria-label="Eliminar producto"><mat-icon>delete</mat-icon></button>
                     } @else {
-                      <button mat-icon-button color="primary" (click)="confirmRestore(producto)" aria-label="Restaurar producto"><mat-icon>restore</mat-icon></button>
+                      <button mat-icon-button color="primary" (click)="confirmRestore(producto)" matTooltip="Restaurar producto" aria-label="Restaurar producto"><mat-icon>restore</mat-icon></button>
                     }
                   }
                 </td>
@@ -176,21 +176,21 @@
                   <div class="card-item-price">{{ precio(producto) | currency: 'BOB' : 'symbol-narrow' }}</div>
                 </div>
                 <div class="card-footer-actions">
-                  <button mat-icon-button type="button" (click)="openView(producto)" aria-label="Ver producto">
+                  <button mat-icon-button type="button" (click)="openView(producto)" matTooltip="Ver detalle del producto" aria-label="Ver producto">
                     <mat-icon>visibility</mat-icon>
                   </button>
                   @if (auth.can('products.update')) {
-                    <button mat-icon-button type="button" (click)="openEdit(producto)" aria-label="Editar producto">
+                    <button mat-icon-button type="button" (click)="openEdit(producto)" matTooltip="Editar producto" aria-label="Editar producto">
                       <mat-icon>edit</mat-icon>
                     </button>
                   }
                   @if (auth.can('products.delete')) {
                     @if (producto.activo !== false) {
-                      <button mat-icon-button type="button" color="warn" (click)="softDelete(producto)" aria-label="Eliminar producto">
+                      <button mat-icon-button type="button" color="warn" (click)="softDelete(producto)" matTooltip="Eliminar producto" aria-label="Eliminar producto">
                         <mat-icon>delete</mat-icon>
                       </button>
                     } @else {
-                      <button mat-icon-button type="button" color="primary" (click)="confirmRestore(producto)" aria-label="Restaurar producto">
+                      <button mat-icon-button type="button" color="primary" (click)="confirmRestore(producto)" matTooltip="Restaurar producto" aria-label="Restaurar producto">
                         <mat-icon>restore</mat-icon>
                       </button>
                     }
@@ -215,9 +215,10 @@
         </mat-card>
       }
     } @else {
-      <app-page-header [title]="mode() === 'new' ? 'Nuevo producto' : 'Detalle de producto'">
-        <button mat-button routerLink="/dashboard/productos">Volver</button>
-      </app-page-header>
+      <app-page-header 
+        [title]="mode() === 'new' ? 'Nuevo producto' : 'Detalle de producto'"
+        backUrl="/dashboard/productos"
+      />
 
       <section class="detail-grid wide">
         <mat-card>

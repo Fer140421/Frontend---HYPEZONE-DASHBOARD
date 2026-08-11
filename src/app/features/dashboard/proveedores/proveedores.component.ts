@@ -11,6 +11,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { BehaviorSubject, combineLatest, firstValueFrom, map, shareReplay, startWith, take } from 'rxjs';
 import { Proveedor } from '../../../core/models/proveedor.model';
 import { ProveedorRepository } from '../../../core/repositories/proveedor.repository';
@@ -45,6 +46,7 @@ type EstadoFiltro = 'todos' | 'activos' | 'inactivos';
     MatSelectModule,
     MatSnackBarModule,
     MatTableModule,
+    MatTooltipModule,
     EmptyStateComponent,
     LoadingComponent,
     PageHeaderComponent,

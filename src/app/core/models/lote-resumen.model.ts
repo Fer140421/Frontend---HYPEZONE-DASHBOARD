@@ -12,4 +12,6 @@ export interface LoteResumen {
   ingresoReal: number;
   gananciaReal: number;
   recuperacionInversion: number;
+  estadoOperativo: 'activo' | 'inactivo' | 'sin_productos';
+  estadoColor: 'verde' | 'amarillo' | 'rojo';
 }

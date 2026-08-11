@@ -94,19 +94,19 @@
           </ng-container>
 
           <ng-container matColumnDef="acciones">
-            <th mat-header-cell *matHeaderCellDef>Acciones</th>
-            <td mat-cell *matCellDef="let cliente" class="actions-cell">
+            <th mat-header-cell *matHeaderCellDef class="sticky-actions">Acciones</th>
+            <td mat-cell *matCellDef="let cliente" class="actions-cell sticky-actions">
               @if (auth.can('clients.update')) {
-                <button mat-icon-button type="button" (click)="openEdit(cliente)" aria-label="Editar cliente">
+                <button mat-icon-button type="button" (click)="openEdit(cliente)" matTooltip="Editar cliente" aria-label="Editar cliente">
                   <mat-icon>edit</mat-icon>
                 </button>
               }
               @if (auth.can('clients.delete') && cliente.activo === false) {
-                <button mat-icon-button type="button" (click)="confirmRestore(cliente)" aria-label="Reactivar cliente">
+                <button mat-icon-button type="button" (click)="confirmRestore(cliente)" matTooltip="Reactivar cliente" aria-label="Reactivar cliente">
                   <mat-icon>restore</mat-icon>
                 </button>
               } @else if (auth.can('clients.delete')) {
-                <button mat-icon-button type="button" color="warn" (click)="confirmDelete(cliente)" aria-label="Eliminar cliente">
+                <button mat-icon-button type="button" color="warn" (click)="confirmDelete(cliente)" matTooltip="Eliminar cliente" aria-label="Eliminar cliente">
                   <mat-icon>delete</mat-icon>
                 </button>
               }
@@ -139,16 +139,16 @@
             </div>
             <div class="card-footer-actions">
               @if (auth.can('clients.update')) {
-                <button mat-icon-button type="button" (click)="openEdit(cliente)" aria-label="Editar cliente">
+                <button mat-icon-button type="button" (click)="openEdit(cliente)" matTooltip="Editar cliente" aria-label="Editar cliente">
                   <mat-icon>edit</mat-icon>
                 </button>
               }
               @if (auth.can('clients.delete') && cliente.activo === false) {
-                <button mat-icon-button type="button" (click)="confirmRestore(cliente)" aria-label="Reactivar cliente">
+                <button mat-icon-button type="button" (click)="confirmRestore(cliente)" matTooltip="Reactivar cliente" aria-label="Reactivar cliente">
                   <mat-icon>restore</mat-icon>
                 </button>
               } @else if (auth.can('clients.delete')) {
-                <button mat-icon-button type="button" color="warn" (click)="confirmDelete(cliente)" aria-label="Eliminar cliente">
+                <button mat-icon-button type="button" color="warn" (click)="confirmDelete(cliente)" matTooltip="Eliminar cliente" aria-label="Eliminar cliente">
                   <mat-icon>delete</mat-icon>
                 </button>
               }

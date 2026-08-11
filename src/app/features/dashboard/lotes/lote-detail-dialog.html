@@ -1,9 +1,10 @@
 <div class="dialog-header">
   <div class="header-main">
-    <h2 mat-dialog-title class="dialog-title">{{ detail.resumen.lote.nombre }}</h2>
-    <app-status-chip [status]="detail.resumen.lote.activo === false ? (detail.resumen.cantidadDisponibles === 0 && detail.resumen.cantidadProductos > 0 ? 'terminado' : 'inactivo') : 'activo'" />
+    <div>
+      <h2 mat-dialog-title class="dialog-title">{{ detail.resumen.lote.nombre }}</h2>
+    </div>
   </div>
-  <button mat-icon-button mat-dialog-close aria-label="Cerrar dialogo">
+  <button mat-icon-button mat-dialog-close aria-label="Cerrar diálogo">
     <mat-icon>close</mat-icon>
   </button>
 </div>
@@ -13,6 +14,12 @@
   <div class="detail-section">
     <h3 class="section-subtitle"><mat-icon>info</mat-icon> Información General</h3>
     <div class="info-grid">
+      <div class="info-item">
+        <span class="info-label">Estado operativo</span>
+        <div>
+          <app-status-chip [status]="detail.resumen.estadoColor === 'rojo' ? 'inactivo' : (detail.resumen.estadoColor === 'amarillo' ? 'amarillo' : 'activo')" [label]="detail.resumen.estadoColor === 'rojo' ? 'Inactivo' : 'Activo'" />
+        </div>
+      </div>
       <div class="info-item">
         <span class="info-label">Fecha de compra</span>
         <strong class="info-val">{{ fecha(detail.resumen.lote.fechaCompra) | date: 'mediumDate' }}</strong>
@@ -90,57 +97,37 @@
     </div>
   }
 
-  <!-- Productos Asociados -->
+  <!-- Prendas en este Lote -->
   <div class="detail-section">
-    <h3 class="section-subtitle"><mat-icon>inventory_2</mat-icon> Productos en este Lote ({{ detail.productos.length }})</h3>
+    <h3 class="section-subtitle"><mat-icon>inventory_2</mat-icon> Prendas en este Lote ({{ itemsUnificados.length }})</h3>
     <div class="items-mini-list">
-      @for (producto of detail.productos; track producto.id) {
+      @for (item of itemsUnificados; track item.producto.id) {
         <div class="mini-list-item">
-          @if (foto(producto); as img) {
-            <img [src]="img" [alt]="producto.nombre" class="mini-thumb" />
+          @if (foto(item.producto); as img) {
+            <img [src]="img" [alt]="item.producto.nombre" class="mini-thumb" />
           } @else {
             <div class="mini-thumb placeholder"><mat-icon>image</mat-icon></div>
           }
           <div class="mini-info">
-            <strong class="mini-name">{{ producto.nombre }}</strong>
-            <span class="mini-sub">Compra: {{ precioCompra(producto) | currency: 'BOB' : 'symbol-narrow' }} | Venta: {{ precio(producto) | currency: 'BOB' : 'symbol-narrow' }}</span>
+            <strong class="mini-name">{{ item.producto.nombre }}</strong>
+            <div class="mini-attributes">
+              <span>Compra: {{ precioCompra(item.producto) | currency: 'BOB' : 'symbol-narrow' }}</span>
+              <span>· Venta: {{ precio(item.producto) | currency: 'BOB' : 'symbol-narrow' }}</span>
+              @if (item.venta) {
+                <span>· Tipo de pago: <strong>{{ item.venta.metodoPago || 'Efectivo' }}</strong></span>
+                <span>· Fecha de venta: <strong>{{ fecha(item.venta.fechaVenta) | date: 'mediumDate' }}</strong></span>
+              }
+            </div>
           </div>
-          <app-status-chip [status]="producto.estado" />
+          <app-status-chip [status]="item.producto.estado" />
         </div>
       } @empty {
-        <p class="muted">No hay productos asociados a este lote.</p>
+        <p class="muted">No hay prendas registradas en este lote.</p>
       }
     </div>
   </div>
-
-  <!-- Ventas Asociadas -->
-  @if (detail.ventas.length > 0) {
-    <div class="detail-section">
-      <h3 class="section-subtitle"><mat-icon>receipt_long</mat-icon> Ventas del Lote ({{ detail.ventas.length }})</h3>
-      <div class="items-mini-list">
-        @for (venta of detail.ventas; track venta.id) {
-          <div class="mini-list-item">
-            <div class="mini-info">
-              <strong class="mini-name">{{ venta.nombreProducto }}</strong>
-              <span class="mini-sub">{{ fecha(venta.fechaVenta) | date: 'mediumDate' }} · {{ venta.metodoPago || 'Efectivo' }}</span>
-            </div>
-            <div style="text-align: right;">
-              <div style="font-weight: 700;">{{ (venta.precioVenta || 0) | currency: 'BOB' : 'symbol-narrow' }}</div>
-              <div style="font-size: 0.75rem; color: #10b981; font-weight: 600;">+{{ (venta.ganancia || 0) | currency: 'BOB' : 'symbol-narrow' }}</div>
-            </div>
-          </div>
-        }
-      </div>
-    </div>
-  }
 </mat-dialog-content>
 
 <mat-dialog-actions align="end" class="dialog-actions">
   <button mat-stroked-button type="button" mat-dialog-close>Cerrar</button>
-  @if (canUpdate) {
-    <button mat-flat-button class="primary-action" type="button" (click)="onEdit()">
-      <mat-icon>edit</mat-icon>
-      Editar lote
-    </button>
-  }
 </mat-dialog-actions>

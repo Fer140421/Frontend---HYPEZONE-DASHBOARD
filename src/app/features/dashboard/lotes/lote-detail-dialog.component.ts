@@ -10,12 +10,17 @@ import {
   precioCompraProducto,
   precioProducto,
 } from '../../../core/models/producto.model';
+import { Venta } from '../../../core/models/venta.model';
 import { StatusChipComponent } from '../../../shared/components/status-chip/status-chip.component';
 import { LoteDetail } from './lotes.component';
 
+export interface LoteItemUnified {
+  producto: Producto;
+  venta?: Venta;
+}
+
 export interface LoteDetailDialogData {
   detail: LoteDetail;
-  canUpdate: boolean;
 }
 
 @Component({
@@ -42,12 +47,22 @@ export class LoteDetailDialogComponent {
     return this.data.detail;
   }
 
-  get canUpdate(): boolean {
-    return this.data.canUpdate;
+  get itemsUnificados(): LoteItemUnified[] {
+    const ventaMap = new Map<string, Venta>();
+    for (const venta of this.detail.ventas) {
+      if (venta.productoId) {
+        ventaMap.set(venta.productoId, venta);
+      }
+    }
+
+    return this.detail.productos.map((producto) => ({
+      producto,
+      venta: producto.id ? ventaMap.get(producto.id) : undefined,
+    }));
   }
 
-  fecha(value: unknown): Date {
-    return loteFechaCompra(value as any);
+  fecha(value: unknown): Date | null {
+    return value ? loteFechaCompra(value as any) : null;
   }
 
   precio(producto: Producto): number {
@@ -61,9 +76,5 @@ export class LoteDetailDialogComponent {
   foto(producto: Producto): string | null {
     const imgs = imagenesProducto(producto);
     return imgs.length > 0 ? imgs[0] : null;
-  }
-
-  onEdit(): void {
-    this.dialogRef.close({ action: 'edit', id: this.detail.resumen.lote.id });
   }
 }

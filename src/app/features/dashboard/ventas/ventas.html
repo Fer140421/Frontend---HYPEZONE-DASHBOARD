@@ -5,18 +5,12 @@
       ? 'Historial de productos vendidos.'
       : 'Selecciona las prendas, asigna un cliente opcional y confirma la operacion.'
   "
+  [backUrl]="mode() !== 'list' ? '/dashboard/ventas' : null"
 >
-  @if (mode() === 'list') {
-    @if (auth.can('sales.create')) {
-      <button mat-flat-button class="primary-action" routerLink="/dashboard/ventas/nueva">
-        <mat-icon>point_of_sale</mat-icon>
-        Nueva venta
-      </button>
-    }
-  } @else {
-    <button mat-button routerLink="/dashboard/ventas">
-      <mat-icon>arrow_back</mat-icon>
-      Volver
+  @if (mode() === 'list' && auth.can('sales.create')) {
+    <button mat-flat-button class="primary-action" routerLink="/dashboard/ventas/nueva">
+      <mat-icon>point_of_sale</mat-icon>
+      Nueva venta
     </button>
   }
 </app-page-header>
@@ -345,13 +339,13 @@
               <td mat-cell *matCellDef="let venta">{{ venta.metodoPago || 'otro' }}</td>
             </ng-container>
             <ng-container matColumnDef="acciones">
-              <th mat-header-cell *matHeaderCellDef>Acciones</th>
-              <td mat-cell *matCellDef="let venta" class="sale-actions">
-                <button mat-icon-button type="button" (click)="viewSale(venta)" aria-label="Ver venta">
+              <th mat-header-cell *matHeaderCellDef class="sticky-actions">Acciones</th>
+              <td mat-cell *matCellDef="let venta" class="sale-actions sticky-actions">
+                <button mat-icon-button type="button" (click)="viewSale(venta)" matTooltip="Ver detalle de la venta" aria-label="Ver venta">
                   <mat-icon>visibility</mat-icon>
                 </button>
                 @if (auth.can('sales.update')) {
-                  <button mat-icon-button type="button" (click)="editSale(venta)" aria-label="Editar venta">
+                  <button mat-icon-button type="button" (click)="editSale(venta)" matTooltip="Editar venta" aria-label="Editar venta">
                     <mat-icon>edit</mat-icon>
                   </button>
                 }
@@ -385,11 +379,11 @@
                 </div>
               </div>
               <div class="card-footer-actions">
-                <button mat-icon-button type="button" (click)="viewSale(venta)" aria-label="Ver venta">
+                <button mat-icon-button type="button" (click)="viewSale(venta)" matTooltip="Ver detalle de la venta" aria-label="Ver venta">
                   <mat-icon>visibility</mat-icon>
                 </button>
                 @if (auth.can('sales.update')) {
-                  <button mat-icon-button type="button" (click)="editSale(venta)" aria-label="Editar venta">
+                  <button mat-icon-button type="button" (click)="editSale(venta)" matTooltip="Editar venta" aria-label="Editar venta">
                     <mat-icon>edit</mat-icon>
                   </button>
                 }

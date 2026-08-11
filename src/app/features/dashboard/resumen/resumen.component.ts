@@ -107,7 +107,15 @@ export class ResumenComponent {
 
       const ultimasVentas = [...ventasActivas]
         .sort((a, b) => new Date(b.fechaVenta).getTime() - new Date(a.fechaVenta).getTime())
-        .slice(0, 5);
+        .slice(0, 5)
+        .map((venta) => {
+          const prod = productoMap.get(venta.productoId);
+          const imagenProducto = prod?.imagenes && prod.imagenes.length > 0 ? prod.imagenes[0] : undefined;
+          return {
+            ...venta,
+            imagenProducto,
+          };
+        });
 
       const financialCards: ResumenMetricCard[] = [
         {
@@ -136,6 +144,12 @@ export class ResumenComponent {
           subtext: 'Costo total de inventario',
         },
       ];
+
+      const lotesActivos = lotes.filter((lote) => {
+        if (lote.activo === false) return false;
+        const productosLote = activos.filter((p) => p.loteId === lote.id);
+        return productosLote.some((p) => p.estado === 'disponible');
+      });
 
       const operationalCards: ResumenMetricCard[] = [
         {
@@ -172,10 +186,10 @@ export class ResumenComponent {
         },
         {
           label: 'Lotes activos',
-          value: lotes.length,
+          value: lotesActivos.length,
           icon: 'local_shipping',
           type: 'lotes',
-          subtext: 'Lotes de compra activos',
+          subtext: 'Con prendas para venta',
         },
       ];
 

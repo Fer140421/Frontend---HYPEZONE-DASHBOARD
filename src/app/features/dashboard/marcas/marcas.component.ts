@@ -9,6 +9,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { PageEvent, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { BehaviorSubject, combineLatest, firstValueFrom, map, take } from 'rxjs';
 import { Marca, marcaImagen, marcasIniciales } from '../../../core/models/catalogo.model';
 import { MarcaRepository } from '../../../core/repositories/marca.repository';
@@ -37,6 +39,8 @@ import {
     MatIconModule,
     MatPaginatorModule,
     MatSnackBarModule,
+    MatTableModule,
+    MatTooltipModule,
     EmptyStateComponent,
     LoadingComponent,
     PageHeaderComponent,
@@ -133,7 +137,6 @@ export class MarcasComponent implements OnInit {
     MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
-    ImageUploaderComponent,
   ],
   templateUrl: './marca-dialog.html',
   styleUrl: './marcas.css',
@@ -141,7 +144,6 @@ export class MarcasComponent implements OnInit {
 export class MarcaDialogComponent {
   private readonly fb = inject(FormBuilder);
   private readonly repository = inject(MarcaRepository);
-  private readonly auth = inject(AuthService);
   private readonly dialogRef = inject(MatDialogRef<MarcaDialogComponent>);
   readonly data = inject<Marca | null>(MAT_DIALOG_DATA, { optional: true });
 
@@ -149,17 +151,9 @@ export class MarcaDialogComponent {
   readonly saving = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
-  readonly imagenes = signal<string[]>(
-    this.data && marcaImagen(this.data) ? [marcaImagen(this.data)!] : [],
-  );
-
   readonly form = this.fb.nonNullable.group({
     nombre: [this.data?.nombre ?? '', [Validators.required]],
   });
-
-  onImagesUploaded(urls: string[]): void {
-    this.imagenes.set(urls);
-  }
 
   async save(): Promise<void> {
     if (this.form.invalid || this.saving()) return;
@@ -184,12 +178,10 @@ export class MarcaDialogComponent {
         return;
       }
 
-      const imagenUrl = this.imagenes()[0] || undefined;
-
       if (this.isEdit && this.data?.id) {
-        await this.repository.update(this.data.id, { nombre, imagenUrl });
+        await this.repository.update(this.data.id, { nombre });
       } else {
-        await this.repository.create({ nombre, imagenUrl });
+        await this.repository.create({ nombre });
       }
 
       this.saving.set(false);

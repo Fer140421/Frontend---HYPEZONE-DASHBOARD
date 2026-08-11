@@ -257,11 +257,13 @@ mat-card.list-card > mat-card-content,
 }
 
 .table-scroll {
+  position: relative;
   max-width: 100%;
   overflow-x: auto;
   border-radius: 8px;
   border: 1px solid var(--hz-border);
   outline: none;
+  background: var(--hz-surface);
 }
 
 table {
@@ -277,12 +279,14 @@ th {
   padding: 12px 16px;
   border-bottom: 1px solid var(--hz-border) !important;
   background: var(--hz-surface);
+  white-space: nowrap;
 }
 
 td {
   color: var(--hz-black);
   padding: 12px 16px;
   border-bottom: 1px solid var(--hz-border) !important;
+  white-space: nowrap;
 }
 
 tr.mat-mdc-row {
@@ -293,15 +297,27 @@ tr.mat-mdc-row:hover {
   background: var(--hz-background) !important;
 }
 
+/* Columna de acciones fija (Sticky right) */
+th.sticky-actions,
+td.sticky-actions,
+.table-actions {
+  position: sticky;
+  right: 0;
+  z-index: 3;
+  background: var(--hz-surface) !important;
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.05);
+  text-align: right;
+  white-space: nowrap;
+}
+
+tr.mat-mdc-row:hover td.sticky-actions {
+  background: var(--hz-background) !important;
+}
+
 mat-paginator {
   background: transparent !important;
   border-top: 1px solid var(--hz-border);
   margin-top: 4px;
-}
-
-.table-actions {
-  width: 176px;
-  text-align: right;
 }
 
 .product-table td,
@@ -432,28 +448,39 @@ mat-paginator {
 }
 
 .status-disponible,
-.status-activo {
-  --mdc-chip-elevated-container-color: var(--hz-primary-soft);
+.status-activo,
+.status-verde {
+  --mdc-chip-elevated-container-color: var(--hz-primary-soft) !important;
+  --mdc-chip-label-text-color: var(--hz-primary-hover) !important;
+  background-color: var(--hz-primary-soft) !important;
   color: var(--hz-primary-hover) !important;
   font-weight: 700;
 }
 
-.status-reservado {
-  --mdc-chip-elevated-container-color: var(--hz-warning-soft);
+.status-reservado,
+.status-amarillo {
+  --mdc-chip-elevated-container-color: var(--hz-warning-soft) !important;
+  --mdc-chip-label-text-color: var(--hz-warning) !important;
+  background-color: var(--hz-warning-soft) !important;
   color: var(--hz-warning) !important;
   font-weight: 700;
 }
 
 .status-vendido,
-.status-inactivo {
-  --mdc-chip-elevated-container-color: var(--hz-danger-soft);
+.status-inactivo,
+.status-rojo {
+  --mdc-chip-elevated-container-color: var(--hz-danger-soft) !important;
+  --mdc-chip-label-text-color: var(--hz-danger) !important;
+  background-color: var(--hz-danger-soft) !important;
   color: var(--hz-danger) !important;
   font-weight: 700;
 }
 
 .status-agotado,
 .status-terminado {
-  --mdc-chip-elevated-container-color: #f0f0f0;
+  --mdc-chip-elevated-container-color: #f0f0f0 !important;
+  --mdc-chip-label-text-color: var(--hz-gray) !important;
+  background-color: #f0f0f0 !important;
   color: var(--hz-gray) !important;
   font-weight: 700;
 }
@@ -847,5 +874,18 @@ mat-paginator {
   .listing-cards-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Tooltip personalizado estilo Hypezone */
+.mat-mdc-tooltip .mdc-tooltip__surface {
+  background-color: var(--hz-black) !important;
+  color: #ffffff !important;
+  font-size: 0.78rem !important;
+  font-weight: 600 !important;
+  padding: 6px 12px !important;
+  border-radius: 8px !important;
+  letter-spacing: 0.3px !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
