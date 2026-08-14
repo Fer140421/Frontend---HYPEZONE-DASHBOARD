@@ -24,19 +24,19 @@
             (input)="onSearch($event)"
           />
         </mat-form-field>
-        <button mat-stroked-button type="button" class="filter-trigger" (click)="filtersOpen.set(true)">
+        <button mat-stroked-button type="button" class="filter-trigger" (click)="openFilters()">
           <mat-icon>tune</mat-icon>
           <span>Filtros</span>
         </button>
       </div>
 
-      <app-filter-drawer [open]="filtersOpen()" (closed)="filtersOpen.set(false)">
+      <app-filter-drawer [open]="filtersOpen()" (closed)="filtersOpen.set(false)" (applied)="applyFilters()">
         <div class="filters users-filters filter-drawer-form" aria-label="Filtros de usuarios">
           <mat-form-field appearance="outline">
             <mat-label>Rol</mat-label>
             <mat-select
-              [value]="roleFilter()"
-              (selectionChange)="setRoleFilter($event.value)"
+              [value]="pendingRoleFilter()"
+              (selectionChange)="setPendingRoleFilter($event.value)"
             >
               <mat-option value="">Todos</mat-option>
               @for (role of availableRoles(); track role) {
@@ -48,8 +48,8 @@
           <mat-form-field appearance="outline">
             <mat-label>Estado</mat-label>
             <mat-select
-              [value]="activeFilter()"
-              (selectionChange)="setActiveFilter($event.value)"
+              [value]="pendingActiveFilter()"
+              (selectionChange)="setPendingActiveFilter($event.value)"
             >
               <mat-option value="all">Todos</mat-option>
               <mat-option value="active">Activos</mat-option>
@@ -58,8 +58,8 @@
           </mat-form-field>
 
           <div class="filter-actions">
-            @if (filtersActive()) {
-              <button mat-button type="button" (click)="clearFilters()">
+            @if (pendingRoleFilter() || pendingActiveFilter() !== 'all') {
+              <button mat-button type="button" (click)="clearPendingFilters()">
                 <mat-icon>filter_alt_off</mat-icon>
                 Limpiar filtros
               </button>

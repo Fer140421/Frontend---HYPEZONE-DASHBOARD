@@ -13,6 +13,35 @@
   white-space: nowrap;
 }
 
+.client-phone-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.client-whatsapp-button {
+  display: inline-grid !important;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 30px !important;
+  height: 30px !important;
+  color: #128c7e !important;
+  border: 1px solid rgba(18, 140, 126, 0.24);
+  border-radius: 7px !important;
+  background: rgba(18, 140, 126, 0.08);
+}
+
+.client-whatsapp-button:hover {
+  color: #075e54 !important;
+  background: rgba(18, 140, 126, 0.16);
+}
+
+.client-whatsapp-button mat-icon {
+  width: 17px;
+  height: 17px;
+  font-size: 17px;
+}
+
 .dialog-form {
   padding-top: 8px;
 }

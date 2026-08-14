@@ -11,6 +11,26 @@
   @if (data$ | async; as data) {
     <mat-card class="list-card wide-table">
       <mat-card-content>
+        <div class="list-filter-bar">
+          <button mat-stroked-button type="button" class="filter-trigger" (click)="openFilters()">
+            <mat-icon>tune</mat-icon>
+            <span>Filtros</span>
+          </button>
+        </div>
+
+        <app-filter-drawer [open]="filtersOpen()" (closed)="filtersOpen.set(false)" (applied)="applyFilters()">
+          <div class="filter-drawer-form">
+            <mat-form-field appearance="outline">
+              <mat-label>Estado</mat-label>
+              <mat-select [formControl]="filters.controls.estado">
+                <mat-option value="activos">Activos</mat-option>
+                <mat-option value="inactivos">Inactivos</mat-option>
+                <mat-option value="todos">Todos</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+        </app-filter-drawer>
+
         <div class="list-toolbar-row">
           <span class="muted" style="font-size: 0.85rem; font-weight: 600;">
             {{ data.resumenesPaginados.total }} {{ data.resumenesPaginados.total === 1 ? 'lote' : 'lotes' }}

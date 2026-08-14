@@ -97,6 +97,8 @@ export class UsuariosPermisosComponent implements OnInit {
   readonly filtersOpen = signal(false);
   readonly roleFilter = signal<string>('');
   readonly activeFilter = signal<'all' | 'active' | 'inactive'>('all');
+  readonly pendingRoleFilter = signal<string>('');
+  readonly pendingActiveFilter = signal<'all' | 'active' | 'inactive'>('all');
   readonly selected = signal<UserProfile | null>(null);
   readonly original = signal<UpdateUserAuthorizationCommand | null>(null);
   readonly saving = signal(false);
@@ -274,6 +276,31 @@ export class UsuariosPermisosComponent implements OnInit {
 
   setActiveFilter(active: 'all' | 'active' | 'inactive'): void {
     this.activeFilter.set(active);
+    this.resetPage();
+  }
+
+  openFilters(): void {
+    this.pendingRoleFilter.set(this.roleFilter());
+    this.pendingActiveFilter.set(this.activeFilter());
+    this.filtersOpen.set(true);
+  }
+
+  setPendingRoleFilter(role: string): void {
+    this.pendingRoleFilter.set(role);
+  }
+
+  setPendingActiveFilter(active: 'all' | 'active' | 'inactive'): void {
+    this.pendingActiveFilter.set(active);
+  }
+
+  clearPendingFilters(): void {
+    this.pendingRoleFilter.set('');
+    this.pendingActiveFilter.set('all');
+  }
+
+  applyFilters(): void {
+    this.roleFilter.set(this.pendingRoleFilter());
+    this.activeFilter.set(this.pendingActiveFilter());
     this.resetPage();
   }
 

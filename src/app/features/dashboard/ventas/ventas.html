@@ -59,7 +59,10 @@
               <h3>{{ producto.nombre }}</h3>
               <div class="catalog-price">
                 @if (hasOffer(producto)) {
-                  <del>{{ precio(producto) | currency: 'BOB' : 'symbol-narrow' }}</del>
+                  <span class="original-price">
+                    <span class="original-price-label">Antes</span>
+                    <del>{{ precio(producto) | currency: 'BOB' : 'symbol-narrow' }}</del>
+                  </span>
                 }
                 <strong>{{ effectivePrice(producto) | currency: 'BOB' : 'symbol-narrow' }}</strong>
               </div>
@@ -159,30 +162,29 @@
 
               <div class="client-search full">
                 <mat-form-field appearance="outline">
-                  <mat-label>Buscar cliente por nombre o CI</mat-label>
+                  <mat-label>Buscar cliente</mat-label>
                   <input
                     matInput
                     [formControl]="clienteSearchControl"
-                    [matAutocomplete]="clienteAuto"
-                    placeholder="Escribe para buscar"
+                    placeholder="Nombre, CI o celular"
+                    (keyup.enter)="buscarCliente()"
                   />
-                  <mat-autocomplete #clienteAuto="matAutocomplete">
-                    @for (cliente of clientesFiltrados$ | async; track cliente.id) {
-                      <mat-option
-                        [value]="cliente.nombreCompleto"
-                        (onSelectionChange)="$event.isUserInput ? selectCliente(cliente) : null"
-                      >
-                        {{ clienteOptionLabel(cliente) }}
-                      </mat-option>
-                    }
-                  </mat-autocomplete>
                 </mat-form-field>
 
                 <div class="client-actions">
+                  <button
+                    mat-flat-button
+                    type="button"
+                    (click)="buscarCliente()"
+                    [disabled]="buscandoCliente()"
+                  >
+                    <mat-icon>search</mat-icon>
+                    {{ buscandoCliente() ? 'Buscando...' : 'Buscar' }}
+                  </button>
                   @if (auth.can('clients.create')) {
                     <button mat-stroked-button type="button" (click)="openClientDialog()">
                       <mat-icon>person_add</mat-icon>
-                      Registrar cliente
+                      Registrar
                     </button>
                   }
                   @if (selectedCliente()) {
@@ -191,28 +193,59 @@
                 </div>
               </div>
 
-              @if (selectedCliente(); as cliente) {
-                <div class="selected-client full">
-                  <strong>{{ cliente.nombreCompleto }}</strong>
-                  <span>Celular: {{ cliente.celular }}</span>
-                  <span>CI: {{ cliente.ci || 'No registrado' }}</span>
+              @if (clienteResultados().length > 0 && !selectedCliente()) {
+                <div class="client-results full">
+                  <span class="client-results-title">Clientes encontrados</span>
+                  @for (cliente of clienteResultados(); track cliente.id) {
+                    <button type="button" class="client-result" (click)="selectCliente(cliente)">
+                      <span>
+                        <strong>{{ cliente.nombreCompleto }}</strong>
+                        <small>Celular: {{ cliente.celular }} · CI: {{ cliente.ci || 'No registrado' }}</small>
+                      </span>
+                      <mat-icon>arrow_forward</mat-icon>
+                    </button>
+                  }
                 </div>
               }
 
-              <mat-form-field appearance="outline">
-                <mat-label>Cliente</mat-label>
-                <input matInput formControlName="clienteNombre" />
-              </mat-form-field>
+              @if (clienteBusquedaRealizada() && clienteResultados().length === 0 && !selectedCliente()) {
+                <div class="client-not-found full">
+                  <mat-icon>person_search</mat-icon>
+                  <span>No encontramos un cliente con esos datos.</span>
+                  @if (auth.can('clients.create')) {
+                    <button mat-button type="button" (click)="openClientDialog()">Registrar cliente</button>
+                  }
+                </div>
+              }
 
-              <mat-form-field appearance="outline">
-                <mat-label>Telefono</mat-label>
-                <input matInput formControlName="clienteTelefono" />
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>CI</mat-label>
-                <input matInput formControlName="clienteCi" />
-              </mat-form-field>
+              @if (selectedCliente(); as cliente) {
+                <div class="selected-client full">
+                  <div class="selected-client-heading">
+                    <span class="eyebrow">Cliente seleccionado</span>
+                    @if (!cliente.id) {
+                      <span class="pending-client-badge">Pendiente de confirmar</span>
+                    }
+                  </div>
+                  <strong>{{ cliente.nombreCompleto }}</strong>
+                  <span class="selected-client-phone">
+                    <span>Celular: {{ cliente.celular }}</span>
+                    @if (whatsappLink(cliente.celular); as whatsapp) {
+                      <a
+                        mat-icon-button
+                        class="client-whatsapp-button"
+                        [href]="whatsapp"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        [attr.aria-label]="'Escribir por WhatsApp a ' + cliente.nombreCompleto"
+                        matTooltip="Escribir por WhatsApp"
+                      >
+                        <mat-icon>chat</mat-icon>
+                      </a>
+                    }
+                  </span>
+                  <span>CI: {{ cliente.ci || 'No registrado' }}</span>
+                </div>
+              }
 
               <mat-form-field appearance="outline" class="full">
                 <mat-label>Notas</mat-label>
@@ -254,13 +287,13 @@
             <mat-label>Producto</mat-label>
             <input matInput [formControl]="filters.controls.producto" placeholder="Nombre del producto" />
           </mat-form-field>
-          <button mat-stroked-button type="button" class="filter-trigger" (click)="filtersOpen.set(true)">
+          <button mat-stroked-button type="button" class="filter-trigger" (click)="openFilters()">
             <mat-icon>tune</mat-icon>
             <span>Filtros</span>
           </button>
         </div>
 
-        <app-filter-drawer [open]="filtersOpen()" (closed)="filtersOpen.set(false)">
+        <app-filter-drawer [open]="filtersOpen()" (closed)="filtersOpen.set(false)" (applied)="applyFilters()">
           <div class="filter-drawer-form">
             <mat-form-field appearance="outline">
               <mat-label>Metodo de pago</mat-label>

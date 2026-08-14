@@ -13,9 +13,15 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BehaviorSubject, combineLatest, firstValueFrom, map, shareReplay, startWith, take } from 'rxjs';
-import { Cliente } from '../../../core/models/cliente.model';
+import { Cliente, normalizeCliente } from '../../../core/models/cliente.model';
 import { ClienteRepository } from '../../../core/repositories/cliente.repository';
 import { AuthService } from '../../../core/services/auth.service';
+import {
+  formatInternationalPhone,
+  SOUTH_AMERICAN_COUNTRIES,
+  splitPhoneNumber,
+  whatsappUrl,
+} from '../../../core/utils/phone.util';
 import { ViewPreferenceService } from '../../../core/services/view-preference.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
@@ -28,6 +34,11 @@ import {
   PaginationState,
   paginateItems,
 } from '../../../shared/utils/pagination.util';
+
+export interface ClienteFormDialogData {
+  cliente?: Cliente;
+  deferred?: boolean;
+}
 
 type EstadoFiltro = 'todos' | 'activos' | 'inactivos';
 
@@ -80,18 +91,24 @@ export class ClientesComponent implements OnInit {
     ci: [''],
     estado: ['activos' as EstadoFiltro],
   });
+  private readonly appliedFilters$ = new BehaviorSubject({
+    celular: '',
+    ci: '',
+    estado: 'activos' as EstadoFiltro,
+  });
   readonly clientes$ = this.clientes.getAll(true).pipe(
     map((items) => [...items].sort((a, b) => a.nombreCompleto.localeCompare(b.nombreCompleto))),
     shareReplay({ bufferSize: 1, refCount: true }),
   );
   readonly filtered$ = combineLatest([
     this.clientes$,
-    this.filters.valueChanges.pipe(startWith(this.filters.getRawValue())),
+    this.filters.controls.nombre.valueChanges.pipe(startWith(this.filters.controls.nombre.getRawValue())),
+    this.appliedFilters$,
   ]).pipe(
-    map(([items, filters]) => {
-      const nombre = (filters.nombre ?? '').toLowerCase().trim();
-      const celular = (filters.celular ?? '').toLowerCase().trim();
-      const ci = (filters.ci ?? '').toLowerCase().trim();
+    map(([items, nombreValue, filters]) => {
+      const nombre = nombreValue.toLowerCase().trim();
+      const celular = filters.celular.toLowerCase().trim();
+      const ci = filters.ci.toLowerCase().trim();
       return items.filter((item) => {
         const estado =
           filters.estado === 'todos'
@@ -113,13 +130,28 @@ export class ClientesComponent implements OnInit {
   );
 
   ngOnInit(): void {
-    this.filters.valueChanges.subscribe(() =>
+    this.filters.controls.nombre.valueChanges.subscribe(() =>
       this.pagination$.next({ pageIndex: 0, pageSize: this.pagination$.value.pageSize }),
     );
   }
 
+  openFilters(): void {
+    this.filters.patchValue(this.appliedFilters$.value, { emitEvent: false });
+    this.filtersOpen.set(true);
+  }
+
+  applyFilters(): void {
+    const { celular, ci, estado } = this.filters.getRawValue();
+    this.appliedFilters$.next({ celular, ci, estado });
+    this.pagination$.next({ pageIndex: 0, pageSize: this.pagination$.value.pageSize });
+  }
+
   updatePage(event: PageEvent): void {
     this.pagination$.next({ pageIndex: event.pageIndex, pageSize: event.pageSize });
+  }
+
+  whatsappLink(celular: string | undefined): string | null {
+    return whatsappUrl(celular);
   }
 
   openCreate(): void {
@@ -211,6 +243,7 @@ export class ClientesComponent implements OnInit {
     MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
   ],
   templateUrl: './cliente-form-dialog.html',
   styleUrl: './clientes.css',
@@ -220,11 +253,16 @@ export class ClienteFormDialogComponent {
   private readonly repository = inject(ClienteRepository);
   private readonly auth = inject(AuthService);
   private readonly ref = inject(MatDialogRef<ClienteFormDialogComponent>);
-  readonly data = inject<Cliente | null>(MAT_DIALOG_DATA, { optional: true }) ?? null;
+  private readonly dialogData = inject<Cliente | ClienteFormDialogData | null>(MAT_DIALOG_DATA, { optional: true });
+  readonly data = this.readCliente(this.dialogData);
+  readonly deferred = this.isDialogData(this.dialogData) && this.dialogData.deferred === true;
+  readonly countries = SOUTH_AMERICAN_COUNTRIES;
   readonly saving = signal(false);
+  private readonly phone = splitPhoneNumber(this.data?.celular);
   readonly form = this.fb.nonNullable.group({
     nombreCompleto: [this.data?.nombreCompleto ?? '', Validators.required],
-    celular: [this.data?.celular ?? '', Validators.required],
+    codigoPais: [this.phone.countryCode, Validators.required],
+    celular: [this.phone.localNumber, [Validators.required, Validators.pattern(/^\d[\d\s-]*$/)]],
     ci: [this.data?.ci ?? ''],
   });
 
@@ -236,7 +274,7 @@ export class ClienteFormDialogComponent {
     const raw = this.form.getRawValue();
     const payload: Partial<Cliente> = {
       nombreCompleto: raw.nombreCompleto.trim(),
-      celular: raw.celular.trim(),
+      celular: formatInternationalPhone(raw.codigoPais, raw.celular),
       ci: raw.ci.trim() || undefined,
       schemaVersion: 1,
       activo: this.data?.activo ?? true,
@@ -256,11 +294,33 @@ export class ClienteFormDialogComponent {
       return;
     }
 
+    if (this.deferred) {
+      this.ref.close(normalizeCliente({
+        nombreCompleto: payload.nombreCompleto!,
+        celular: payload.celular!,
+        ci: payload.ci,
+        schemaVersion: 1,
+        activo: true,
+      }));
+      return;
+    }
+
     if (this.data?.id) {
       await this.repository.update(this.data.id, payload);
     } else {
       await this.repository.create(payload);
     }
     this.ref.close(true);
+  }
+
+  private isDialogData(value: Cliente | ClienteFormDialogData | null): value is ClienteFormDialogData {
+    return !!value && ('deferred' in value || 'cliente' in value);
+  }
+
+  private readCliente(value: Cliente | ClienteFormDialogData | null): Cliente | null {
+    if (!value) {
+      return null;
+    }
+    return this.isDialogData(value) ? value.cliente ?? null : value;
   }
 }

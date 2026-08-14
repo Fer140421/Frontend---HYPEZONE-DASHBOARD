@@ -18,13 +18,13 @@
           <mat-label>Buscar por nombre</mat-label>
           <input matInput [formControl]="filters.controls.nombre" placeholder="Nombre, direccion, celular o red social" />
         </mat-form-field>
-        <button mat-stroked-button type="button" class="filter-trigger" (click)="filtersOpen.set(true)">
+        <button mat-stroked-button type="button" class="filter-trigger" (click)="openFilters()">
           <mat-icon>tune</mat-icon>
           <span>Filtros</span>
         </button>
       </div>
 
-      <app-filter-drawer [open]="filtersOpen()" (closed)="filtersOpen.set(false)">
+      <app-filter-drawer [open]="filtersOpen()" (closed)="filtersOpen.set(false)" (applied)="applyFilters()">
         <div class="filter-drawer-form">
           <mat-form-field appearance="outline">
             <mat-label>Categoria</mat-label>

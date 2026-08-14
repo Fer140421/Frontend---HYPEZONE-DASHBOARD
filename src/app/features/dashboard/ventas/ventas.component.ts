@@ -2,7 +2,6 @@ import { AsyncPipe, CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
@@ -30,6 +29,7 @@ import {
   cloudinaryPreviewUrl,
   cloudinaryThumbnailUrl,
 } from '../../../core/utils/cloudinary-image.util';
+import { whatsappUrl } from '../../../core/utils/phone.util';
 import { ViewPreferenceService } from '../../../core/services/view-preference.service';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { FilterDrawerComponent } from '../../../shared/components/filter-drawer/filter-drawer.component';
@@ -41,7 +41,10 @@ import {
   PaginationState,
   paginateItems,
 } from '../../../shared/utils/pagination.util';
-import { ClienteFormDialogComponent } from '../clientes/clientes.component';
+import {
+  ClienteFormDialogComponent,
+  ClienteFormDialogData,
+} from '../clientes/clientes.component';
 
 @Component({
   selector: 'app-ventas',
@@ -52,7 +55,6 @@ import { ClienteFormDialogComponent } from '../clientes/clientes.component';
     DatePipe,
     RouterLink,
     ReactiveFormsModule,
-    MatAutocompleteModule,
     MatButtonModule,
     MatCardModule,
     MatDatepickerModule,
@@ -97,9 +99,12 @@ export class VentasComponent implements OnInit {
   readonly viewType = inject(ViewPreferenceService).getViewSignal('ventas', 'table');
   readonly filtersOpen = signal(false);
   readonly procesandoVenta = signal(false);
+  readonly buscandoCliente = signal(false);
   readonly searchControl = this.fb.nonNullable.control('');
   readonly clienteSearchControl = this.fb.nonNullable.control('');
   readonly selectedCliente = signal<Cliente | null>(null);
+  readonly clienteResultados = signal<Cliente[]>([]);
+  readonly clienteBusquedaRealizada = signal(false);
 
   private productosDisponibles: Producto[] = [];
   private ventasActuales: Venta[] = [];
@@ -142,25 +147,6 @@ export class VentasComponent implements OnInit {
     }),
   );
 
-  readonly clientesFiltrados$ = combineLatest([
-    this.clientesSource$,
-    this.clienteSearchControl.valueChanges.pipe(startWith('')),
-  ]).pipe(
-    map(([clientes, search]) => {
-      const term = search.toLowerCase().trim();
-      return clientes.filter((cliente) => {
-        const matchesState = cliente.activo !== false || cliente.id === this.selectedCliente()?.id;
-        const matchesTerm =
-          !term ||
-          [cliente.nombreCompleto, cliente.ci, cliente.celular].some((value) =>
-            (value ?? '').toLowerCase().includes(term),
-          );
-        return matchesState && matchesTerm;
-      });
-    }),
-    shareReplay({ bufferSize: 1, refCount: true }),
-  );
-
   readonly saleForm = this.fb.nonNullable.group({
     detalles: this.fb.array([] as ReturnType<VentasComponent['createDetailGroup']>[]),
     metodoPago: ['efectivo', Validators.required],
@@ -178,14 +164,20 @@ export class VentasComponent implements OnInit {
     desde: [null as Date | null],
     hasta: [null as Date | null],
   });
+  private readonly appliedFilters$ = new BehaviorSubject({
+    metodoPago: '',
+    desde: null as Date | null,
+    hasta: null as Date | null,
+  });
 
   readonly ventasFiltradas$ = combineLatest([
     this.ventasSource$,
-    this.filters.valueChanges.pipe(startWith(this.filters.getRawValue())),
+    this.filters.controls.producto.valueChanges.pipe(startWith(this.filters.controls.producto.getRawValue())),
+    this.appliedFilters$,
   ]).pipe(
-    map(([ventas, filters]) => {
+    map(([ventas, productoValue, filters]) => {
       this.ventasActuales = ventas;
-      const producto = (filters.producto ?? '').toLowerCase().trim();
+      const producto = productoValue.toLowerCase().trim();
       const desde = filters.desde
         ? new Date(filters.desde).setHours(0, 0, 0, 0)
         : 0;
@@ -235,6 +227,10 @@ export class VentasComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.filters.controls.producto.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.resetListPage());
+
     this.route.url
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((segments) =>
@@ -302,7 +298,22 @@ export class VentasComponent implements OnInit {
       if (cliente) {
         this.applyCliente(cliente);
       }
-    });
+      });
+  }
+
+  openFilters(): void {
+    this.filters.patchValue(this.appliedFilters$.value, { emitEvent: false });
+    this.filtersOpen.set(true);
+  }
+
+  applyFilters(): void {
+    const { metodoPago, desde, hasta } = this.filters.getRawValue();
+    this.appliedFilters$.next({ metodoPago, desde, hasta });
+    this.resetListPage();
+  }
+
+  private resetListPage(): void {
+    this.pagination$.next({ pageIndex: 0, pageSize: this.pagination$.value.pageSize });
   }
 
   precio(producto: Producto): number {
@@ -342,6 +353,10 @@ export class VentasComponent implements OnInit {
       : '';
   }
 
+  whatsappLink(celular: string | undefined): string | null {
+    return whatsappUrl(celular);
+  }
+
   clienteOptionLabel(cliente: Cliente): string {
     return [cliente.nombreCompleto, cliente.ci && `CI ${cliente.ci}`].filter(Boolean).join(' · ');
   }
@@ -364,10 +379,14 @@ export class VentasComponent implements OnInit {
 
   selectCliente(cliente: Cliente): void {
     this.applyCliente(cliente);
+    this.clienteResultados.set([]);
+    this.clienteBusquedaRealizada.set(false);
   }
 
   clearCliente(): void {
     this.selectedCliente.set(null);
+    this.clienteResultados.set([]);
+    this.clienteBusquedaRealizada.set(false);
     this.clienteSearchControl.setValue('');
     this.saleForm.patchValue({
       clienteId: '',
@@ -377,6 +396,44 @@ export class VentasComponent implements OnInit {
     });
   }
 
+  async buscarCliente(): Promise<void> {
+    const term = this.normalizeSearch(this.clienteSearchControl.getRawValue());
+    if (!term || this.buscandoCliente()) {
+      if (!term) {
+        this.snackBar.open('Escribe un nombre, CI o celular para buscar.', 'OK', { duration: 2800 });
+      }
+      return;
+    }
+
+    this.buscandoCliente.set(true);
+    this.selectedCliente.set(null);
+    this.saleForm.patchValue({ clienteId: '', clienteNombre: '', clienteTelefono: '', clienteCi: '' });
+    try {
+      const clientes = await firstValueFrom(this.clientesSource$.pipe(take(1)));
+      const resultados = clientes.filter((cliente) =>
+        cliente.activo !== false &&
+        [cliente.nombreCompleto, cliente.ci, cliente.celular]
+          .map((value) => this.normalizeSearch(value ?? ''))
+          .some((value) => value.includes(term)),
+      );
+      this.clienteBusquedaRealizada.set(true);
+
+      if (resultados.length === 1) {
+        this.selectCliente(resultados[0]);
+        this.snackBar.open('Cliente encontrado y seleccionado.', 'OK', { duration: 2200 });
+      } else {
+        this.clienteResultados.set(resultados);
+        this.snackBar.open(
+          resultados.length ? 'Selecciona el cliente correcto.' : 'No se encontró el cliente. Puedes registrarlo.',
+          'OK',
+          { duration: 3000 },
+        );
+      }
+    } finally {
+      this.buscandoCliente.set(false);
+    }
+  }
+
   async openClientDialog(): Promise<void> {
     if (!this.auth.can('clients.create')) return;
     const result = await firstValueFrom(
@@ -384,6 +441,7 @@ export class VentasComponent implements OnInit {
         .open(ClienteFormDialogComponent, {
           width: 'min(560px, 96vw)',
           maxHeight: '90vh',
+          data: { deferred: true } satisfies ClienteFormDialogData,
         })
         .afterClosed(),
     );
@@ -391,12 +449,8 @@ export class VentasComponent implements OnInit {
       return;
     }
 
-    const clientes = await firstValueFrom(this.clienteRepository.getAll(true).pipe(take(1)));
-    const cliente = clientes.find((item) => item.id === result);
-    if (cliente) {
-      this.applyCliente(cliente);
-      this.snackBar.open('Cliente registrado y seleccionado.', 'OK', { duration: 2600 });
-    }
+    this.applyCliente(result as Cliente);
+    this.snackBar.open('Cliente preparado. Se guardará al confirmar la venta.', 'OK', { duration: 3200 });
   }
 
   updatePage(event: PageEvent): void {
@@ -435,6 +489,15 @@ export class VentasComponent implements OnInit {
         clienteNombre: raw.clienteNombre || undefined,
         clienteTelefono: raw.clienteTelefono || undefined,
         clienteCi: raw.clienteCi || undefined,
+        clienteNuevo: this.selectedCliente()?.id
+          ? undefined
+          : this.selectedCliente()
+            ? {
+                nombreCompleto: this.selectedCliente()!.nombreCompleto,
+                celular: this.selectedCliente()!.celular,
+                ci: this.selectedCliente()!.ci,
+              }
+            : undefined,
         notas: raw.notas,
       };
 
@@ -481,6 +544,7 @@ export class VentasComponent implements OnInit {
 
   private applyCliente(cliente: Cliente): void {
     this.selectedCliente.set(cliente);
+    this.clienteResultados.set([]);
     this.clienteSearchControl.setValue(cliente.nombreCompleto, { emitEvent: false });
     this.saleForm.patchValue({
       clienteId: cliente.id ?? '',
@@ -488,6 +552,14 @@ export class VentasComponent implements OnInit {
       clienteTelefono: cliente.celular,
       clienteCi: cliente.ci ?? '',
     });
+  }
+
+  private normalizeSearch(value: string): string {
+    return value
+      .toLocaleLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
   }
 }
 

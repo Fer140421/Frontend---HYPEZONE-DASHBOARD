@@ -39,6 +39,7 @@ import { VentaService } from '../../../core/services/venta.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ViewPreferenceService } from '../../../core/services/view-preference.service';
 import { cloudinaryDetailUrl, cloudinaryThumbnailUrl } from '../../../core/utils/cloudinary-image.util';
+import { formatInternationalPhone, SOUTH_AMERICAN_COUNTRIES } from '../../../core/utils/phone.util';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { FilterDrawerComponent } from '../../../shared/components/filter-drawer/filter-drawer.component';
@@ -118,6 +119,7 @@ export class ProductosComponent implements OnInit {
   readonly estados = estadosProducto;
   readonly generos = generosProducto;
   readonly metodos = metodosPago;
+  readonly countries = SOUTH_AMERICAN_COUNTRIES;
   readonly columns = ['imagen', 'nombre', 'talla', 'precioVenta', 'estado', 'acciones'];
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
   readonly mode = signal<'list' | 'new' | 'detail'>('list');
@@ -128,9 +130,10 @@ export class ProductosComponent implements OnInit {
   readonly imagenes = signal<string[]>([]);
   readonly procesandoVenta = signal(false);
 
-  readonly lotes$ = this.loteRepository.getAll().pipe(
+  private readonly lotesSource$ = this.loteRepository.getAll(true).pipe(
     shareReplay({ bufferSize: 1, refCount: true }),
   );
+  readonly lotes$ = this.lotesSource$;
   readonly filters = this.fb.nonNullable.group({
     search: [''],
     categoria: [''],
@@ -138,13 +141,20 @@ export class ProductosComponent implements OnInit {
     estado: ['disponible'],
     loteId: [''],
   });
+  private readonly appliedFilters$ = new BehaviorSubject({
+    categoria: '',
+    talla: '',
+    estado: 'disponible',
+    loteId: '',
+  });
 
   readonly productosFiltrados$ = combineLatest([
     this.productosSource$,
-    this.filters.valueChanges.pipe(startWith(this.filters.getRawValue())),
+    this.filters.controls.search.valueChanges.pipe(startWith(this.filters.controls.search.getRawValue())),
+    this.appliedFilters$,
   ]).pipe(
-    map(([productos, filters]) => {
-      const search = (filters.search ?? '').toLowerCase().trim();
+    map(([productos, searchValue, filters]) => {
+      const search = searchValue.toLowerCase().trim();
       return productos.filter((producto) => {
         const matchesSearch =
           !search ||
@@ -160,9 +170,29 @@ export class ProductosComponent implements OnInit {
       });
     }),
   );
+  readonly lotesParaFiltro$ = combineLatest([
+    this.lotesSource$,
+    this.productosSource$,
+    this.appliedFilters$,
+  ]).pipe(
+    map(([lotes, productos, filters]) => {
+      const estado = filters.estado;
+      if (!estado) {
+        return lotes;
+      }
+
+      const lotesConEstado = new Set(
+        productos
+          .filter((producto) => producto.estado === estado && !!producto.loteId)
+          .map((producto) => producto.loteId!),
+      );
+      return lotes.filter((lote) => !!lote.id && lotesConEstado.has(lote.id));
+    }),
+    shareReplay({ bufferSize: 1, refCount: true }),
+  );
   readonly listViewModel$ = combineLatest({
     categorias: this.categorias$,
-    lotes: this.lotes$,
+    lotes: this.lotesParaFiltro$,
     tallas: this.tallas$,
     productos: this.productosFiltrados$,
     pagination: this.pagination$,
@@ -205,11 +235,24 @@ export class ProductosComponent implements OnInit {
     precioVenta: [0, [Validators.required, Validators.min(0)]],
     metodoPago: ['efectivo', Validators.required],
     clienteNombre: [''],
+    codigoPais: ['591'],
     clienteTelefono: [''],
     notas: [''],
   });
 
   ngOnInit(): void {
+    this.filters.controls.search.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.resetListPage());
+
+    this.filters.controls.estado.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.filters.controls.loteId.getRawValue()) {
+          this.filters.controls.loteId.setValue('');
+        }
+      });
+
     this.route.url.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((segments) => {
       const isNew = segments.some((segment) => segment.path === 'nuevo');
       this.mode.set(isNew ? 'new' : this.route.snapshot.paramMap.has('id') ? 'detail' : 'list');
@@ -266,6 +309,21 @@ export class ProductosComponent implements OnInit {
         this.imagenes.set(imagenesProducto(producto));
         this.ventaForm.patchValue({ precioVenta: Number(producto.precioOferta ?? precioProducto(producto)) });
       });
+  }
+
+  openFilters(): void {
+    this.filters.patchValue(this.appliedFilters$.value, { emitEvent: false });
+    this.filtersOpen.set(true);
+  }
+
+  applyFilters(): void {
+    const { categoria, talla, estado, loteId } = this.filters.getRawValue();
+    this.appliedFilters$.next({ categoria, talla, estado, loteId });
+    this.resetListPage();
+  }
+
+  private resetListPage(): void {
+    this.pagination$.next({ pageIndex: 0, pageSize: this.pagination$.value.pageSize });
   }
 
   precio(producto: Producto): number {
@@ -425,9 +483,12 @@ export class ProductosComponent implements OnInit {
     this.procesandoVenta.set(true);
     try {
       await this.ventaService.registrarVenta(producto, {
-        ...raw,
-        fechaVenta: new Date().toISOString(),
+        precioVenta: raw.precioVenta,
         metodoPago: raw.metodoPago as never,
+        clienteNombre: raw.clienteNombre || undefined,
+        clienteTelefono: formatInternationalPhone(raw.codigoPais, raw.clienteTelefono) || undefined,
+        notas: raw.notas || undefined,
+        fechaVenta: new Date().toISOString(),
       });
       this.snack('Venta registrada correctamente.');
       await this.router.navigate(['/dashboard/ventas']);

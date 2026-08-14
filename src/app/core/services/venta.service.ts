@@ -14,12 +14,19 @@ import { Producto } from '../models/producto.model';
 import { MetodoPago, Venta, metodosPago } from '../models/venta.model';
 import { removeUndefinedDeep } from '../repositories/firestore.repository';
 
+export interface ClienteNuevoInput {
+  nombreCompleto: string;
+  celular: string;
+  ci?: string;
+}
+
 export type VentaInput = Pick<
   Venta,
   'clienteId' | 'clienteNombre' | 'clienteTelefono' | 'clienteCi' | 'fechaVenta' | 'notas'
 > & {
   precioVenta: number;
   metodoPago: MetodoPago;
+  clienteNuevo?: ClienteNuevoInput;
 };
 
 export interface VentaDetalleInput {
@@ -48,6 +55,9 @@ export class VentaService {
     const operacionRef = doc(collection(this.firestore, 'operacionesVenta'));
     const ventaRefs = detalles.map(() => doc(collection(this.firestore, 'ventas')));
     const productoRefs = ids.map((id) => doc(this.firestore, `productos/${id}`));
+    const clienteRef = input.clienteNuevo
+      ? doc(collection(this.firestore, 'clientes'))
+      : undefined;
 
     await runTransaction(this.firestore, async (transaction) => {
       const snapshots = await Promise.all(productoRefs.map((productoRef) => transaction.get(productoRef)));
@@ -62,10 +72,22 @@ export class VentaService {
       if (precios.some((precio) => !Number.isFinite(precio) || precio < 0)) throw new Error('Precio de venta inválido.');
       const totalOperacion = precios.reduce((total, precio) => total + precio, 0);
       const timestamp = serverTimestamp();
+      const clienteId = input.clienteId || clienteRef?.id;
+
+      if (clienteRef && input.clienteNuevo) {
+        transaction.set(clienteRef, removeUndefinedDeep({
+          ...input.clienteNuevo,
+          activo: true,
+          schemaVersion: 1,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        }));
+      }
+
       transaction.set(operacionRef, removeUndefinedDeep({
         total: totalOperacion,
         cantidadDetalles: detalles.length,
-        clienteId: input.clienteId || undefined,
+        clienteId,
         clienteNombre: input.clienteNombre || undefined,
         clienteTelefono: input.clienteTelefono || undefined,
         clienteCi: input.clienteCi || undefined,
@@ -101,7 +123,7 @@ export class VentaService {
           productoId: snapshots[index].id, loteId: current.loteId || undefined,
           nombreProducto: current.nombre, precioCompra, precioVenta,
           ganancia: precioVenta - precioCompra,
-          clienteId: input.clienteId || undefined,
+          clienteId,
           clienteNombre: input.clienteNombre || undefined,
           clienteTelefono: input.clienteTelefono || undefined,
           clienteCi: input.clienteCi || undefined,
@@ -182,6 +204,9 @@ export class VentaService {
     const operacionId = originales[0].operacionId ?? originales[0].id!;
     const operacionRef = doc(this.firestore, `operacionesVenta/${operacionId}`);
     const nuevosVentaRefs = new Map(agregados.map(id => [id, doc(collection(this.firestore, 'ventas'))]));
+    const clienteRef = input.clienteNuevo
+      ? doc(collection(this.firestore, 'clientes'))
+      : undefined;
     const precios = nuevos.map(item => Number(item.precioVenta));
     if (precios.some(precio => !Number.isFinite(precio) || precio < 0)) throw new Error('Precio de venta inválido.');
 
@@ -194,8 +219,18 @@ export class VentaService {
       agregados.forEach(id => this.validateAvailableProduct(products.get(id)!));
       const totalOperacion = precios.reduce((sum, price) => sum + price, 0);
       const timestamp = serverTimestamp();
+      const clienteId = input.clienteId || clienteRef?.id;
+      if (clienteRef && input.clienteNuevo) {
+        transaction.set(clienteRef, removeUndefinedDeep({
+          ...input.clienteNuevo,
+          activo: true,
+          schemaVersion: 1,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        }));
+      }
       const common = { operacionId, cantidadDetalles:nuevos.length, totalOperacion, metodoPago:input.metodoPago,
-        fechaVenta:input.fechaVenta, clienteId:input.clienteId||deleteField(),
+        fechaVenta:input.fechaVenta, clienteId:clienteId||deleteField(),
         clienteNombre:input.clienteNombre||deleteField(), clienteTelefono:input.clienteTelefono||deleteField(),
         clienteCi:input.clienteCi||deleteField(), notas:input.notas||deleteField(), updatedAt:timestamp };
 
@@ -228,7 +263,7 @@ export class VentaService {
           transaction.set(nuevosVentaRefs.get(item.producto.id!)!, removeUndefinedDeep({
             ...ventaData,
             loteId: product.loteId || undefined,
-            clienteId: input.clienteId || undefined,
+            clienteId: clienteId || undefined,
             clienteNombre: input.clienteNombre || undefined,
             clienteTelefono: input.clienteTelefono || undefined,
             clienteCi: input.clienteCi || undefined,
@@ -244,7 +279,7 @@ export class VentaService {
         }
       });
       transaction.set(operacionRef, { total:totalOperacion, cantidadDetalles:nuevos.length, metodoPago:input.metodoPago,
-        fechaVenta:input.fechaVenta, clienteId:input.clienteId||deleteField(), clienteNombre:input.clienteNombre||deleteField(),
+        fechaVenta:input.fechaVenta, clienteId:clienteId||deleteField(), clienteNombre:input.clienteNombre||deleteField(),
         clienteTelefono:input.clienteTelefono||deleteField(), clienteCi:input.clienteCi||deleteField(),
         notas:input.notas||deleteField(), activo:true, schemaVersion:1, updatedAt:timestamp }, { merge:true });
     });

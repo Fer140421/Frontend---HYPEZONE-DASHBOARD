@@ -55,6 +55,15 @@
               <small>{{ auth.profile()?.email }}</small>
               <small>{{ auth.role() }}</small>
             </div>
+            <a
+              mat-menu-item
+              href="https://hyp3z0ne-store.web.app/home"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <mat-icon>storefront</mat-icon>
+              <span>Ir a tienda</span>
+            </a>
             <button mat-menu-item type="button" (click)="logout()">
               <mat-icon>logout</mat-icon>
               <span>Cerrar sesion</span>

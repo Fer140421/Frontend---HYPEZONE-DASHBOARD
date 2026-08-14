@@ -82,6 +82,10 @@ export class ProveedoresComponent implements OnInit {
     categoria: [''],
     estado: ['activos' as EstadoFiltro],
   });
+  private readonly appliedFilters$ = new BehaviorSubject({
+    categoria: '',
+    estado: 'activos' as EstadoFiltro,
+  });
   readonly proveedores$ = this.proveedores.getAll(true).pipe(
     map((items) => [...items].sort((a, b) => a.nombreCompleto.localeCompare(b.nombreCompleto))),
     shareReplay({ bufferSize: 1, refCount: true }),
@@ -92,11 +96,12 @@ export class ProveedoresComponent implements OnInit {
   );
   readonly filtered$ = combineLatest([
     this.proveedores$,
-    this.filters.valueChanges.pipe(startWith(this.filters.getRawValue())),
+    this.filters.controls.nombre.valueChanges.pipe(startWith(this.filters.controls.nombre.getRawValue())),
+    this.appliedFilters$,
   ]).pipe(
-    map(([items, filters]) => {
-      const nombre = (filters.nombre ?? '').toLowerCase().trim();
-      const categoria = (filters.categoria ?? '').toLowerCase().trim();
+    map(([items, nombreValue, filters]) => {
+      const nombre = nombreValue.toLowerCase().trim();
+      const categoria = filters.categoria.toLowerCase().trim();
       const estado = filters.estado;
       return items.filter((item) => {
         const matchesEstado =
@@ -122,9 +127,20 @@ export class ProveedoresComponent implements OnInit {
   );
 
   ngOnInit(): void {
-    this.filters.valueChanges.subscribe(() =>
+    this.filters.controls.nombre.valueChanges.subscribe(() =>
       this.pagination$.next({ pageIndex: 0, pageSize: this.pagination$.value.pageSize }),
     );
+  }
+
+  openFilters(): void {
+    this.filters.patchValue(this.appliedFilters$.value, { emitEvent: false });
+    this.filtersOpen.set(true);
+  }
+
+  applyFilters(): void {
+    const { categoria, estado } = this.filters.getRawValue();
+    this.appliedFilters$.next({ categoria, estado });
+    this.pagination$.next({ pageIndex: 0, pageSize: this.pagination$.value.pageSize });
   }
 
   updatePage(event: PageEvent): void {

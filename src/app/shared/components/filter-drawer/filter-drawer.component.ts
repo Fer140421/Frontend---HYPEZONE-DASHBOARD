@@ -14,9 +14,15 @@ export class FilterDrawerComponent {
   @Input() open = false;
   @Input() title = 'Filtros';
   @Output() readonly closed = new EventEmitter<void>();
+  @Output() readonly applied = new EventEmitter<void>();
 
   close(): void {
     this.closed.emit();
+  }
+
+  apply(): void {
+    this.applied.emit();
+    this.close();
   }
 
   @HostListener('document:keydown.escape')

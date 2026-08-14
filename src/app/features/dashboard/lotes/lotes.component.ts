@@ -50,6 +50,7 @@ import {
 import { cloudinaryThumbnailUrl } from '../../../core/utils/cloudinary-image.util';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { FilterDrawerComponent } from '../../../shared/components/filter-drawer/filter-drawer.component';
 import { ImageUploaderComponent } from '../../../shared/components/image-uploader/image-uploader.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -67,6 +68,8 @@ interface LotesData {
   productos: Producto[];
   ventas: Venta[];
 }
+
+type EstadoFiltro = 'todos' | 'activos' | 'inactivos';
 
 export interface LoteDetail {
   resumen: LoteResumen;
@@ -101,6 +104,7 @@ export interface LoteDetail {
     MatTableModule,
     MatTooltipModule,
     EmptyStateComponent,
+    FilterDrawerComponent,
     LoadingComponent,
     PageHeaderComponent,
     StatusChipComponent,
@@ -136,6 +140,11 @@ export class LotesComponent implements OnInit {
   readonly mode = signal<'list' | 'new' | 'detail' | 'edit'>('list');
   readonly viewType = inject(ViewPreferenceService).getViewSignal('lotes', 'table');
   readonly currentId = signal<string | null>(null);
+  readonly filtersOpen = signal(false);
+  readonly filters = this.fb.nonNullable.group({
+    estado: ['activos' as EstadoFiltro],
+  });
+  private readonly appliedFilters$ = new BehaviorSubject<EstadoFiltro>('activos');
 
   private readonly lotesSource$ = this.lotes.getAll(true).pipe(
     shareReplay({ bufferSize: 1, refCount: true }),
@@ -151,17 +160,15 @@ export class LotesComponent implements OnInit {
     shareReplay({ bufferSize: 1, refCount: true }),
   );
 
-  readonly data$ = combineLatest([
+  private readonly baseData$ = combineLatest([
     this.lotesSource$,
     this.productosSource$,
     this.ventasSource$,
-    this.pagination$,
   ]).pipe(
-    map(([lotes, productos, ventas, pagination]) => {
+    map(([lotes, productos, ventas]) => {
       const resumenes = this.analytics.getResumenesLotes(lotes, productos, ventas);
       return {
         resumenes,
-        resumenesPaginados: paginateItems(resumenes, pagination),
         productos,
         ventas,
       };
@@ -169,7 +176,25 @@ export class LotesComponent implements OnInit {
     shareReplay({ bufferSize: 1, refCount: true }),
   );
 
-  readonly detail$ = combineLatest([this.data$, this.route.paramMap]).pipe(
+  readonly data$ = combineLatest([this.baseData$, this.appliedFilters$, this.pagination$]).pipe(
+    map(([data, estado, pagination]) => {
+      const resumenes = data.resumenes.filter((resumen) =>
+        estado === 'todos'
+          ? true
+          : estado === 'activos'
+            ? resumen.lote.activo !== false
+            : resumen.lote.activo === false,
+      );
+      return {
+        ...data,
+        resumenes,
+        resumenesPaginados: paginateItems(resumenes, pagination),
+      };
+    }),
+    shareReplay({ bufferSize: 1, refCount: true }),
+  );
+
+  readonly detail$ = combineLatest([this.baseData$, this.route.paramMap]).pipe(
     map(([data, params]) => this.buildDetail(data, params.get('id'))),
     shareReplay({ bufferSize: 1, refCount: true }),
   );
@@ -229,6 +254,16 @@ export class LotesComponent implements OnInit {
         notas: lote.notas ?? '',
       });
     });
+  }
+
+  openFilters(): void {
+    this.filters.patchValue({ estado: this.appliedFilters$.value }, { emitEvent: false });
+    this.filtersOpen.set(true);
+  }
+
+  applyFilters(): void {
+    this.appliedFilters$.next(this.filters.controls.estado.getRawValue());
+    this.pagination$.next({ pageIndex: 0, pageSize: this.pagination$.value.pageSize });
   }
 
   fecha(value: Lote['fechaCompra']): Date {
@@ -292,7 +327,7 @@ export class LotesComponent implements OnInit {
   }
 
   async openDetailModal(id: string): Promise<void> {
-    const data = await firstValueFrom(this.data$);
+    const data = await firstValueFrom(this.baseData$);
     const detail = this.buildDetail(data, id);
     if (!detail) return;
 
