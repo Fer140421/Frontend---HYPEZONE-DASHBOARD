@@ -82,6 +82,24 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'descuentos',
+        canActivate: [permissionGuard],
+        data: { permission: 'products.update' },
+        loadComponent: () =>
+          import('./features/dashboard/descuentos/descuentos.component').then(
+            (m) => m.DescuentosComponent,
+          ),
+      },
+      {
+        path: 'descuentos/:id',
+        canActivate: [permissionGuard],
+        data: { permission: 'products.update' },
+        loadComponent: () =>
+          import('./features/dashboard/descuentos/descuentos.component').then(
+            (m) => m.DescuentosComponent,
+          ),
+      },
+      {
         path: 'ventas',
         canActivate: [permissionGuard], data: { permission: 'sales.view' },
         loadComponent: () =>

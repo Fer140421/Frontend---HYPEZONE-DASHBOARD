@@ -27,6 +27,8 @@ export interface Producto extends AuditableEntity {
   precioCompra: number;
   precioVenta: number;
   precioOferta?: number;
+  /** Campaign that owns the current offer. Only one active campaign is allowed per product. */
+  descuentoId?: string;
   estado: EstadoProducto;
   imagenes: string[];
   codigo?: string;

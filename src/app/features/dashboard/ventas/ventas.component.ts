@@ -324,7 +324,7 @@ export class VentasComponent implements OnInit {
     const offer = Number(producto.precioOferta);
     return producto.precioOferta !== undefined &&
       Number.isFinite(offer) &&
-      offer >= 0 &&
+      offer > 0 &&
       offer < this.precio(producto)
       ? offer
       : this.precio(producto);

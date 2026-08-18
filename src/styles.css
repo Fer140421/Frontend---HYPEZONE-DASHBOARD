@@ -421,6 +421,35 @@ mat-paginator {
   color: var(--hz-black);
 }
 
+.offer-price-cell,
+.offer-card-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.offer-price-cell del,
+.offer-card-price del {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: .8rem;
+}
+
+.offer-price-cell strong,
+.offer-card-price strong {
+  color: #b42318;
+}
+
+.offer-price-cell span,
+.offer-card-price span {
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: #fef3f2;
+  color: #b42318;
+  font-size: .68rem;
+  font-weight: 700;
+}
+
 .product-view {
   display: grid;
   grid-template-columns: minmax(180px, 0.75fr) minmax(0, 1.25fr);

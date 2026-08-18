@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { deleteDoc, doc, getDoc, serverTimestamp, setDoc } from '@angular/fire/firestore';
+import { deleteDoc, deleteField, doc, getDoc, serverTimestamp, setDoc, writeBatch } from '@angular/fire/firestore';
 import { Observable, map } from 'rxjs';
 import { Producto, normalizeProducto } from '../models/producto.model';
 import { FirestoreRepository, removeUndefinedDeep } from './firestore.repository';
@@ -49,11 +49,12 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
   }
 
   override async create(item: Partial<Producto>): Promise<string> {
-    const id = await super.create(item);
+    const normalizedItem = this.normalizeOfferForCreate(item);
+    const id = await super.create(normalizedItem);
     try {
       const publicPayload = removeUndefinedDeep({
-        ...sanitizePublicProduct(item),
-        activo: item.activo ?? true,
+        ...sanitizePublicProduct(normalizedItem),
+        activo: normalizedItem.activo ?? true,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -65,10 +66,18 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
   }
 
   override async update(id: string, item: Partial<Producto>): Promise<void> {
-    await super.update(id, item);
+    const includesOffer = Object.hasOwn(item, 'precioOferta');
+    const { precioOferta, ...otherFields } = item;
+    const validOffer = this.validOffer(precioOferta);
+    const normalizedItem = includesOffer
+      ? { ...otherFields, precioOferta: validOffer ?? deleteField() }
+      : item;
+
+    await super.update(id, normalizedItem as Partial<Producto>);
     try {
       const publicPayload = removeUndefinedDeep({
-        ...sanitizePublicProduct(item),
+        ...sanitizePublicProduct(otherFields),
+        ...(includesOffer ? { precioOferta: validOffer ?? deleteField() } : {}),
         updatedAt: serverTimestamp(),
       });
       if (Object.keys(publicPayload).length > 0) {
@@ -112,5 +121,53 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
 
   cambiarPrecio(id: string, precioVenta: number): Promise<void> {
     return this.update(id, { precioVenta });
+  }
+
+  /**
+   * Actualiza la oferta de varios productos junto con su espejo público. Cada producto
+   * representa dos escrituras, por eso se divide en lotes compatibles con Firestore.
+   */
+  async actualizarOfertas(ids: string[], precioOferta: number | null): Promise<void> {
+    await this.actualizarOfertasIndividuales(
+      [...new Set(ids.filter(Boolean))].map((id) => ({ id, precioOferta })),
+    );
+  }
+
+  async actualizarOfertasIndividuales(ofertas: Array<{ id: string; precioOferta: number | null }>): Promise<void> {
+    const uniqueOffers = [...new Map(ofertas.filter((item) => item.id).map((item) => [item.id, item])).values()];
+
+    for (let index = 0; index < uniqueOffers.length; index += 250) {
+      const batch = writeBatch(this.firestore);
+      const timestamp = serverTimestamp();
+
+      for (const offer of uniqueOffers.slice(index, index + 250)) {
+        const value = offer.precioOferta === null ? deleteField() : offer.precioOferta;
+        const id = offer.id;
+        batch.update(doc(this.firestore, `productos/${id}`), {
+          precioOferta: value,
+          updatedAt: timestamp,
+        });
+        batch.set(
+          doc(this.firestore, `productosPublicos/${id}`),
+          { precioOferta: value, updatedAt: timestamp },
+          { merge: true },
+        );
+      }
+
+      await batch.commit();
+    }
+  }
+
+  private normalizeOfferForCreate(item: Partial<Producto>): Partial<Producto> {
+    if (!Object.hasOwn(item, 'precioOferta')) return item;
+    const validOffer = this.validOffer(item.precioOferta);
+    if (validOffer !== null) return { ...item, precioOferta: validOffer };
+    const { precioOferta: _precioOferta, ...withoutOffer } = item;
+    return withoutOffer;
+  }
+
+  private validOffer(value: unknown): number | null {
+    const offer = Number(value);
+    return Number.isFinite(offer) && offer > 0 ? offer : null;
   }
 }

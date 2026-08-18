@@ -65,6 +65,7 @@ export class DashboardLayoutComponent {
     { label: 'Resumen', icon: 'dashboard', route: '/dashboard/resumen', permission: 'dashboard.view' },
     { label: 'Lotes', icon: 'local_shipping', route: '/dashboard/lotes', permission: 'lots.view' },
     { label: 'Productos', icon: 'inventory_2', route: '/dashboard/productos', permission: 'products.view' },
+    { label: 'Descuentos', icon: 'sell', route: '/dashboard/descuentos', permission: 'products.update' },
     { label: 'Ventas', icon: 'point_of_sale', route: '/dashboard/ventas', permission: 'sales.view' },
     { label: 'Proveedores', icon: 'local_shipping', route: '/dashboard/proveedores', permission: 'providers.view' },
     { label: 'Clientes', icon: 'groups', route: '/dashboard/clientes', permission: 'clients.view' },
@@ -79,4 +80,3 @@ export class DashboardLayoutComponent {
     void this.auth.logout();
   }
 }
-

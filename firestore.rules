@@ -38,6 +38,12 @@ service cloud.firestore {
       allow delete: if hasPermission('products.delete');
     }
 
+    // Discount campaigns only change the public offer already mirrored on products.
+    match /descuentos/{id} {
+      allow read: if hasPermission('products.view');
+      allow create, update, delete: if hasPermission('products.update');
+    }
+
     match /clientes/{id} {
       allow read: if hasPermission('clients.view');
       allow create: if hasPermission('clients.create');

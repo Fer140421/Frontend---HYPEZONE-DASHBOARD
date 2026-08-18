@@ -1,0 +1,41 @@
+@if (selectedDiscount(); as descuento) {
+  <app-page-header [title]="descuento.nombre" [description]="descuentoLabel(descuento)" backUrl="/dashboard/descuentos">
+    <button mat-stroked-button type="button" (click)="editar()" [disabled]="loading()"><mat-icon>edit</mat-icon>Editar</button>
+    @if (descuento.activo) { <button mat-flat-button type="button" (click)="agregarProductos()" [disabled]="loading()"><mat-icon>add</mat-icon>Agregar productos</button><button mat-stroked-button type="button" (click)="finalizar()" [disabled]="loading()"><mat-icon>event_busy</mat-icon>Finalizar</button> }
+    <button mat-stroked-button type="button" class="delete-campaign" (click)="eliminar()" [disabled]="loading()"><mat-icon>delete_outline</mat-icon>Eliminar</button>
+  </app-page-header>
+  @if (detailProductos$ | async; as productos) {
+    <mat-card class="detail-card">
+      <mat-card-content>
+        <div class="detail-summary"><span>{{ productos.length }} productos asociados</span><span>{{ descuento.activo ? 'Descuento activo' : 'Descuento finalizado' }}</span></div>
+        @if (productos.length) {
+          <div class="table-scroll"><table><thead><tr><th>Producto</th><th>Precio normal</th><th>Oferta</th><th></th></tr></thead><tbody>
+            @for (producto of productos; track producto.id) { <tr><td><strong>{{ producto.nombre }}</strong><small>{{ producto.marca || 'Sin marca' }} · Talla {{ producto.talla }}</small></td><td><del>{{ producto.precioVenta | currency:'BOB':'symbol-narrow' }}</del></td><td class="offer">{{ oferta(producto) | currency:'BOB':'symbol-narrow' }}</td><td>@if (descuento.activo) { <button mat-icon-button type="button" (click)="quitarProducto(producto)" aria-label="Quitar del descuento"><mat-icon>remove_circle_outline</mat-icon></button> }</td></tr> }
+          </tbody></table></div>
+        } @else { <app-empty-state icon="sell" title="Sin productos asociados" description="Agrega productos a esta campaña para aplicar su oferta." /> }
+      </mat-card-content>
+    </mat-card>
+  } @else { <app-loading text="Cargando productos..." /> }
+} @else {
+  <app-page-header title="Descuentos" description="Crea y administra campañas de descuento."><button mat-flat-button type="button" (click)="nuevo()" [disabled]="loading()"><mat-icon>add</mat-icon>Nuevo descuento</button></app-page-header>
+  @if (listViewModel$ | async; as descuentos) {
+    <mat-card class="list-card"><mat-card-content>
+      <div class="list-toolbar-row"><span class="muted campaign-count">{{ descuentos.total }} {{ descuentos.total === 1 ? 'descuento' : 'descuentos' }}</span><div class="view-toggle-group"><button type="button" class="view-toggle-btn" [class.active]="viewType() === 'table'" (click)="viewType.set('table')" aria-label="Vista de lista"><mat-icon>format_list_bulleted</mat-icon></button><button type="button" class="view-toggle-btn" [class.active]="viewType() === 'cards'" (click)="viewType.set('cards')" aria-label="Vista de tarjetas"><mat-icon>grid_view</mat-icon></button></div></div>
+      @if (descuentos.total === 0) {
+        <app-empty-state icon="sell" [title]="listError() ? 'No se pudieron cargar los descuentos' : 'Aún no hay descuentos'" [description]="listError() || 'Crea una campaña y asocia sus productos desde un solo lugar.'" />
+      } @else if (viewType() === 'table') {
+        <div class="table-scroll"><table mat-table [dataSource]="descuentos.items">
+          <ng-container matColumnDef="nombre"><th mat-header-cell *matHeaderCellDef>Descuento</th><td mat-cell *matCellDef="let item"><strong>{{ item.nombre }}</strong></td></ng-container>
+          <ng-container matColumnDef="regla"><th mat-header-cell *matHeaderCellDef>Regla</th><td mat-cell *matCellDef="let item">{{ descuentoLabel(item) }}</td></ng-container>
+          <ng-container matColumnDef="productos"><th mat-header-cell *matHeaderCellDef>Productos</th><td mat-cell *matCellDef="let item">{{ item.cantidadProductos }}</td></ng-container>
+          <ng-container matColumnDef="estado"><th mat-header-cell *matHeaderCellDef>Estado</th><td mat-cell *matCellDef="let item"><span class="campaign-status" [class.inactive]="!item.activo">{{ item.activo ? 'Activo' : 'Finalizado' }}</span></td></ng-container>
+          <ng-container matColumnDef="acciones"><th mat-header-cell *matHeaderCellDef></th><td mat-cell *matCellDef="let item"><a mat-icon-button [routerLink]="['/dashboard/descuentos', item.id]" aria-label="Ver descuento"><mat-icon>visibility</mat-icon></a></td></ng-container>
+          <tr mat-header-row *matHeaderRowDef="['nombre', 'regla', 'productos', 'estado', 'acciones']"></tr><tr mat-row *matRowDef="let row; columns: ['nombre', 'regla', 'productos', 'estado', 'acciones']"></tr>
+        </table></div>
+      } @else {
+        <div class="listing-cards-grid">@for (descuento of descuentos.items; track descuento.id) { <a class="listing-card-item campaign-list-card" [routerLink]="['/dashboard/descuentos', descuento.id]"><div class="card-body-content"><div class="campaign-icon"><mat-icon>sell</mat-icon></div><h3 class="card-item-title">{{ descuento.nombre }}</h3><p>{{ descuentoLabel(descuento) }}</p><small>{{ descuento.cantidadProductos }} productos · {{ descuento.activo ? 'Activo' : 'Finalizado' }}</small></div><div class="card-footer-actions"><mat-icon>chevron_right</mat-icon></div></a> }</div>
+      }
+      <mat-paginator [length]="descuentos.total" [pageIndex]="descuentos.pageIndex" [pageSize]="descuentos.pageSize" [pageSizeOptions]="pageSizeOptions" (page)="updatePage($event)" />
+    </mat-card-content></mat-card>
+  } @else { <app-loading text="Cargando descuentos..." /> }
+}

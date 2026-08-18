@@ -225,7 +225,6 @@ export class ProductosComponent implements OnInit {
     genero: [''],
     precioCompra: [0, [Validators.required, Validators.min(0)]],
     precioVenta: [0, [Validators.required, Validators.min(0)]],
-    precioOferta: this.fb.control<number | null>(null),
     estado: ['disponible', Validators.required],
     codigo: [''],
     notas: [''],
@@ -280,7 +279,6 @@ export class ProductosComponent implements OnInit {
               genero: '',
               precioCompra: 0,
               precioVenta: 0,
-              precioOferta: null,
               estado: 'disponible',
               codigo: generateProductCode(),
               notas: '',
@@ -301,13 +299,16 @@ export class ProductosComponent implements OnInit {
           genero: producto.genero ?? '',
           precioCompra: precioCompraProducto(producto),
           precioVenta: precioProducto(producto),
-          precioOferta: producto.precioOferta ?? null,
           estado: producto.estado,
           codigo: producto.codigo || generateProductCode(),
           notas: producto.notas ?? '',
         });
         this.imagenes.set(imagenesProducto(producto));
-        this.ventaForm.patchValue({ precioVenta: Number(producto.precioOferta ?? precioProducto(producto)) });
+        const oferta = Number(producto.precioOferta);
+        const precioBase = precioProducto(producto);
+        this.ventaForm.patchValue({
+          precioVenta: Number.isFinite(oferta) && oferta > 0 && oferta < precioBase ? oferta : precioBase,
+        });
       });
   }
 
@@ -332,6 +333,11 @@ export class ProductosComponent implements OnInit {
 
   precioCompra(producto: Producto): number {
     return precioCompraProducto(producto);
+  }
+
+  tieneOferta(producto: Producto): boolean {
+    const oferta = Number(producto.precioOferta);
+    return Number.isFinite(oferta) && oferta > 0 && oferta < this.precio(producto);
   }
 
   firstImage(producto: Producto): string {
@@ -380,13 +386,11 @@ export class ProductosComponent implements OnInit {
   async save(): Promise<void> {
     if (!this.auth.can('products.create') && !this.auth.can('products.update')) return;
     const raw = this.form.getRawValue();
-    const { precioOferta, ...productValues } = raw;
     const payload: Partial<Producto> = {
-      ...productValues,
+      ...raw,
       loteId: raw.loteId || undefined,
       genero: (raw.genero || undefined) as GeneroProducto | undefined,
       codigo: raw.codigo || generateProductCode(),
-      ...(precioOferta === null ? {} : { precioOferta }),
       imagenes: this.imagenes(),
       activo: true,
     } as Partial<Producto>;
@@ -675,7 +679,6 @@ export class ProductEditDialogComponent {
     genero: [this.data.producto.genero ?? ''],
     precioCompra: [precioCompraProducto(this.data.producto), [Validators.required, Validators.min(0)]],
     precioVenta: [precioProducto(this.data.producto), [Validators.required, Validators.min(0)]],
-    precioOferta: this.fb.control<number | null>(this.data.producto.precioOferta ?? null),
     estado: [this.data.producto.estado, Validators.required],
     codigo: [this.data.producto.codigo || generateProductCode()],
     notas: [this.data.producto.notas ?? ''],
@@ -683,12 +686,10 @@ export class ProductEditDialogComponent {
 
   save(): void {
     const raw = this.form.getRawValue();
-    const { precioOferta, ...productValues } = raw;
     this.dialogRef.close({
-      ...productValues,
+      ...raw,
       loteId: raw.loteId || undefined,
       genero: (raw.genero || undefined) as GeneroProducto | undefined,
-      ...(precioOferta === null ? {} : { precioOferta }),
       imagenes: this.imagenes(),
       activo: true,
     } satisfies Partial<Producto>);
