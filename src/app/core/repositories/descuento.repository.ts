@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, deleteField, doc, serverTimestamp, writeBatch } from '@angular/fire/firestore';
+import { Firestore, collection, deleteField, doc, getDoc, serverTimestamp, writeBatch } from '@angular/fire/firestore';
 import { Descuento } from '../models/descuento.model';
 import { Producto, precioProducto } from '../models/producto.model';
 import { FirestoreRepository } from './firestore.repository';
@@ -31,10 +31,13 @@ export class DescuentoRepository extends FirestoreRepository<Descuento> {
   }
 
   async quitarProducto(descuentoId: string, productoId: string): Promise<void> {
+    const producto = await getDoc(doc(this.db, `productos/${productoId}`));
     const batch = writeBatch(this.db);
     const timestamp = serverTimestamp();
     batch.update(doc(this.db, `productos/${productoId}`), { descuentoId: deleteField(), precioOferta: deleteField(), updatedAt: timestamp });
-    batch.set(doc(this.db, `productosPublicos/${productoId}`), { precioOferta: deleteField(), updatedAt: timestamp }, { merge: true });
+    if (producto.exists() && (producto.data() as Producto).estadoPublicacion !== 'pendiente') {
+      batch.set(doc(this.db, `productosPublicos/${productoId}`), { precioOferta: deleteField(), updatedAt: timestamp }, { merge: true });
+    }
     batch.update(doc(this.db, `descuentos/${descuentoId}`), { updatedAt: timestamp });
     await batch.commit();
   }
@@ -71,7 +74,9 @@ export class DescuentoRepository extends FirestoreRepository<Descuento> {
         const precioOferta = this.precioOferta(producto, descuento.tipo, descuento.valor);
         if (precioOferta >= precioProducto(producto)) throw new Error(`La oferta de "${producto.nombre}" debe ser menor al precio de venta.`);
         batch.update(doc(this.db, `productos/${producto.id}`), { descuentoId, precioOferta, updatedAt: timestamp });
-        batch.set(doc(this.db, `productosPublicos/${producto.id}`), { precioOferta, updatedAt: timestamp }, { merge: true });
+        if (producto.estadoPublicacion === 'publicado') {
+          batch.set(doc(this.db, `productosPublicos/${producto.id}`), { precioOferta, updatedAt: timestamp }, { merge: true });
+        }
       }
       await batch.commit();
     }
@@ -96,14 +101,18 @@ export class DescuentoRepository extends FirestoreRepository<Descuento> {
       const batch = writeBatch(this.db);
       const timestamp = serverTimestamp();
       const group = ids.slice(index, index + 249);
+      const productos = await Promise.all(group.map((id) => getDoc(doc(this.db, `productos/${id}`))));
       const campaignRef = doc(this.db, `descuentos/${descuentoId}`);
       const isLastBatch = index + 249 >= ids.length;
       if (deleteCampaign && isLastBatch) batch.delete(campaignRef);
       else batch.update(campaignRef, { ...(deleteCampaign ? {} : { activo: false }), updatedAt: timestamp });
 
-      for (const id of group) {
+      for (let productIndex = 0; productIndex < group.length; productIndex++) {
+        const id = group[productIndex];
         batch.update(doc(this.db, `productos/${id}`), { descuentoId: deleteField(), precioOferta: deleteField(), updatedAt: timestamp });
-        batch.set(doc(this.db, `productosPublicos/${id}`), { precioOferta: deleteField(), updatedAt: timestamp }, { merge: true });
+        if (productos[productIndex].exists() && (productos[productIndex].data() as Producto).estadoPublicacion !== 'pendiente') {
+          batch.set(doc(this.db, `productosPublicos/${id}`), { precioOferta: deleteField(), updatedAt: timestamp }, { merge: true });
+        }
       }
       await batch.commit();
     }

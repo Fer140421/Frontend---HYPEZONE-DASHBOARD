@@ -120,7 +120,7 @@ export class ProductosComponent implements OnInit {
   readonly generos = generosProducto;
   readonly metodos = metodosPago;
   readonly countries = SOUTH_AMERICAN_COUNTRIES;
-  readonly columns = ['imagen', 'nombre', 'talla', 'precioVenta', 'estado', 'acciones'];
+  readonly columns = ['imagen', 'nombre', 'talla', 'precioVenta', 'estado', 'publicacion', 'acciones'];
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
   readonly mode = signal<'list' | 'new' | 'detail'>('list');
   readonly viewType = inject(ViewPreferenceService).getViewSignal('productos', 'table');
@@ -405,6 +405,16 @@ export class ProductosComponent implements OnInit {
     await this.productoRepository.create(payload);
     this.snack('Producto creado.');
     await this.router.navigate(['/dashboard/productos']);
+  }
+
+  async publicarEnWeb(producto: Producto): Promise<void> {
+    if (!this.auth.can('products.update') || !producto.id || producto.estadoPublicacion === 'publicado') return;
+    try {
+      await this.productoRepository.publicarEnWeb(producto.id);
+      this.snack('Producto publicado en la web.');
+    } catch (error) {
+      this.snack(error instanceof Error ? error.message : 'No se pudo publicar el producto.');
+    }
   }
 
   openPriceEdit(producto: Producto): void {

@@ -7,6 +7,7 @@ const { execFileSync } = require('node:child_process');
 const root = path.resolve(__dirname, '..');
 const requestedProjectId = process.argv.find((value, index, args) => args[index - 1] === '--project');
 const apply = process.argv.includes('--apply');
+const markPublished = process.argv.includes('--mark-published');
 
 function fail(message) {
   throw new Error(`[sync-public-products] ${message}`);
@@ -104,6 +105,16 @@ async function firestoreRequest(projectId, token, method, suffix, body) {
   return response.status === 204 ? undefined : response.json();
 }
 
+async function markProductAsPublished(projectId, token, docId) {
+  await firestoreRequest(
+    projectId,
+    token,
+    'PATCH',
+    `productos/${docId}?updateMask.fieldPaths=estadoPublicacion`,
+    { fields: { estadoPublicacion: { stringValue: 'publicado' } } },
+  );
+}
+
 async function main() {
   const projectId = getActiveProjectId();
   console.log(`📌 Sincronizando productos a productosPublicos en el proyecto: ${projectId}`);
@@ -111,12 +122,24 @@ async function main() {
   const token = await accessToken();
   const productsResponse = await firestoreRequest(projectId, token, 'GET', 'productos?pageSize=1000');
   const documents = productsResponse.documents ?? [];
+  const publicationSummary = documents.reduce(
+    (summary, product) => {
+      const status = product.fields?.estadoPublicacion?.stringValue;
+      if (status === 'publicado') summary.publicados++;
+      else if (status === 'pendiente') summary.pendientes++;
+      else summary.sinEstado++;
+      return summary;
+    },
+    { publicados: 0, pendientes: 0, sinEstado: 0 },
+  );
 
   console.log(`📦 Encontrados ${documents.length} documentos en la colección 'productos'.`);
+  console.log(`🌐 Publicación: ${publicationSummary.publicados} publicados, ${publicationSummary.pendientes} pendientes, ${publicationSummary.sinEstado} sin estado.`);
 
   if (!apply) {
     console.log('🔍 MODO VISTA PREVIA (simulación). No se realizaron escrituras.');
     console.log('👉 Ejecuta con --apply para realizar la sincronización real en Firestore.');
+    if (markPublished) console.log('👉 También se marcarán como publicados los productos sincronizados.');
     return;
   }
 
@@ -124,11 +147,18 @@ async function main() {
   for (const doc of documents) {
     const docId = doc.name.split('/').pop();
     const rawFields = doc.fields ?? {};
+    if (rawFields.estadoPublicacion?.stringValue === 'pendiente') {
+      continue;
+    }
     const publicFields = sanitizeFields(rawFields);
+    publicFields.productoId = { stringValue: docId };
 
     await firestoreRequest(projectId, token, 'PATCH', `productosPublicos/${docId}`, {
       fields: publicFields,
     });
+    if (markPublished) {
+      await markProductAsPublished(projectId, token, docId);
+    }
     count++;
   }
 

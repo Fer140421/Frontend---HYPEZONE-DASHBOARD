@@ -95,6 +95,7 @@ erDiagram
 | `precioVenta` | `number` | Sí | Precio de venta al público en Bs. |
 | `precioOferta` | `number` | No | Precio promocional con descuento (opcional). |
 | `estado` | `string` | Sí | Estado operativo (`disponible`, `reservado`, `vendido`). |
+| `estadoPublicacion` | `string` | Sí | Estado de publicación: `pendiente` (solo inventario) o `publicado` (en la web). |
 | `imagenes` | `array<string>` | Sí | Array de URLs públicas de imágenes alojadas en Cloudinary. |
 | `codigo` | `string` | No | Código interno o SKU. |
 | `notas` | `string` | No | Observaciones internas. |

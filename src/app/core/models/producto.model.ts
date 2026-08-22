@@ -13,6 +13,7 @@ export type CategoriaProducto =
 
 export type GeneroProducto = 'hombre' | 'mujer' | 'unisex' | 'nino' | 'nina';
 export type EstadoProducto = 'disponible' | 'reservado' | 'vendido';
+export type EstadoPublicacionProducto = 'pendiente' | 'publicado';
 
 export interface Producto extends AuditableEntity {
   schemaVersion?: number;
@@ -30,6 +31,8 @@ export interface Producto extends AuditableEntity {
   /** Campaign that owns the current offer. Only one active campaign is allowed per product. */
   descuentoId?: string;
   estado: EstadoProducto;
+  /** Controla si el producto ya fue enviado al catálogo público. */
+  estadoPublicacion?: EstadoPublicacionProducto;
   imagenes: string[];
   codigo?: string;
   notas?: string;
@@ -43,6 +46,8 @@ export function normalizeProducto(producto: Producto): Producto {
     precioCompra: Number(producto.precioCompra ?? 0),
     activo: producto.activo ?? true,
     estado: producto.estado ?? 'disponible',
+    // Los productos anteriores a este cambio ya tienen espejo público.
+    estadoPublicacion: producto.estadoPublicacion ?? 'publicado',
   };
 }
 

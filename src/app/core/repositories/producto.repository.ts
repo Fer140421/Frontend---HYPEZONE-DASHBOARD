@@ -49,20 +49,10 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
   }
 
   override async create(item: Partial<Producto>): Promise<string> {
-    const normalizedItem = this.normalizeOfferForCreate(item);
-    const id = await super.create(normalizedItem);
-    try {
-      const publicPayload = removeUndefinedDeep({
-        ...sanitizePublicProduct(normalizedItem),
-        activo: normalizedItem.activo ?? true,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-      await setDoc(doc(this.firestore, `productosPublicos/${id}`), publicPayload);
-    } catch (err) {
-      console.warn('No se pudo crear el espejo en productosPublicos:', err);
-    }
-    return id;
+    return super.create({
+      ...this.normalizeOfferForCreate(item),
+      estadoPublicacion: item.estadoPublicacion ?? 'pendiente',
+    });
   }
 
   override async update(id: string, item: Partial<Producto>): Promise<void> {
@@ -80,8 +70,9 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
         ...(includesOffer ? { precioOferta: validOffer ?? deleteField() } : {}),
         updatedAt: serverTimestamp(),
       });
-      if (Object.keys(publicPayload).length > 0) {
-        await setDoc(doc(this.firestore, `productosPublicos/${id}`), publicPayload, { merge: true });
+      const publicRef = doc(this.firestore, `productosPublicos/${id}`);
+      if (Object.keys(publicPayload).length > 0 && (await getDoc(publicRef)).exists()) {
+        await setDoc(publicRef, publicPayload, { merge: true });
       }
     } catch (err) {
       console.warn('No se pudo actualizar el espejo en productosPublicos:', err);
@@ -123,6 +114,32 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
     return this.update(id, { precioVenta });
   }
 
+  async publicarEnWeb(id: string): Promise<void> {
+    const productRef = doc(this.firestore, `productos/${id}`);
+    const snapshot = await getDoc(productRef);
+    if (!snapshot.exists()) throw new Error('El producto no existe.');
+
+    const producto = normalizeProducto({ id: snapshot.id, ...(snapshot.data() as Producto) });
+    const faltantes = this.datosFaltantesParaPublicar(producto);
+    if (faltantes.length) {
+      throw new Error(`Completa lo siguiente antes de publicar: ${faltantes.join(', ')}.`);
+    }
+
+    const timestamp = serverTimestamp();
+    await setDoc(
+      doc(this.firestore, `productosPublicos/${id}`),
+      removeUndefinedDeep({
+        ...sanitizePublicProduct(producto),
+        productoId: id,
+        activo: true,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      }),
+      { merge: true },
+    );
+    await super.update(id, { estadoPublicacion: 'publicado' });
+  }
+
   /**
    * Actualiza la oferta de varios productos junto con su espejo público. Cada producto
    * representa dos escrituras, por eso se divide en lotes compatibles con Firestore.
@@ -139,19 +156,24 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
     for (let index = 0; index < uniqueOffers.length; index += 250) {
       const batch = writeBatch(this.firestore);
       const timestamp = serverTimestamp();
+      const group = uniqueOffers.slice(index, index + 250);
+      const products = await Promise.all(group.map((offer) => getDoc(doc(this.firestore, `productos/${offer.id}`))));
 
-      for (const offer of uniqueOffers.slice(index, index + 250)) {
+      for (let productIndex = 0; productIndex < group.length; productIndex++) {
+        const offer = group[productIndex];
         const value = offer.precioOferta === null ? deleteField() : offer.precioOferta;
         const id = offer.id;
         batch.update(doc(this.firestore, `productos/${id}`), {
           precioOferta: value,
           updatedAt: timestamp,
         });
-        batch.set(
-          doc(this.firestore, `productosPublicos/${id}`),
-          { precioOferta: value, updatedAt: timestamp },
-          { merge: true },
-        );
+        if (products[productIndex].exists() && (products[productIndex].data() as Producto).estadoPublicacion !== 'pendiente') {
+          batch.set(
+            doc(this.firestore, `productosPublicos/${id}`),
+            { precioOferta: value, updatedAt: timestamp },
+            { merge: true },
+          );
+        }
       }
 
       await batch.commit();
@@ -169,5 +191,18 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
   private validOffer(value: unknown): number | null {
     const offer = Number(value);
     return Number.isFinite(offer) && offer > 0 ? offer : null;
+  }
+
+  private datosFaltantesParaPublicar(producto: Producto): string[] {
+    const faltantes: string[] = [];
+    if (!producto.imagenes.length) faltantes.push('al menos una foto');
+    if (!producto.nombre.trim()) faltantes.push('nombre');
+    if (!producto.talla.trim()) faltantes.push('talla');
+    if (!producto.categoria) faltantes.push('categoría');
+    if (!producto.descripcion.trim()) faltantes.push('descripción');
+    if (!Number.isFinite(producto.precioVenta) || producto.precioVenta <= 0) faltantes.push('precio de venta válido');
+    if (producto.activo === false) faltantes.push('producto activo');
+    if (producto.estado !== 'disponible') faltantes.push('estado disponible');
+    return faltantes;
   }
 }

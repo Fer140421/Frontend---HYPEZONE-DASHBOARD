@@ -52,7 +52,9 @@ export class ReservaService {
       }));
       productRefs.forEach((ref, index) => {
         tx.update(ref, { estado: 'reservado', updatedAt: timestamp });
-        tx.set(doc(this.firestore, `productosPublicos/${ids[index]}`), { estado: 'reservado', updatedAt: timestamp }, { merge: true });
+        if ((products[index].data() as Producto).estadoPublicacion === 'publicado') {
+          tx.set(doc(this.firestore, `productosPublicos/${ids[index]}`), { estado: 'reservado', updatedAt: timestamp }, { merge: true });
+        }
       });
     });
     return reservaRef.id;
@@ -85,7 +87,9 @@ export class ReservaService {
       products.forEach((product, index) => {
         if (product.exists() && (product.data() as Producto).estado === 'reservado') {
           tx.update(refs[index], { estado: 'disponible', updatedAt: timestamp });
-          tx.set(doc(this.firestore, `productosPublicos/${refs[index].id}`), { estado: 'disponible', updatedAt: timestamp }, { merge: true });
+          if ((product.data() as Producto).estadoPublicacion === 'publicado') {
+            tx.set(doc(this.firestore, `productosPublicos/${refs[index].id}`), { estado: 'disponible', updatedAt: timestamp }, { merge: true });
+          }
         }
       });
       tx.update(ref, { estado: 'cancelada', fechaCierre: new Date().toISOString(), updatedAt: timestamp });
@@ -128,7 +132,9 @@ export class ReservaService {
           metodoPago, fechaVenta, notas: reserva.notas || undefined, activo: true, schemaVersion: 4, createdAt: timestamp, updatedAt: timestamp,
         }));
         tx.update(productRefs[index], { estado: 'vendido', precioVenta: detail.precioAcordado, updatedAt: timestamp });
-        tx.set(doc(this.firestore, `productosPublicos/${detail.productoId}`), { estado: 'vendido', precioVenta: detail.precioAcordado, updatedAt: timestamp }, { merge: true });
+        if (product.estadoPublicacion === 'publicado') {
+          tx.set(doc(this.firestore, `productosPublicos/${detail.productoId}`), { estado: 'vendido', precioVenta: detail.precioAcordado, updatedAt: timestamp }, { merge: true });
+        }
       });
       tx.update(reservaRef, { estado: 'confirmada', saldoPendiente: 0, ventaOperacionId: operacionRef.id, fechaCierre: fechaVenta, updatedAt: timestamp });
     });
