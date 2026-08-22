@@ -65,6 +65,13 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /reservas/{id} {
+      allow read: if hasPermission('sales.view');
+      allow create: if hasPermission('sales.create');
+      allow update: if hasPermission('sales.update');
+      allow delete: if false;
+    }
+
     match /lotes/{id} {
       allow read: if hasPermission('lots.view');
       allow create: if hasPermission('lots.create');

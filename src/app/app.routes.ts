@@ -106,6 +106,16 @@ export const routes: Routes = [
           import('./features/dashboard/ventas/ventas.component').then((m) => m.VentasComponent),
       },
       {
+        path: 'reservas',
+        canActivate: [permissionGuard], data: { permission: 'sales.view' },
+        loadComponent: () => import('./features/dashboard/reservas/reservas.component').then((m) => m.ReservasComponent),
+      },
+      {
+        path: 'reservas/nueva',
+        canActivate: [permissionGuard], data: { permission: 'sales.create' },
+        loadComponent: () => import('./features/dashboard/reservas/reservas.component').then((m) => m.ReservasComponent),
+      },
+      {
         path: 'proveedores',
         canActivate: [permissionGuard], data: { permission: 'providers.view' },
         loadComponent: () =>

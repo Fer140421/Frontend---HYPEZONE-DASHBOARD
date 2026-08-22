@@ -67,6 +67,7 @@ export class DashboardLayoutComponent {
     { label: 'Productos', icon: 'inventory_2', route: '/dashboard/productos', permission: 'products.view' },
     { label: 'Descuentos', icon: 'sell', route: '/dashboard/descuentos', permission: 'products.update' },
     { label: 'Ventas', icon: 'point_of_sale', route: '/dashboard/ventas', permission: 'sales.view' },
+    { label: 'Reservas', icon: 'event_available', route: '/dashboard/reservas', permission: 'sales.view' },
     { label: 'Proveedores', icon: 'local_shipping', route: '/dashboard/proveedores', permission: 'providers.view' },
     { label: 'Clientes', icon: 'groups', route: '/dashboard/clientes', permission: 'clients.view' },
     { label: 'Categorias', icon: 'category', route: '/dashboard/catalogos', permission: 'catalogs.view' },

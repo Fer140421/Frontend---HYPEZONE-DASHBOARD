@@ -6,6 +6,7 @@ export type MetodoPagoHistorico = MetodoPago | 'transferencia' | 'otro';
 export interface Venta extends AuditableEntity {
   schemaVersion?: number;
   operacionId?: string;
+  reservaId?: string;
   cantidadDetalles?: number;
   totalOperacion?: number;
   productoId: string;
