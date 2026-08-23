@@ -141,6 +141,92 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
   }
 
   /**
+   * Publica de forma atómica por grupos los productos indicados. Antes de escribir,
+   * valida todos los pendientes para no dejar un lote publicado parcialmente.
+   */
+  async publicarProductosEnWeb(ids: string[]): Promise<number> {
+    const uniqueIds = [...new Set(ids.filter(Boolean))];
+    if (!uniqueIds.length) return 0;
+
+    const snapshots = await Promise.all(
+      uniqueIds.map((id) => getDoc(doc(this.firestore, `productos/${id}`))),
+    );
+    const productos = snapshots.map((snapshot, index) => {
+      if (!snapshot.exists()) {
+        throw new Error(`El producto con ID ${uniqueIds[index]} ya no existe.`);
+      }
+      return normalizeProducto({ id: snapshot.id, ...(snapshot.data() as Producto) });
+    });
+    const pendientes = productos.filter((producto) => producto.estadoPublicacion !== 'publicado');
+    const invalidos = pendientes
+      .map((producto) => ({ producto, faltantes: this.datosFaltantesParaPublicar(producto) }))
+      .filter(({ faltantes }) => faltantes.length);
+
+    if (invalidos.length) {
+      const detalle = invalidos
+        .map(({ producto, faltantes }) => `${producto.nombre}: ${faltantes.join(', ')}`)
+        .join(' | ');
+      throw new Error(`No se publicó el lote. Corrige: ${detalle}.`);
+    }
+
+    for (let index = 0; index < pendientes.length; index += 250) {
+      const batch = writeBatch(this.firestore);
+      const timestamp = serverTimestamp();
+
+      for (const producto of pendientes.slice(index, index + 250)) {
+        const id = producto.id!;
+        batch.set(
+          doc(this.firestore, `productosPublicos/${id}`),
+          removeUndefinedDeep({
+            ...sanitizePublicProduct(producto),
+            productoId: id,
+            activo: true,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          }),
+          { merge: true },
+        );
+        batch.update(doc(this.firestore, `productos/${id}`), {
+          estadoPublicacion: 'publicado',
+          updatedAt: timestamp,
+        });
+      }
+
+      await batch.commit();
+    }
+
+    return pendientes.length;
+  }
+
+  /** Reasigna una categoría y mantiene sincronizado el producto publicado, si existe. */
+  async reasignarCategoria(ids: string[], categoria: string): Promise<void> {
+    const uniqueIds = [...new Set(ids.filter(Boolean))];
+    if (!uniqueIds.length) return;
+
+    for (let index = 0; index < uniqueIds.length; index += 250) {
+      const group = uniqueIds.slice(index, index + 250);
+      const productRefs = group.map((id) => doc(this.firestore, `productos/${id}`));
+      const publicRefs = group.map((id) => doc(this.firestore, `productosPublicos/${id}`));
+      const [products, publicProducts] = await Promise.all([
+        Promise.all(productRefs.map((ref) => getDoc(ref))),
+        Promise.all(publicRefs.map((ref) => getDoc(ref))),
+      ]);
+      const batch = writeBatch(this.firestore);
+      const timestamp = serverTimestamp();
+
+      for (let productIndex = 0; productIndex < group.length; productIndex++) {
+        if (!products[productIndex].exists()) continue;
+        batch.update(productRefs[productIndex], { categoria, updatedAt: timestamp });
+        if (publicProducts[productIndex].exists()) {
+          batch.update(publicRefs[productIndex], { categoria, updatedAt: timestamp });
+        }
+      }
+
+      await batch.commit();
+    }
+  }
+
+  /**
    * Actualiza la oferta de varios productos junto con su espejo público. Cada producto
    * representa dos escrituras, por eso se divide en lotes compatibles con Firestore.
    */

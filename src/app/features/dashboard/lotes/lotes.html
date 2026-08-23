@@ -255,7 +255,19 @@
         <div>
           <mat-card-title>Prendas asociadas a este lote ({{ detail.productos.length }})</mat-card-title>
         </div>
-        @if (mode() === 'edit' && auth.can('products.create')) {
+        <div class="section-actions">
+          @if (auth.can('products.update') && detail.productos.length > 0) {
+            <button
+              mat-stroked-button
+              type="button"
+              (click)="confirmarPublicacionLote(detail)"
+              matTooltip="Publicar todos los productos pendientes de este lote"
+            >
+              <mat-icon>language</mat-icon>
+              Publicar lote
+            </button>
+          }
+          @if (mode() === 'edit' && auth.can('products.create')) {
           <button
             mat-flat-button
             class="primary-action"
@@ -267,7 +279,8 @@
             <mat-icon>add</mat-icon>
             Registrar prenda nueva
           </button>
-        }
+          }
+        </div>
       </mat-card-header>
       <mat-card-content>
         <!-- Barra de asociación de producto existente -->
@@ -320,8 +333,21 @@
                     <strong>{{ precio(p) | currency: 'BOB' : 'symbol-narrow' }}</strong>
                   </div>
                 </div>
-                @if (mode() === 'edit' && auth.can('lots.update')) {
+                @if ((auth.can('products.update') && p.estadoPublicacion !== 'publicado') || (mode() === 'edit' && auth.can('lots.update'))) {
                   <div class="prenda-card-actions">
+                    @if (auth.can('products.update') && p.estadoPublicacion !== 'publicado') {
+                      <button
+                        mat-icon-button
+                        type="button"
+                        color="primary"
+                        (click)="publicarProductoEnWeb(p)"
+                        matTooltip="Publicar en web"
+                        aria-label="Publicar en web"
+                      >
+                        <mat-icon>language</mat-icon>
+                      </button>
+                    }
+                    @if (mode() === 'edit' && auth.can('lots.update')) {
                     <button 
                       mat-icon-button 
                       type="button" 
@@ -332,6 +358,7 @@
                     >
                       <mat-icon>delete</mat-icon>
                     </button>
+                    }
                   </div>
                 }
               </div>

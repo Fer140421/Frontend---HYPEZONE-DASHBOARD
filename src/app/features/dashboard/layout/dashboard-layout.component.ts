@@ -63,6 +63,7 @@ export class DashboardLayoutComponent {
 
   private readonly navItems: NavItem[] = [
     { label: 'Resumen', icon: 'dashboard', route: '/dashboard/resumen', permission: 'dashboard.view' },
+    { label: 'Reportes', icon: 'analytics', route: '/dashboard/reportes', permission: 'dashboard.view' },
     { label: 'Lotes', icon: 'local_shipping', route: '/dashboard/lotes', permission: 'lots.view' },
     { label: 'Productos', icon: 'inventory_2', route: '/dashboard/productos', permission: 'products.view' },
     { label: 'Descuentos', icon: 'sell', route: '/dashboard/descuentos', permission: 'products.update' },

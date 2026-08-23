@@ -1,0 +1,84 @@
+<app-page-header title="Reportes" description="Análisis de ventas, inventario y clientes.">
+  <button mat-stroked-button type="button" (click)="limpiarFechas()"><mat-icon>restart_alt</mat-icon> Limpiar fechas</button>
+</app-page-header>
+
+<form [formGroup]="filtro" class="report-filter">
+  <mat-form-field appearance="outline">
+    <mat-label>Desde</mat-label>
+    <input matInput type="date" formControlName="desde" />
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>Hasta</mat-label>
+    <input matInput type="date" formControlName="hasta" />
+  </mat-form-field>
+</form>
+
+@if (viewModel$ | async; as vm) {
+  <section class="metric-grid">
+    <mat-card class="metric-card"><span>Operaciones</span><strong>{{ vm.metricas.operaciones }}</strong></mat-card>
+    <mat-card class="metric-card"><span>Prendas vendidas</span><strong>{{ vm.metricas.prendas }}</strong></mat-card>
+    <mat-card class="metric-card"><span>Ingreso</span><strong>{{ vm.metricas.ingreso | currency: 'BOB' : 'symbol-narrow' }}</strong></mat-card>
+    <mat-card class="metric-card"><span>Ganancia</span><strong>{{ vm.metricas.ganancia | currency: 'BOB' : 'symbol-narrow' }}</strong></mat-card>
+    <mat-card class="metric-card"><span>Descuentos registrados</span><strong>{{ vm.metricas.descuento | currency: 'BOB' : 'symbol-narrow' }}</strong></mat-card>
+  </section>
+
+  <section class="report-grid">
+    <mat-card>
+      <mat-card-header><mat-card-title>Marcas más vendidas</mat-card-title><mat-card-subtitle>Ordenadas por prendas vendidas</mat-card-subtitle></mat-card-header>
+      <mat-card-content>
+        @for (marca of vm.marcas; track marca.nombre; let index = $index) {
+          <button class="report-row clickable" type="button" (click)="abrirMarca(marca)">
+            <span class="rank">{{ index + 1 }}</span><strong>{{ marca.nombre }}</strong><span>{{ marca.cantidad }} prendas</span><mat-icon>chevron_right</mat-icon>
+          </button>
+        } @empty { <p class="muted">Sin ventas en el período.</p> }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header><mat-card-title>Productos más vendidos</mat-card-title></mat-card-header>
+      <mat-card-content>
+        @for (producto of vm.productosMasVendidos.slice(0, 8); track producto.nombre) {
+          <div class="report-row"><strong>{{ producto.nombre }}</strong><span>{{ producto.cantidad }} prendas · {{ producto.ingreso | currency: 'BOB' : 'symbol-narrow' }}</span></div>
+        } @empty { <p class="muted">Sin ventas en el período.</p> }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header><mat-card-title>Rendimiento por categoría</mat-card-title></mat-card-header>
+      <mat-card-content>
+        @for (categoria of vm.categorias.slice(0, 8); track categoria.nombre) {
+          <div class="report-row"><strong>{{ categoria.nombre }}</strong><span>{{ categoria.cantidad }} prendas · {{ categoria.ganancia | currency: 'BOB' : 'symbol-narrow' }}</span></div>
+        } @empty { <p class="muted">Sin datos en el período.</p> }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header><mat-card-title>Rendimiento por lote</mat-card-title></mat-card-header>
+      <mat-card-content>
+        @for (lote of vm.lotes.slice(0, 8); track lote.nombre) {
+          <div class="report-row"><strong>{{ lote.nombre }}</strong><span>{{ lote.cantidad }} prendas · {{ lote.ganancia | currency: 'BOB' : 'symbol-narrow' }}</span></div>
+        } @empty { <p class="muted">Sin datos en el período.</p> }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header><mat-card-title>Clientes frecuentes</mat-card-title></mat-card-header>
+      <mat-card-content>
+        @for (cliente of vm.clientes; track cliente.nombre) {
+          <div class="report-row"><strong>{{ cliente.nombre }}</strong><span>{{ cliente.cantidad }} prendas · {{ cliente.cliente?.puntosDisponibles || 0 }} pts</span></div>
+        } @empty { <p class="muted">Sin clientes con ventas en el período.</p> }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header><mat-card-title>Estado de reservas</mat-card-title></mat-card-header>
+      <mat-card-content class="reservation-stats">
+        <span>Activas <strong>{{ vm.reservas.activas }}</strong></span>
+        <span>Vencidas <strong>{{ vm.reservas.vencidas }}</strong></span>
+        <span>Convertidas <strong>{{ vm.reservas.convertidas }}</strong></span>
+      </mat-card-content>
+    </mat-card>
+  </section>
+} @else if (loadError()) {
+  <mat-card><mat-card-content><p class="report-error"><mat-icon>error_outline</mat-icon>{{ loadError() }}</p></mat-card-content></mat-card>
+}

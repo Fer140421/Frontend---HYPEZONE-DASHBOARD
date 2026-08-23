@@ -20,6 +20,7 @@ a {
 }
 
 .shell {
+  height: 100dvh;
   min-height: 100vh;
   background: var(--hz-background);
 }
@@ -27,6 +28,7 @@ a {
 .sidebar {
   width: 280px;
   padding: 20px 14px;
+  overflow-y: auto;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   background: var(--hz-dark) !important;
   color: #ffffff;

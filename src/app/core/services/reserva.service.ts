@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, doc, runTransaction, serverTimestamp } from '@angular/fire/firestore';
+import { Firestore, collection, doc, getDoc, runTransaction, serverTimestamp } from '@angular/fire/firestore';
 import { Cliente } from '../models/cliente.model';
+import { CONFIGURACION_FIDELIDAD_DEFAULT, ConfiguracionFidelidad } from '../models/fidelidad.model';
 import { Producto } from '../models/producto.model';
 import { Reserva, ReservaDetalle, ReservaPago, totalAnticipos } from '../models/reserva.model';
 import { MetodoPago, Venta } from '../models/venta.model';
@@ -100,6 +101,7 @@ export class ReservaService {
     const reservaRef = doc(this.firestore, `reservas/${reservaId}`);
     const operacionRef = doc(collection(this.firestore, 'operacionesVenta'));
     const ventaRefs: ReturnType<typeof doc>[] = [];
+    const fidelidad = await this.getConfiguracionFidelidad();
     await runTransaction(this.firestore, async (tx) => {
       const snapshot = await tx.get(reservaRef);
       if (!snapshot.exists()) throw new Error('Reserva no encontrada.');
@@ -111,6 +113,18 @@ export class ReservaService {
         if (!product.exists() || (product.data() as Producto).estado !== 'reservado') throw new Error('Uno de los productos ya no está reservado para esta operación.');
       });
       const saldo = Number(reserva.saldoPendiente);
+      const clienteRef = doc(this.firestore, `clientes/${reserva.clienteId}`);
+      const clienteSnapshot = await tx.get(clienteRef);
+      if (!clienteSnapshot.exists()) throw new Error('El cliente de la reserva ya no existe.');
+      const cliente = clienteSnapshot.data() as Cliente;
+      const puntosGanados = reserva.detalles.length * fidelidad.puntosPorPrenda;
+      const puntosConCompra = Number(cliente.puntosDisponibles ?? 0) + puntosGanados;
+      tx.update(clienteRef, {
+        puntosDisponibles: puntosConCompra % fidelidad.puntosParaRecompensa,
+        puntosAcumulados: Number(cliente.puntosAcumulados ?? 0) + puntosGanados,
+        recompensasDisponibles: Number(cliente.recompensasDisponibles ?? 0) + Math.floor(puntosConCompra / fidelidad.puntosParaRecompensa),
+        updatedAt: serverTimestamp(),
+      });
       const pagos: ReservaPago[] = saldo > 0 ? [...(reserva.anticipos ?? []), { monto: saldo, metodoPago, fecha: fechaVenta }] : [...(reserva.anticipos ?? [])];
       const timestamp = serverTimestamp();
       tx.set(operacionRef, removeUndefinedDeep({
@@ -130,6 +144,7 @@ export class ReservaService {
           precioVenta: detail.precioAcordado, ganancia: detail.precioAcordado - precioCompra, clienteId: reserva.clienteId,
           clienteNombre: reserva.clienteNombre, clienteTelefono: reserva.clienteTelefono, clienteCi: reserva.clienteCi,
           metodoPago, fechaVenta, notas: reserva.notas || undefined, activo: true, schemaVersion: 4, createdAt: timestamp, updatedAt: timestamp,
+          puntosGanados: fidelidad.puntosPorPrenda,
         }));
         tx.update(productRefs[index], { estado: 'vendido', precioVenta: detail.precioAcordado, updatedAt: timestamp });
         if (product.estadoPublicacion === 'publicado') {
@@ -139,5 +154,10 @@ export class ReservaService {
       tx.update(reservaRef, { estado: 'confirmada', saldoPendiente: 0, ventaOperacionId: operacionRef.id, fechaCierre: fechaVenta, updatedAt: timestamp });
     });
     return ventaRefs.map((ref) => ref.id);
+  }
+
+  private async getConfiguracionFidelidad(): Promise<ConfiguracionFidelidad> {
+    const snapshot = await getDoc(doc(this.firestore, 'configuracion/fidelidad'));
+    return { ...CONFIGURACION_FIDELIDAD_DEFAULT, ...(snapshot.data() as Partial<ConfiguracionFidelidad> | undefined) };
   }
 }

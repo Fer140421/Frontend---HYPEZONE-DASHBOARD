@@ -8,12 +8,15 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { PageEvent, MatPaginatorModule } from '@angular/material/paginator';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { BehaviorSubject, combineLatest, firstValueFrom, map, take } from 'rxjs';
+import { BehaviorSubject, combineLatest, firstValueFrom, map, shareReplay, startWith, take } from 'rxjs';
 import { Categoria, categoriasIniciales } from '../../../core/models/catalogo.model';
 import { CategoriaRepository } from '../../../core/repositories/categoria.repository';
+import { ProductoRepository } from '../../../core/repositories/producto.repository';
+import { Producto } from '../../../core/models/producto.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ViewPreferenceService } from '../../../core/services/view-preference.service';
 import {
@@ -25,21 +28,29 @@ import {
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+import { FilterDrawerComponent } from '../../../shared/components/filter-drawer/filter-drawer.component';
+
+type EstadoCategoriaFiltro = 'todos' | 'activos' | 'inactivos';
 
 @Component({
   selector: 'app-catalogos',
   standalone: true,
   imports: [
     AsyncPipe,
+    ReactiveFormsModule,
     MatButtonModule,
     MatCardModule,
     MatDialogModule,
+    MatFormFieldModule,
     MatIconModule,
+    MatInputModule,
     MatPaginatorModule,
     MatSnackBarModule,
     MatTableModule,
     MatTooltipModule,
+    MatSelectModule,
     EmptyStateComponent,
+    FilterDrawerComponent,
     LoadingComponent,
     PageHeaderComponent,
   ],
@@ -47,7 +58,9 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
   styleUrl: './catalogos.css',
 })
 export class CatalogosComponent implements OnInit {
+  private readonly fb = inject(FormBuilder);
   private readonly categorias = inject(CategoriaRepository);
+  private readonly productos = inject(ProductoRepository);
   private readonly snack = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   readonly auth = inject(AuthService);
@@ -59,9 +72,31 @@ export class CatalogosComponent implements OnInit {
 
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
   readonly viewType = inject(ViewPreferenceService).getViewSignal('categorias', 'cards');
-  readonly categorias$ = this.categorias.getAll().pipe(map((items) => [...items].sort((a, b) => a.nombre.localeCompare(b.nombre))));
-  readonly listViewModel$ = combineLatest([this.categorias$, this.pagination$]).pipe(
-    map(([categorias, pagination]) => ({ categorias: paginateItems(categorias, pagination) })),
+  readonly filtersOpen = signal(false);
+  readonly filters = this.fb.nonNullable.group({
+    search: [''],
+    estado: ['activos' as EstadoCategoriaFiltro],
+  });
+  private readonly appliedFilters$ = new BehaviorSubject<EstadoCategoriaFiltro>('activos');
+  private readonly categoriasSource$ = this.categorias.getAll(true).pipe(
+    map((items) => [...items].sort((a, b) => a.nombre.localeCompare(b.nombre))),
+    shareReplay({ bufferSize: 1, refCount: true }),
+  );
+  readonly categorias$ = this.categoriasSource$;
+  readonly listViewModel$ = combineLatest([
+    this.categoriasSource$,
+    this.filters.controls.search.valueChanges.pipe(startWith(this.filters.controls.search.getRawValue())),
+    this.appliedFilters$,
+    this.pagination$,
+  ]).pipe(
+    map(([categorias, searchValue, estado, pagination]) => {
+      const search = searchValue.trim().toLocaleLowerCase();
+      const filtradas = categorias.filter((categoria) =>
+        (!search || categoria.nombre.toLocaleLowerCase().includes(search)) &&
+        (estado === 'todos' || (estado === 'activos' ? categoria.activo !== false : categoria.activo === false)),
+      );
+      return { categorias: paginateItems(filtradas, pagination) };
+    }),
   );
 
   ngOnInit(): void {
@@ -97,10 +132,76 @@ export class CatalogosComponent implements OnInit {
       });
   }
 
-  async removeCategoria(id: string): Promise<void> {
+  async removeCategoria(categoria: Categoria): Promise<void> {
     if (!this.auth.can('catalogs.delete')) return;
-    await this.categorias.delete(id);
-    this.message('Categoría eliminada.');
+    try {
+      const [productos, categoriasDestino] = await Promise.all([
+        firstValueFrom(this.productos.getAll(true).pipe(take(1))),
+        firstValueFrom(this.categorias.getAll().pipe(take(1))),
+      ]);
+      const asociados = productos.filter((producto) => producto.categoria === categoria.nombre);
+
+      if (!asociados.length) {
+        await this.categorias.delete(categoria.id!);
+        this.message('Categoría eliminada.');
+        return;
+      }
+
+      if (!this.auth.can('products.update')) {
+        this.message('Necesitas permiso para editar productos y reasignar esta categoría.');
+        return;
+      }
+
+      const destinos = categoriasDestino.filter((item) => item.id !== categoria.id);
+      if (!destinos.length) {
+        this.message('Crea otra categoría antes de eliminar esta, porque tiene productos asociados.');
+        return;
+      }
+
+      this.dialog
+        .open(CategoriaTransferDialogComponent, {
+          width: 'min(720px, 96vw)',
+          maxHeight: '90vh',
+          data: { categoria, productos: asociados, destinos },
+        })
+        .afterClosed()
+        .subscribe(async (asignaciones?: Record<string, string[]>) => {
+          if (!asignaciones) return;
+          try {
+            await Promise.all(
+              Object.entries(asignaciones).map(([destino, ids]) =>
+                this.productos.reasignarCategoria(ids, destino),
+              ),
+            );
+            await this.categorias.delete(categoria.id!);
+            this.message(`Categoría eliminada y ${asociados.length} producto(s) reasignado(s).`);
+          } catch (error) {
+            this.message(error instanceof Error ? error.message : 'No se pudo reasignar los productos.');
+          }
+        });
+    } catch (error) {
+      this.message(error instanceof Error ? error.message : 'No se pudo eliminar la categoría.');
+    }
+  }
+
+  async restoreCategoria(categoria: Categoria): Promise<void> {
+    if (!this.auth.can('catalogs.delete') || !categoria.id || categoria.activo !== false) return;
+    try {
+      await this.categorias.activate(categoria.id);
+      this.message('Categoría activada.');
+    } catch (error) {
+      this.message(error instanceof Error ? error.message : 'No se pudo activar la categoría.');
+    }
+  }
+
+  openFilters(): void {
+    this.filters.patchValue({ estado: this.appliedFilters$.value }, { emitEvent: false });
+    this.filtersOpen.set(true);
+  }
+
+  applyFilters(): void {
+    this.appliedFilters$.next(this.filters.controls.estado.getRawValue());
+    this.pagination$.next({ pageIndex: 0, pageSize: this.pagination$.value.pageSize });
   }
 
   updatePage(event: PageEvent): void {
@@ -186,5 +287,48 @@ export class CategoriaDialogComponent {
       this.errorMessage.set('Ocurrió un error al guardar la categoría.');
       this.saving.set(false);
     }
+  }
+}
+
+interface CategoriaTransferDialogData {
+  categoria: Categoria;
+  productos: Producto[];
+  destinos: Categoria[];
+}
+
+@Component({
+  selector: 'app-categoria-transfer-dialog',
+  standalone: true,
+  imports: [MatButtonModule, MatDialogModule, MatFormFieldModule, MatSelectModule],
+  templateUrl: './categoria-transfer-dialog.html',
+  styleUrl: './categoria-transfer-dialog.css',
+})
+export class CategoriaTransferDialogComponent {
+  readonly data = inject<CategoriaTransferDialogData>(MAT_DIALOG_DATA);
+  private readonly dialogRef = inject(MatDialogRef<CategoriaTransferDialogComponent>);
+  readonly destinoGeneral = signal('');
+  readonly destinosIndividuales = signal<Record<string, string>>({});
+
+  seleccionarDestinoGeneral(destino: string): void {
+    this.destinoGeneral.set(destino);
+  }
+
+  seleccionarDestinoProducto(productoId: string, destino: string): void {
+    this.destinosIndividuales.update((actuales) => ({ ...actuales, [productoId]: destino }));
+  }
+
+  destinoDe(producto: Producto): string {
+    return this.destinosIndividuales()[producto.id!] || this.destinoGeneral();
+  }
+
+  confirmar(): void {
+    if (!this.destinoGeneral()) return;
+    const asignaciones: Record<string, string[]> = {};
+    for (const producto of this.data.productos) {
+      const destino = this.destinoDe(producto);
+      if (!destino || !producto.id) return;
+      (asignaciones[destino] ??= []).push(producto.id);
+    }
+    this.dialogRef.close(asignaciones);
   }
 }

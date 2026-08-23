@@ -22,6 +22,12 @@ export interface Venta extends AuditableEntity {
   metodoPago?: MetodoPagoHistorico;
   fechaVenta: string;
   notas?: string;
+  puntosGanados?: number;
+  recompensaCanjeada?: boolean;
+  descuentoFidelidadPorcentaje?: number;
+  productoRecompensaId?: string;
+  precioOriginal?: number;
+  descuentoAplicado?: number;
 }
 
 export const metodosPago: MetodoPago[] = ['efectivo', 'qr'];

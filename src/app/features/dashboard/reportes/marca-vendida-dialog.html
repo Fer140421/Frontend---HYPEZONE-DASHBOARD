@@ -1,0 +1,10 @@
+<h2 mat-dialog-title>{{ data.nombre }}: prendas vendidas</h2>
+<mat-dialog-content>
+  <p class="muted">{{ data.cantidad }} prendas · {{ data.ingreso | currency: 'BOB' : 'symbol-narrow' }} en ventas</p>
+  <div class="dialog-report-list">
+    @for (detalle of data.detalles; track detalle.venta.id) {
+      <div class="report-row"><span><strong>{{ detalle.venta.nombreProducto }}</strong><small>{{ detalle.venta.fechaVenta | date: 'mediumDate' }}</small></span><strong>{{ detalle.venta.precioVenta | currency: 'BOB' : 'symbol-narrow' }}</strong></div>
+    }
+  </div>
+</mat-dialog-content>
+<mat-dialog-actions align="end"><button mat-button mat-dialog-close>Cerrar</button></mat-dialog-actions>

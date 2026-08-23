@@ -1,0 +1,42 @@
+<h2 mat-dialog-title>Reasignar productos antes de eliminar</h2>
+
+<mat-dialog-content>
+  <p>
+    <strong>{{ data.categoria.nombre }}</strong> tiene {{ data.productos.length }} producto(s) asociado(s).
+    Elige a qué categoría se transferirán antes de eliminarla.
+  </p>
+
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>Categoría para todos los productos</mat-label>
+    <mat-select [value]="destinoGeneral()" (selectionChange)="seleccionarDestinoGeneral($event.value)">
+      @for (destino of data.destinos; track destino.id) {
+        <mat-option [value]="destino.nombre">{{ destino.nombre }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  @if (destinoGeneral()) {
+    <p class="transfer-help">Puedes cambiar individualmente el destino de cualquier producto.</p>
+    <div class="product-transfer-list">
+      @for (producto of data.productos; track producto.id) {
+        <div class="product-transfer-row">
+          <span>{{ producto.nombre }}</span>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-select [value]="destinoDe(producto)" (selectionChange)="seleccionarDestinoProducto(producto.id!, $event.value)">
+              @for (destino of data.destinos; track destino.id) {
+                <mat-option [value]="destino.nombre">{{ destino.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+      }
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" mat-dialog-close>Cancelar</button>
+  <button mat-flat-button color="warn" type="button" [disabled]="!destinoGeneral()" (click)="confirmar()">
+    Reasignar y eliminar
+  </button>
+</mat-dialog-actions>

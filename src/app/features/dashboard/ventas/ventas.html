@@ -243,9 +243,22 @@
                       </a>
                     }
                   </span>
-                  <span>CI: {{ cliente.ci || 'No registrado' }}</span>
-                </div>
-              }
+                   <span>CI: {{ cliente.ci || 'No registrado' }}</span>
+                   <span>Puntos: {{ cliente.puntosDisponibles || 0 }} / {{ configuracionFidelidad().puntosParaRecompensa }} · Recompensas: {{ cliente.recompensasDisponibles || 0 }}</span>
+                 </div>
+               }
+
+               @if (puedeUsarRecompensa()) {
+                 <mat-form-field appearance="outline" class="full">
+                   <mat-label>Aplicar recompensa ({{ configuracionFidelidad().descuentoRecompensaPorcentaje }}% en una prenda)</mat-label>
+                   <mat-select formControlName="recompensaProductoId">
+                     <mat-option value="">No usar recompensa en esta compra</mat-option>
+                     @for (control of detalles.controls; track control.getRawValue().productoId) {
+                       <mat-option [value]="control.getRawValue().productoId">{{ control.getRawValue().nombre }}</mat-option>
+                     }
+                   </mat-select>
+                 </mat-form-field>
+               }
 
               <mat-form-field appearance="outline" class="full">
                 <mat-label>Notas</mat-label>

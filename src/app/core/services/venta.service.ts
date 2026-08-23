@@ -4,6 +4,7 @@ import {
   collection,
   deleteField,
   doc,
+  getDoc,
   getDocs,
   query,
   runTransaction,
@@ -11,6 +12,7 @@ import {
   where,
 } from '@angular/fire/firestore';
 import { Producto } from '../models/producto.model';
+import { CONFIGURACION_FIDELIDAD_DEFAULT, ConfiguracionFidelidad } from '../models/fidelidad.model';
 import { MetodoPago, Venta, metodosPago } from '../models/venta.model';
 import { removeUndefinedDeep } from '../repositories/firestore.repository';
 
@@ -27,6 +29,7 @@ export type VentaInput = Pick<
   precioVenta: number;
   metodoPago: MetodoPago;
   clienteNuevo?: ClienteNuevoInput;
+  productoRecompensaId?: string;
 };
 
 export interface VentaDetalleInput {
@@ -58,6 +61,7 @@ export class VentaService {
     const clienteRef = input.clienteNuevo
       ? doc(collection(this.firestore, 'clientes'))
       : undefined;
+    const fidelidad = await this.getConfiguracionFidelidad();
 
     await runTransaction(this.firestore, async (transaction) => {
       const snapshots = await Promise.all(productoRefs.map((productoRef) => transaction.get(productoRef)));
@@ -70,13 +74,53 @@ export class VentaService {
 
       const precios = detalles.map(({ precioVenta }) => Number(precioVenta));
       if (precios.some((precio) => !Number.isFinite(precio) || precio < 0)) throw new Error('Precio de venta inválido.');
+      if (input.productoRecompensaId) {
+        const indiceRecompensa = ids.indexOf(input.productoRecompensaId);
+        const precioEsperado = Number(
+          (this.precioBaseParaFidelidad(currentProducts[indiceRecompensa]) *
+            (1 - fidelidad.descuentoRecompensaPorcentaje / 100)).toFixed(2),
+        );
+        if (precios[indiceRecompensa] !== precioEsperado) {
+          throw new Error(`La recompensa debe aplicar ${fidelidad.descuentoRecompensaPorcentaje}% de descuento a la prenda seleccionada.`);
+        }
+      }
       const totalOperacion = precios.reduce((total, precio) => total + precio, 0);
       const timestamp = serverTimestamp();
       const clienteId = input.clienteId || clienteRef?.id;
 
+      const clienteExistenteRef = input.clienteId ? doc(this.firestore, `clientes/${input.clienteId}`) : undefined;
+      const clienteExistente = clienteExistenteRef ? await transaction.get(clienteExistenteRef) : undefined;
+      if (clienteExistenteRef && !clienteExistente?.exists()) throw new Error('El cliente seleccionado no existe.');
+      if (input.productoRecompensaId && !clienteExistenteRef) {
+        throw new Error('Selecciona un cliente registrado para usar una recompensa.');
+      }
+      if (input.productoRecompensaId && !ids.includes(input.productoRecompensaId)) {
+        throw new Error('La recompensa debe aplicarse a una prenda de esta venta.');
+      }
+
+      const puntosGanados = detalles.length * fidelidad.puntosPorPrenda;
+      if (clienteExistenteRef && clienteExistente) {
+        const cliente = clienteExistente.data() as { puntosDisponibles?: number; puntosAcumulados?: number; recompensasDisponibles?: number };
+        const recompensasActuales = Number(cliente.recompensasDisponibles ?? 0);
+        if (input.productoRecompensaId && recompensasActuales < 1) {
+          throw new Error('El cliente no tiene una recompensa disponible.');
+        }
+        const puntosConCompra = Number(cliente.puntosDisponibles ?? 0) + puntosGanados;
+        const nuevasRecompensas = Math.floor(puntosConCompra / fidelidad.puntosParaRecompensa);
+        transaction.update(clienteExistenteRef, {
+          puntosDisponibles: puntosConCompra % fidelidad.puntosParaRecompensa,
+          puntosAcumulados: Number(cliente.puntosAcumulados ?? 0) + puntosGanados,
+          recompensasDisponibles: recompensasActuales + nuevasRecompensas - (input.productoRecompensaId ? 1 : 0),
+          updatedAt: timestamp,
+        });
+      }
+
       if (clienteRef && input.clienteNuevo) {
         transaction.set(clienteRef, removeUndefinedDeep({
           ...input.clienteNuevo,
+          puntosDisponibles: puntosGanados % fidelidad.puntosParaRecompensa,
+          puntosAcumulados: puntosGanados,
+          recompensasDisponibles: Math.floor(puntosGanados / fidelidad.puntosParaRecompensa),
           activo: true,
           schemaVersion: 1,
           createdAt: timestamp,
@@ -116,12 +160,15 @@ export class VentaService {
       }
 
       currentProducts.forEach((current, index) => {
+        const productoId = snapshots[index].id;
         const precioCompra = this.readPurchasePrice(current);
         const precioVenta = precios[index];
         transaction.set(ventaRefs[index], removeUndefinedDeep<Partial<Venta>>({
           operacionId: operacionRef.id, cantidadDetalles: detalles.length, totalOperacion,
-          productoId: snapshots[index].id, loteId: current.loteId || undefined,
+          productoId, loteId: current.loteId || undefined,
           nombreProducto: current.nombre, precioCompra, precioVenta,
+          precioOriginal: Number(current.precioVenta),
+          descuentoAplicado: Math.max(0, Number(current.precioVenta) - precioVenta),
           ganancia: precioVenta - precioCompra,
           clienteId,
           clienteNombre: input.clienteNombre || undefined,
@@ -129,6 +176,10 @@ export class VentaService {
           clienteCi: input.clienteCi || undefined,
           metodoPago: input.metodoPago, fechaVenta: input.fechaVenta,
           notas: input.notas || undefined, activo: true, schemaVersion: 3,
+          puntosGanados: clienteId ? fidelidad.puntosPorPrenda : 0,
+          recompensaCanjeada: input.productoRecompensaId === productoId,
+          descuentoFidelidadPorcentaje: input.productoRecompensaId === productoId ? fidelidad.descuentoRecompensaPorcentaje : undefined,
+          productoRecompensaId: input.productoRecompensaId === productoId ? productoId : undefined,
           createdAt: timestamp, updatedAt: timestamp,
         }));
         transaction.update(productoRefs[index], { estado: 'vendido', precioVenta, updatedAt: timestamp });
@@ -316,5 +367,16 @@ export class VentaService {
       throw new Error('Precio de compra inválido.');
     }
     return precioCompra;
+  }
+
+  private precioBaseParaFidelidad(producto: Producto): number {
+    const oferta = Number(producto.precioOferta);
+    const precioVenta = Number(producto.precioVenta);
+    return Number.isFinite(oferta) && oferta > 0 && oferta < precioVenta ? oferta : precioVenta;
+  }
+
+  private async getConfiguracionFidelidad(): Promise<ConfiguracionFidelidad> {
+    const snapshot = await getDoc(doc(this.firestore, 'configuracion/fidelidad'));
+    return { ...CONFIGURACION_FIDELIDAD_DEFAULT, ...(snapshot.data() as Partial<ConfiguracionFidelidad> | undefined) };
   }
 }

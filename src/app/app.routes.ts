@@ -33,6 +33,13 @@ export const routes: Routes = [
           import('./features/dashboard/resumen/resumen.component').then((m) => m.ResumenComponent),
       },
       {
+        path: 'reportes',
+        canActivate: [permissionGuard],
+        data: { permission: 'dashboard.view' },
+        loadComponent: () =>
+          import('./features/dashboard/reportes/reportes.component').then((m) => m.ReportesComponent),
+      },
+      {
         path: 'lotes',
         canActivate: [permissionGuard], data: { permission: 'lots.view' },
         loadComponent: () =>

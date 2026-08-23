@@ -81,7 +81,7 @@ export class ClientesComponent implements OnInit {
   readonly viewType = inject(ViewPreferenceService).getViewSignal('clientes', 'table');
   readonly filtersOpen = signal(false);
   get columns(): string[] {
-    const base = ['nombreCompleto', 'celular', 'ci', 'estado'];
+    const base = ['nombreCompleto', 'celular', 'ci', 'puntos', 'estado'];
     return this.auth.canAny(['clients.update', 'clients.delete']) ? [...base, 'acciones'] : base;
   }
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;

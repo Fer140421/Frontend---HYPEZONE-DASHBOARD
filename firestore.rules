@@ -47,8 +47,19 @@ service cloud.firestore {
     match /clientes/{id} {
       allow read: if hasPermission('clients.view');
       allow create: if hasPermission('clients.create');
-      allow update: if hasPermission('clients.update');
+      allow update: if hasPermission('clients.update') || (
+        hasPermission('sales.create') &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'puntosDisponibles', 'puntosAcumulados', 'recompensasDisponibles', 'updatedAt'
+        ])
+      );
       allow delete: if hasPermission('clients.delete');
+    }
+
+    match /configuracion/{id} {
+      allow read: if hasPermission('settings.view') || hasPermission('sales.create');
+      allow create, update: if hasPermission('settings.view');
+      allow delete: if false;
     }
 
     match /ventas/{id} {

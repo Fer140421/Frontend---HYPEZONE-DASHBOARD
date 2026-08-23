@@ -70,6 +70,15 @@
 
 .filter-drawer-footer button {
   width: 100%;
+  border-color: var(--hz-primary) !important;
+  background-color: var(--hz-primary) !important;
+  color: #ffffff !important;
+  font-weight: 700;
+}
+
+.filter-drawer-footer button:hover {
+  border-color: var(--hz-primary-hover) !important;
+  background-color: var(--hz-primary-hover) !important;
 }
 
 @media (max-width: 600px) {

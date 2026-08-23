@@ -48,6 +48,13 @@ table { min-width: 1500px; }
   gap: 12px;
 }
 
+.section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .associate-bar {
   display: flex;
   align-items: center;

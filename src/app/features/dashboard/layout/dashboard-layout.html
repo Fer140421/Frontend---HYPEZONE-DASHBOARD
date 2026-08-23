@@ -64,6 +64,12 @@
               <mat-icon>storefront</mat-icon>
               <span>Ir a tienda</span>
             </a>
+            @if (auth.can('settings.view')) {
+              <a mat-menu-item routerLink="/dashboard/configuracion">
+                <mat-icon>settings</mat-icon>
+                <span>Configuración</span>
+              </a>
+            }
             <button mat-menu-item type="button" (click)="logout()">
               <mat-icon>logout</mat-icon>
               <span>Cerrar sesion</span>

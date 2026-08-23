@@ -114,6 +114,14 @@
             <td mat-cell *matCellDef="let cliente">{{ cliente.ci || 'Sin CI' }}</td>
           </ng-container>
 
+          <ng-container matColumnDef="puntos">
+            <th mat-header-cell *matHeaderCellDef>Fidelidad</th>
+            <td mat-cell *matCellDef="let cliente">
+              <strong>{{ cliente.puntosDisponibles || 0 }} pts</strong>
+              <span class="cell-subtitle">{{ cliente.recompensasDisponibles || 0 }} recompensa(s)</span>
+            </td>
+          </ng-container>
+
           <ng-container matColumnDef="estado">
             <th mat-header-cell *matHeaderCellDef>Estado</th>
             <td mat-cell *matCellDef="let cliente">{{ cliente.activo === false ? 'Inactivo' : 'Activo' }}</td>
@@ -174,6 +182,9 @@
               </div>
               <div class="card-item-subtitle">
                 CI: {{ cliente.ci || 'Sin CI' }}
+              </div>
+              <div class="card-item-subtitle">
+                <strong>{{ cliente.puntosDisponibles || 0 }} puntos</strong> · {{ cliente.recompensasDisponibles || 0 }} recompensa(s)
               </div>
             </div>
             <div class="card-footer-actions">

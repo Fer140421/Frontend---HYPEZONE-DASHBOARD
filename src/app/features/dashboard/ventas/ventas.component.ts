@@ -20,10 +20,12 @@ import { Cliente } from '../../../core/models/cliente.model';
 import { Producto, imagenesProducto, precioProducto } from '../../../core/models/producto.model';
 import { MetodoPago, Venta, metodosPago } from '../../../core/models/venta.model';
 import { ClienteRepository } from '../../../core/repositories/cliente.repository';
+import { FidelidadConfigRepository } from '../../../core/repositories/fidelidad-config.repository';
 import { ProductoRepository } from '../../../core/repositories/producto.repository';
 import { VentaRepository } from '../../../core/repositories/venta.repository';
 import { VentaService } from '../../../core/services/venta.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { CONFIGURACION_FIDELIDAD_DEFAULT, ConfiguracionFidelidad } from '../../../core/models/fidelidad.model';
 import {
   cloudinaryCardUrl,
   cloudinaryPreviewUrl,
@@ -82,6 +84,7 @@ export class VentasComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   private readonly clienteRepository = inject(ClienteRepository);
+  private readonly fidelidadRepository = inject(FidelidadConfigRepository);
   private readonly productoRepository = inject(ProductoRepository);
   private readonly ventaRepository = inject(VentaRepository);
   private readonly ventaService = inject(VentaService);
@@ -105,6 +108,7 @@ export class VentasComponent implements OnInit {
   readonly selectedCliente = signal<Cliente | null>(null);
   readonly clienteResultados = signal<Cliente[]>([]);
   readonly clienteBusquedaRealizada = signal(false);
+  readonly configuracionFidelidad = signal<ConfiguracionFidelidad>(CONFIGURACION_FIDELIDAD_DEFAULT);
 
   private productosDisponibles: Producto[] = [];
   private ventasActuales: Venta[] = [];
@@ -155,6 +159,7 @@ export class VentasComponent implements OnInit {
     clienteNombre: [''],
     clienteTelefono: [''],
     clienteCi: [''],
+    recompensaProductoId: [''],
     notas: [''],
   });
 
@@ -227,6 +232,13 @@ export class VentasComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.fidelidadRepository.get().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((configuracion) => {
+      this.configuracionFidelidad.set(configuracion);
+      this.aplicarDescuentoFidelidad();
+    });
+    this.saleForm.controls.recompensaProductoId.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.aplicarDescuentoFidelidad());
     this.filters.controls.producto.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.resetListPage());
@@ -367,6 +379,7 @@ export class VentasComponent implements OnInit {
     }
     this.selected.set(producto.id, producto);
     this.detalles.push(this.createDetailGroup(producto));
+    this.aplicarDescuentoFidelidad();
   }
 
   removeProduct(index: number): void {
@@ -374,6 +387,9 @@ export class VentasComponent implements OnInit {
     this.detalles.removeAt(index);
     if (id) {
       this.selected.delete(id);
+      if (this.saleForm.controls.recompensaProductoId.getRawValue() === id) {
+        this.saleForm.controls.recompensaProductoId.setValue('');
+      }
     }
   }
 
@@ -393,6 +409,7 @@ export class VentasComponent implements OnInit {
       clienteNombre: '',
       clienteTelefono: '',
       clienteCi: '',
+      recompensaProductoId: '',
     });
   }
 
@@ -489,6 +506,7 @@ export class VentasComponent implements OnInit {
         clienteNombre: raw.clienteNombre || undefined,
         clienteTelefono: raw.clienteTelefono || undefined,
         clienteCi: raw.clienteCi || undefined,
+        productoRecompensaId: raw.recompensaProductoId || undefined,
         clienteNuevo: this.selectedCliente()?.id
           ? undefined
           : this.selectedCliente()
@@ -551,6 +569,25 @@ export class VentasComponent implements OnInit {
       clienteNombre: cliente.nombreCompleto,
       clienteTelefono: cliente.celular,
       clienteCi: cliente.ci ?? '',
+    });
+    this.aplicarDescuentoFidelidad();
+  }
+
+  puedeUsarRecompensa(): boolean {
+    return this.mode() !== 'edit' && !!this.selectedCliente()?.id && Number(this.selectedCliente()?.recompensasDisponibles ?? 0) > 0 && this.detalles.length > 0;
+  }
+
+  private aplicarDescuentoFidelidad(): void {
+    const recompensaProductoId = this.saleForm.controls.recompensaProductoId.getRawValue();
+    const puedeAplicar = this.puedeUsarRecompensa();
+    const porcentaje = this.configuracionFidelidad().descuentoRecompensaPorcentaje / 100;
+    this.detalles.controls.forEach((control) => {
+      const valorBase = Number(control.get('precioBase')?.getRawValue());
+      const esRecompensa = puedeAplicar && control.get('productoId')?.getRawValue() === recompensaProductoId;
+      control.get('precioFinal')?.setValue(
+        esRecompensa ? Number((valorBase * (1 - porcentaje)).toFixed(2)) : valorBase,
+        { emitEvent: false },
+      );
     });
   }
 

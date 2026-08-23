@@ -1,0 +1,37 @@
+.full-width {
+  width: 100%;
+}
+
+.transfer-help {
+  margin: 0 0 12px;
+  color: var(--hz-gray);
+}
+
+.product-transfer-list {
+  display: grid;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.product-transfer-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.7fr);
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--hz-border);
+}
+
+.product-transfer-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .product-transfer-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}

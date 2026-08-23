@@ -429,6 +429,50 @@ export class LotesComponent implements OnInit {
     }
   }
 
+  publicarProductoEnWeb(producto: Producto): void {
+    if (!this.auth.can('products.update') || !producto.id || producto.estadoPublicacion === 'publicado') {
+      return;
+    }
+    this.productos
+      .publicarEnWeb(producto.id)
+      .then(() => this.message('Producto publicado en la web.'))
+      .catch((error: unknown) => this.showError(error));
+  }
+
+  confirmarPublicacionLote(detail: LoteDetail): void {
+    if (!this.auth.can('products.update')) {
+      return;
+    }
+    const pendientes = detail.productos.filter(
+      (producto) => producto.id && producto.estadoPublicacion !== 'publicado',
+    );
+    if (!pendientes.length) {
+      this.message('Todos los productos de este lote ya están publicados.');
+      return;
+    }
+
+    this.dialog
+      .open(ConfirmDialogComponent, {
+        data: {
+          title: 'Publicar lote en la web',
+          message: `Se publicarán ${pendientes.length} producto(s) pendientes. Si alguno no cumple los requisitos, no se publicará ninguno.`,
+          confirmText: 'Publicar lote',
+        },
+      })
+      .afterClosed()
+      .subscribe(async (confirmed) => {
+        if (!confirmed) return;
+        try {
+          const publicados = await this.productos.publicarProductosEnWeb(
+            pendientes.map((producto) => producto.id!),
+          );
+          this.message(`${publicados} producto(s) publicado(s) en la web.`);
+        } catch (error) {
+          this.showError(error);
+        }
+      });
+  }
+
   private confirmHistoricalMove(lote: Lote, productoId: string, message: string): void {
     this.dialog
       .open(ConfirmDialogComponent, {
