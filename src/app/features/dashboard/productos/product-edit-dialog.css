@@ -1,0 +1,4 @@
+:host .catalog-field { display: flex; align-items: center; min-width: 0; gap: 2px; }
+:host .catalog-field mat-form-field { flex: 1 1 auto; min-width: 0; }
+:host .quick-option-button { align-self: flex-start; flex: 0 0 auto; width: 36px; height: 36px; margin-top: 10px; color: var(--hz-primary-hover); }
+:host .quick-option-button:hover { background: var(--hz-primary-soft); }

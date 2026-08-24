@@ -47,6 +47,7 @@ import { ImageUploaderComponent } from '../../../shared/components/image-uploade
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { StatusChipComponent } from '../../../shared/components/status-chip/status-chip.component';
+import { QuickCatalogValueDialogComponent } from '../../../shared/components/quick-catalog-value-dialog/quick-catalog-value-dialog.component';
 import {
   DEFAULT_PAGE_SIZE,
   DEFAULT_PAGE_SIZE_OPTIONS,
@@ -129,6 +130,11 @@ export class ProductosComponent implements OnInit {
   readonly filtersOpen = signal(false);
   readonly imagenes = signal<string[]>([]);
   readonly procesandoVenta = signal(false);
+  readonly opcionesLocales = {
+    marcas: signal<string[]>([]),
+    categorias: signal<string[]>([]),
+    tallas: signal<string[]>([]),
+  };
 
   private readonly lotesSource$ = this.loteRepository.getAll(true).pipe(
     shareReplay({ bufferSize: 1, refCount: true }),
@@ -374,11 +380,12 @@ export class ProductosComponent implements OnInit {
       },
     });
 
-    dialogRef.afterClosed().subscribe(async (payload?: Partial<Producto>) => {
-      if (!payload || !producto.id) {
+    dialogRef.afterClosed().subscribe(async (result?: ProductEditResult) => {
+      if (!result || !producto.id) {
         return;
       }
-      await this.productoRepository.update(producto.id, payload);
+      await this.productoRepository.update(producto.id, result.payload);
+      await this.persistirCatalogos(result.catalogos);
       this.snack('Producto actualizado.');
     });
   }
@@ -397,14 +404,48 @@ export class ProductosComponent implements OnInit {
 
     if (this.currentId()) {
       await this.productoRepository.update(this.currentId()!, payload);
+      await this.persistirOpcionesPendientes(raw);
       this.snack('Producto actualizado.');
       await this.router.navigate(['/dashboard/productos']);
       return;
     }
 
     await this.productoRepository.create(payload);
+    await this.persistirOpcionesPendientes(raw);
     this.snack('Producto creado.');
     await this.router.navigate(['/dashboard/productos']);
+  }
+
+  agregarOpcionRapida(tipo: 'marca' | 'categoria' | 'talla'): void {
+    const label = tipo === 'marca' ? 'marca' : tipo === 'categoria' ? 'categoría' : 'talla';
+    this.dialog.open(QuickCatalogValueDialogComponent, { width: 'min(400px, 92vw)', data: { label } })
+      .afterClosed().subscribe((nombre?: string) => {
+        const valor = nombre?.trim();
+        if (!valor) return;
+        const destino = tipo === 'marca' ? this.opcionesLocales.marcas : tipo === 'categoria' ? this.opcionesLocales.categorias : this.opcionesLocales.tallas;
+        const existente = destino().find((item) => item.localeCompare(valor, undefined, { sensitivity: 'accent' }) === 0);
+        destino.update((items) => existente ? items : [...items, valor]);
+        this.form.controls[tipo].setValue(existente ?? valor);
+      });
+  }
+
+  private async persistirOpcionesPendientes(raw: { marca: string; categoria: string; talla: string }): Promise<void> {
+    await this.persistirCatalogos({
+      marca: this.opcionesLocales.marcas().includes(raw.marca) ? raw.marca : '',
+      categoria: this.opcionesLocales.categorias().includes(raw.categoria) ? raw.categoria : '',
+      talla: this.opcionesLocales.tallas().includes(raw.talla) ? raw.talla : '',
+    });
+    this.opcionesLocales.marcas.set([]);
+    this.opcionesLocales.categorias.set([]);
+    this.opcionesLocales.tallas.set([]);
+  }
+
+  private async persistirCatalogos(catalogos: { marca: string; categoria: string; talla: string }): Promise<void> {
+    const tareas: Promise<string>[] = [];
+    if (catalogos.marca) tareas.push(this.marcaRepository.create({ nombre: catalogos.marca }));
+    if (catalogos.categoria) tareas.push(this.categoriaRepository.create({ nombre: catalogos.categoria }));
+    if (catalogos.talla) tareas.push(this.tallaRepository.create({ nombre: catalogos.talla }));
+    await Promise.all(tareas);
   }
 
   async publicarEnWeb(producto: Producto): Promise<void> {
@@ -525,6 +566,11 @@ export class ProductosComponent implements OnInit {
 interface ProductEditDialogData {
   producto: Producto;
   lotes$: Observable<Lote[]>;
+}
+
+interface ProductEditResult {
+  payload: Partial<Producto>;
+  catalogos: { marca: string; categoria: string; talla: string };
 }
 
 interface ProductViewDialogData {
@@ -657,6 +703,7 @@ export class ProductPriceDialogComponent {
     MatIconModule,
     MatInputModule,
     MatSelectModule,
+    MatTooltipModule,
     ImageUploaderComponent,
   ],
   templateUrl: './product-edit-dialog.html',
@@ -677,6 +724,8 @@ export class ProductEditDialogComponent {
   readonly generos = generosProducto;
   readonly colores = coloresProducto;
   readonly imagenes = signal(imagenesProducto(this.data.producto));
+  readonly opcionesLocales = { marcas: signal<string[]>([]), categorias: signal<string[]>([]), tallas: signal<string[]>([]) };
+  private readonly dialog = inject(MatDialog);
 
   readonly form = this.fb.nonNullable.group({
     loteId: [this.data.producto.loteId ?? ''],
@@ -697,12 +746,21 @@ export class ProductEditDialogComponent {
   save(): void {
     const raw = this.form.getRawValue();
     this.dialogRef.close({
-      ...raw,
-      loteId: raw.loteId || undefined,
-      genero: (raw.genero || undefined) as GeneroProducto | undefined,
-      imagenes: this.imagenes(),
-      activo: true,
-    } satisfies Partial<Producto>);
+      payload: { ...raw, loteId: raw.loteId || undefined, genero: (raw.genero || undefined) as GeneroProducto | undefined, imagenes: this.imagenes(), activo: true } satisfies Partial<Producto>,
+      catalogos: { marca: this.opcionesLocales.marcas().includes(raw.marca) ? raw.marca : '', categoria: this.opcionesLocales.categorias().includes(raw.categoria) ? raw.categoria : '', talla: this.opcionesLocales.tallas().includes(raw.talla) ? raw.talla : '' },
+    } satisfies ProductEditResult);
+  }
+
+  agregarOpcionRapida(tipo: 'marca' | 'categoria' | 'talla'): void {
+    const label = tipo === 'marca' ? 'marca' : tipo === 'categoria' ? 'categoría' : 'talla';
+    this.dialog.open(QuickCatalogValueDialogComponent, { width: 'min(400px, 92vw)', data: { label } }).afterClosed().subscribe((nombre?: string) => {
+      const valor = nombre?.trim();
+      if (!valor) return;
+      const destino = tipo === 'marca' ? this.opcionesLocales.marcas : tipo === 'categoria' ? this.opcionesLocales.categorias : this.opcionesLocales.tallas;
+      const existente = destino().find((item) => item.localeCompare(valor, undefined, { sensitivity: 'accent' }) === 0);
+      destino.update((items) => existente ? items : [...items, valor]);
+      this.form.controls[tipo].setValue(existente ?? valor);
+    });
   }
 }
 

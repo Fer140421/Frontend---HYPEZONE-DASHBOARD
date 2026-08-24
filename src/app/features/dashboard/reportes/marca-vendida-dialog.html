@@ -1,9 +1,34 @@
-<h2 mat-dialog-title>{{ data.nombre }}: prendas vendidas</h2>
+<h2 mat-dialog-title class="brand-dialog-title">
+  <span class="brand-dialog-icon"><mat-icon>local_offer</mat-icon></span>
+  <span><small>Reporte de marca</small>{{ data.nombre }}</span>
+</h2>
 <mat-dialog-content>
-  <p class="muted">{{ data.cantidad }} prendas · {{ data.ingreso | currency: 'BOB' : 'symbol-narrow' }} en ventas</p>
-  <div class="dialog-report-list">
+  <section class="brand-dialog-summary">
+    <span><small>Prendas vendidas</small><strong>{{ data.cantidad }}</strong></span>
+    <span><small>Ingresos</small><strong>{{ data.ingreso | currency: 'BOB' : 'symbol-narrow' }}</strong></span>
+    <span><small>Ganancia</small><strong>{{ data.ganancia | currency: 'BOB' : 'symbol-narrow' }}</strong></span>
+  </section>
+  <div class="brand-products-grid">
     @for (detalle of data.detalles; track detalle.venta.id) {
-      <div class="report-row"><span><strong>{{ detalle.venta.nombreProducto }}</strong><small>{{ detalle.venta.fechaVenta | date: 'mediumDate' }}</small></span><strong>{{ detalle.venta.precioVenta | currency: 'BOB' : 'symbol-narrow' }}</strong></div>
+      <article class="listing-card-item brand-product-card">
+        <div class="card-media-wrap">
+          @if (image(detalle); as src) {
+            <img [src]="src" [alt]="detalle.venta.nombreProducto" loading="lazy" decoding="async" />
+          } @else {
+            <div class="card-media-placeholder"><mat-icon>image</mat-icon><span>Sin foto</span></div>
+          }
+          <span class="sold-badge">Vendido</span>
+        </div>
+        <div class="card-body-content">
+          <h3 class="card-item-title">{{ detalle.venta.nombreProducto }}</h3>
+          <p class="card-item-subtitle">{{ detalle.producto?.categoria || 'Sin categoría' }} · Talla {{ detalle.producto?.talla || '—' }}</p>
+          <span class="sale-date"><mat-icon>calendar_today</mat-icon>{{ detalle.venta.fechaVenta | date: 'mediumDate' }}</span>
+          <div class="brand-product-values">
+            <span><small>Venta</small><strong>{{ detalle.venta.precioVenta | currency: 'BOB' : 'symbol-narrow' }}</strong></span>
+            <span><small>Ganancia</small><strong>{{ detalle.venta.ganancia | currency: 'BOB' : 'symbol-narrow' }}</strong></span>
+          </div>
+        </div>
+      </article>
     }
   </div>
 </mat-dialog-content>

@@ -1,84 +1,53 @@
-<app-page-header title="Reportes" description="Análisis de ventas, inventario y clientes.">
-  <button mat-stroked-button type="button" (click)="limpiarFechas()"><mat-icon>restart_alt</mat-icon> Limpiar fechas</button>
-</app-page-header>
+<app-page-header title="Reportes" description="Consulta el rendimiento de cada área en un solo lugar." />
 
-<form [formGroup]="filtro" class="report-filter">
-  <mat-form-field appearance="outline">
-    <mat-label>Desde</mat-label>
-    <input matInput type="date" formControlName="desde" />
-  </mat-form-field>
-  <mat-form-field appearance="outline">
-    <mat-label>Hasta</mat-label>
-    <input matInput type="date" formControlName="hasta" />
-  </mat-form-field>
-</form>
+<ng-template #filtroFechas let-tab="tab">
+  <form class="report-filter" [formGroup]="filtroDe(tab)">
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha desde</mat-label>
+      <input matInput [matDatepicker]="desdePicker" formControlName="desde" readonly />
+      <mat-datepicker-toggle matIconSuffix [for]="desdePicker" />
+      <mat-datepicker #desdePicker />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha hasta</mat-label>
+      <input matInput [matDatepicker]="hastaPicker" formControlName="hasta" readonly />
+      <mat-datepicker-toggle matIconSuffix [for]="hastaPicker" />
+      <mat-datepicker #hastaPicker />
+    </mat-form-field>
+    <button mat-stroked-button type="button" class="clear-dates" (click)="limpiarFechas(tab)">
+      <mat-icon>restart_alt</mat-icon> Limpiar fechas
+    </button>
+  </form>
+</ng-template>
 
 @if (viewModel$ | async; as vm) {
-  <section class="metric-grid">
-    <mat-card class="metric-card"><span>Operaciones</span><strong>{{ vm.metricas.operaciones }}</strong></mat-card>
-    <mat-card class="metric-card"><span>Prendas vendidas</span><strong>{{ vm.metricas.prendas }}</strong></mat-card>
-    <mat-card class="metric-card"><span>Ingreso</span><strong>{{ vm.metricas.ingreso | currency: 'BOB' : 'symbol-narrow' }}</strong></mat-card>
-    <mat-card class="metric-card"><span>Ganancia</span><strong>{{ vm.metricas.ganancia | currency: 'BOB' : 'symbol-narrow' }}</strong></mat-card>
-    <mat-card class="metric-card"><span>Descuentos registrados</span><strong>{{ vm.metricas.descuento | currency: 'BOB' : 'symbol-narrow' }}</strong></mat-card>
-  </section>
+  <mat-tab-group class="reports-tabs" animationDuration="180ms" (selectedIndexChange)="seleccionarIndice($event)">
+    <mat-tab label="Ventas">
+      <section class="tab-content">
+        <ng-container [ngTemplateOutlet]="filtroFechas" [ngTemplateOutletContext]="{ tab: 'ventas' }" />
+        <section class="metric-grid">
+          <mat-card class="metric-card"><mat-icon>receipt_long</mat-icon><span>Operaciones</span><strong>{{ vm.metricas.operaciones }}</strong></mat-card>
+          <mat-card class="metric-card"><mat-icon>checkroom</mat-icon><span>Prendas vendidas</span><strong>{{ vm.metricas.prendas }}</strong></mat-card>
+          <mat-card class="metric-card"><mat-icon>payments</mat-icon><span>Ingreso</span><strong>{{ vm.metricas.ingreso | currency: 'BOB' : 'symbol-narrow' }}</strong></mat-card>
+          <mat-card class="metric-card"><mat-icon>trending_up</mat-icon><span>Ganancia</span><strong>{{ vm.metricas.ganancia | currency: 'BOB' : 'symbol-narrow' }}</strong></mat-card>
+          <mat-card class="metric-card"><mat-icon>sell</mat-icon><span>Descuentos</span><strong>{{ vm.metricas.descuento | currency: 'BOB' : 'symbol-narrow' }}</strong></mat-card>
+        </section>
+        <mat-card class="report-panel"><mat-card-header><mat-card-title>Resumen de ventas</mat-card-title><mat-card-subtitle>Productos con mejor desempeño en el período</mat-card-subtitle></mat-card-header><mat-card-content>
+          @for (producto of vm.productosMasVendidos.slice(0, 10); track producto.nombre) { <div class="report-row"><strong>{{ producto.nombre }}</strong><span>{{ producto.cantidad }} prendas · {{ producto.ingreso | currency: 'BOB' : 'symbol-narrow' }}</span></div> } @empty { <p class="muted">Sin ventas en el período.</p> }
+        </mat-card-content></mat-card>
+      </section>
+    </mat-tab>
 
-  <section class="report-grid">
-    <mat-card>
-      <mat-card-header><mat-card-title>Marcas más vendidas</mat-card-title><mat-card-subtitle>Ordenadas por prendas vendidas</mat-card-subtitle></mat-card-header>
-      <mat-card-content>
-        @for (marca of vm.marcas; track marca.nombre; let index = $index) {
-          <button class="report-row clickable" type="button" (click)="abrirMarca(marca)">
-            <span class="rank">{{ index + 1 }}</span><strong>{{ marca.nombre }}</strong><span>{{ marca.cantidad }} prendas</span><mat-icon>chevron_right</mat-icon>
-          </button>
-        } @empty { <p class="muted">Sin ventas en el período.</p> }
-      </mat-card-content>
-    </mat-card>
+    <mat-tab label="Marcas"><section class="tab-content"><ng-container [ngTemplateOutlet]="filtroFechas" [ngTemplateOutletContext]="{ tab: 'marcas' }" /><section class="metric-grid compact-metrics"><mat-card class="metric-card"><span>Marcas con ventas</span><strong>{{ vm.marcas.length }}</strong></mat-card><mat-card class="metric-card"><span>Marca líder</span><strong>{{ vm.marcas[0]?.nombre || '—' }}</strong></mat-card></section><mat-card class="report-panel"><mat-card-header><mat-card-title>Marcas más vendidas</mat-card-title><mat-card-subtitle>Selecciona una marca para ver sus prendas</mat-card-subtitle></mat-card-header><mat-card-content>@for (marca of vm.marcas; track marca.nombre; let index = $index) { <button class="report-row clickable" type="button" (click)="abrirMarca(marca)"><span class="rank">{{ index + 1 }}</span><strong>{{ marca.nombre }}</strong><span>{{ marca.cantidad }} prendas · {{ marca.ingreso | currency: 'BOB' : 'symbol-narrow' }}</span><mat-icon>chevron_right</mat-icon></button> } @empty { <p class="muted">Sin ventas en el período.</p> }</mat-card-content></mat-card></section></mat-tab>
 
-    <mat-card>
-      <mat-card-header><mat-card-title>Productos más vendidos</mat-card-title></mat-card-header>
-      <mat-card-content>
-        @for (producto of vm.productosMasVendidos.slice(0, 8); track producto.nombre) {
-          <div class="report-row"><strong>{{ producto.nombre }}</strong><span>{{ producto.cantidad }} prendas · {{ producto.ingreso | currency: 'BOB' : 'symbol-narrow' }}</span></div>
-        } @empty { <p class="muted">Sin ventas en el período.</p> }
-      </mat-card-content>
-    </mat-card>
+    <mat-tab label="Productos"><section class="tab-content"><ng-container [ngTemplateOutlet]="filtroFechas" [ngTemplateOutletContext]="{ tab: 'productos' }" /><section class="metric-grid compact-metrics"><mat-card class="metric-card"><span>Productos vendidos</span><strong>{{ vm.productosMasVendidos.length }}</strong></mat-card><mat-card class="metric-card"><span>Más vendido</span><strong>{{ vm.productosMasVendidos[0]?.nombre || '—' }}</strong></mat-card></section><mat-card class="report-panel"><mat-card-header><mat-card-title>Productos más vendidos</mat-card-title></mat-card-header><mat-card-content>@for (producto of vm.productosMasVendidos; track producto.nombre; let index = $index) { <div class="report-row"><span class="rank">{{ index + 1 }}</span><strong>{{ producto.nombre }}</strong><span>{{ producto.cantidad }} prendas · {{ producto.ingreso | currency: 'BOB' : 'symbol-narrow' }}</span></div> } @empty { <p class="muted">Sin ventas en el período.</p> }</mat-card-content></mat-card></section></mat-tab>
 
-    <mat-card>
-      <mat-card-header><mat-card-title>Rendimiento por categoría</mat-card-title></mat-card-header>
-      <mat-card-content>
-        @for (categoria of vm.categorias.slice(0, 8); track categoria.nombre) {
-          <div class="report-row"><strong>{{ categoria.nombre }}</strong><span>{{ categoria.cantidad }} prendas · {{ categoria.ganancia | currency: 'BOB' : 'symbol-narrow' }}</span></div>
-        } @empty { <p class="muted">Sin datos en el período.</p> }
-      </mat-card-content>
-    </mat-card>
+    <mat-tab label="Categorías"><section class="tab-content"><ng-container [ngTemplateOutlet]="filtroFechas" [ngTemplateOutletContext]="{ tab: 'categorias' }" /><section class="metric-grid compact-metrics"><mat-card class="metric-card"><span>Categorías vendidas</span><strong>{{ vm.categorias.length }}</strong></mat-card><mat-card class="metric-card"><span>Mayor ganancia</span><strong>{{ vm.categorias[0]?.ganancia | currency: 'BOB' : 'symbol-narrow' }}</strong></mat-card></section><mat-card class="report-panel"><mat-card-header><mat-card-title>Rendimiento por categoría</mat-card-title></mat-card-header><mat-card-content>@for (categoria of vm.categorias; track categoria.nombre; let index = $index) { <div class="report-row"><span class="rank">{{ index + 1 }}</span><strong>{{ categoria.nombre }}</strong><span>{{ categoria.cantidad }} prendas · {{ categoria.ganancia | currency: 'BOB' : 'symbol-narrow' }}</span></div> } @empty { <p class="muted">Sin datos en el período.</p> }</mat-card-content></mat-card></section></mat-tab>
 
-    <mat-card>
-      <mat-card-header><mat-card-title>Rendimiento por lote</mat-card-title></mat-card-header>
-      <mat-card-content>
-        @for (lote of vm.lotes.slice(0, 8); track lote.nombre) {
-          <div class="report-row"><strong>{{ lote.nombre }}</strong><span>{{ lote.cantidad }} prendas · {{ lote.ganancia | currency: 'BOB' : 'symbol-narrow' }}</span></div>
-        } @empty { <p class="muted">Sin datos en el período.</p> }
-      </mat-card-content>
-    </mat-card>
+    <mat-tab label="Lotes"><section class="tab-content"><ng-container [ngTemplateOutlet]="filtroFechas" [ngTemplateOutletContext]="{ tab: 'lotes' }" /><section class="metric-grid compact-metrics"><mat-card class="metric-card"><span>Lotes con ventas</span><strong>{{ vm.lotes.length }}</strong></mat-card><mat-card class="metric-card"><span>Mejor lote</span><strong>{{ vm.lotes[0]?.nombre || '—' }}</strong></mat-card></section><mat-card class="report-panel"><mat-card-header><mat-card-title>Rendimiento por lote</mat-card-title></mat-card-header><mat-card-content>@for (lote of vm.lotes; track lote.nombre; let index = $index) { <div class="report-row"><span class="rank">{{ index + 1 }}</span><strong>{{ lote.nombre }}</strong><span>{{ lote.cantidad }} prendas · {{ lote.ganancia | currency: 'BOB' : 'symbol-narrow' }}</span></div> } @empty { <p class="muted">Sin datos en el período.</p> }</mat-card-content></mat-card></section></mat-tab>
 
-    <mat-card>
-      <mat-card-header><mat-card-title>Clientes frecuentes</mat-card-title></mat-card-header>
-      <mat-card-content>
-        @for (cliente of vm.clientes; track cliente.nombre) {
-          <div class="report-row"><strong>{{ cliente.nombre }}</strong><span>{{ cliente.cantidad }} prendas · {{ cliente.cliente?.puntosDisponibles || 0 }} pts</span></div>
-        } @empty { <p class="muted">Sin clientes con ventas en el período.</p> }
-      </mat-card-content>
-    </mat-card>
+    <mat-tab label="Clientes"><section class="tab-content"><ng-container [ngTemplateOutlet]="filtroFechas" [ngTemplateOutletContext]="{ tab: 'clientes' }" /><section class="metric-grid compact-metrics"><mat-card class="metric-card"><span>Clientes con compras</span><strong>{{ vm.clientes.length }}</strong></mat-card><mat-card class="metric-card"><span>Cliente frecuente</span><strong>{{ vm.clientes[0]?.nombre || '—' }}</strong></mat-card></section><mat-card class="report-panel"><mat-card-header><mat-card-title>Clientes frecuentes</mat-card-title></mat-card-header><mat-card-content>@for (cliente of vm.clientes; track cliente.nombre; let index = $index) { <div class="report-row"><span class="rank">{{ index + 1 }}</span><strong>{{ cliente.nombre }}</strong><span>{{ cliente.cantidad }} prendas · {{ cliente.cliente?.puntosDisponibles || 0 }} pts</span></div> } @empty { <p class="muted">Sin clientes con ventas en el período.</p> }</mat-card-content></mat-card></section></mat-tab>
 
-    <mat-card>
-      <mat-card-header><mat-card-title>Estado de reservas</mat-card-title></mat-card-header>
-      <mat-card-content class="reservation-stats">
-        <span>Activas <strong>{{ vm.reservas.activas }}</strong></span>
-        <span>Vencidas <strong>{{ vm.reservas.vencidas }}</strong></span>
-        <span>Convertidas <strong>{{ vm.reservas.convertidas }}</strong></span>
-      </mat-card-content>
-    </mat-card>
-  </section>
-} @else if (loadError()) {
-  <mat-card><mat-card-content><p class="report-error"><mat-icon>error_outline</mat-icon>{{ loadError() }}</p></mat-card-content></mat-card>
-}
+    <mat-tab label="Reservas"><section class="tab-content"><ng-container [ngTemplateOutlet]="filtroFechas" [ngTemplateOutletContext]="{ tab: 'reservas' }" /><section class="metric-grid"><mat-card class="metric-card"><mat-icon>bookmark</mat-icon><span>Activas</span><strong>{{ vm.reservas.activas }}</strong></mat-card><mat-card class="metric-card"><mat-icon>event_busy</mat-icon><span>Vencidas</span><strong>{{ vm.reservas.vencidas }}</strong></mat-card><mat-card class="metric-card"><mat-icon>verified</mat-icon><span>Convertidas</span><strong>{{ vm.reservas.convertidas }}</strong></mat-card></section><mat-card class="report-panel"><mat-card-header><mat-card-title>Estado de reservas</mat-card-title><mat-card-subtitle>Resultados correspondientes al período elegido</mat-card-subtitle></mat-card-header><mat-card-content class="reservation-stats"><span>Total en el período <strong>{{ vm.reservas.total }}</strong></span><span>Activas <strong>{{ vm.reservas.activas }}</strong></span><span>Confirmadas <strong>{{ vm.reservas.convertidas }}</strong></span></mat-card-content></mat-card></section></mat-tab>
+  </mat-tab-group>
+} @else if (loadError()) { <mat-card><mat-card-content><p class="report-error"><mat-icon>error_outline</mat-icon>{{ loadError() }}</p></mat-card-content></mat-card> }

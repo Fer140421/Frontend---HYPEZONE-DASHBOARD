@@ -6,23 +6,25 @@
           <mat-label>Nombre</mat-label>
           <input matInput formControlName="nombre" />
         </mat-form-field>
-        <mat-form-field appearance="outline">
+        <div class="catalog-field"><mat-form-field appearance="outline">
           <mat-label>Marca</mat-label>
           <mat-select formControlName="marca">
             <mat-option value="">Sin definir</mat-option>
             @for (marca of marcas$ | async; track marca.id) {
               <mat-option [value]="marca.nombre">{{ marca.nombre }}</mat-option>
             }
+            @for (marca of opcionesLocales.marcas(); track marca) { <mat-option [value]="marca">{{ marca }}</mat-option> }
           </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
+        </mat-form-field><button mat-icon-button type="button" class="quick-option-button" (click)="agregarOpcionRapida('marca')" matTooltip="Registrar marca" aria-label="Registrar marca"><mat-icon>add</mat-icon></button></div>
+        <div class="catalog-field"><mat-form-field appearance="outline">
           <mat-label>Categoria</mat-label>
           <mat-select formControlName="categoria">
             @for (categoria of categorias$ | async; track categoria.id) {
               <mat-option [value]="categoria.nombre">{{ categoria.nombre }}</mat-option>
             }
+            @for (categoria of opcionesLocales.categorias(); track categoria) { <mat-option [value]="categoria">{{ categoria }}</mat-option> }
           </mat-select>
-        </mat-form-field>
+        </mat-form-field><button mat-icon-button type="button" class="quick-option-button" (click)="agregarOpcionRapida('categoria')" matTooltip="Registrar categoría" aria-label="Registrar categoría"><mat-icon>add</mat-icon></button></div>
         <mat-form-field appearance="outline">
           <mat-label>Lote</mat-label>
           <mat-select formControlName="loteId">
@@ -32,14 +34,15 @@
             }
           </mat-select>
         </mat-form-field>
-        <mat-form-field appearance="outline">
+        <div class="catalog-field"><mat-form-field appearance="outline">
           <mat-label>Talla</mat-label>
           <mat-select formControlName="talla">
             @for (talla of tallas$ | async; track talla.id) {
               <mat-option [value]="talla.nombre">{{ talla.nombre }}</mat-option>
             }
+            @for (talla of opcionesLocales.tallas(); track talla) { <mat-option [value]="talla">{{ talla }}</mat-option> }
           </mat-select>
-        </mat-form-field>
+        </mat-form-field><button mat-icon-button type="button" class="quick-option-button" (click)="agregarOpcionRapida('talla')" matTooltip="Registrar talla" aria-label="Registrar talla"><mat-icon>add</mat-icon></button></div>
         <mat-form-field appearance="outline">
           <mat-label>Color</mat-label>
           <mat-select formControlName="color">

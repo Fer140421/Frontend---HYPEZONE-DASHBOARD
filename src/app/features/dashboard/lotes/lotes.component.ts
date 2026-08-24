@@ -56,6 +56,7 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { LoteDetailDialogComponent } from './lote-detail-dialog.component';
 import { StatusChipComponent } from '../../../shared/components/status-chip/status-chip.component';
+import { QuickCatalogValueDialogComponent } from '../../../shared/components/quick-catalog-value-dialog/quick-catalog-value-dialog.component';
 import {
   DEFAULT_PAGE_SIZE,
   DEFAULT_PAGE_SIZE_OPTIONS,
@@ -537,6 +538,7 @@ export class LotesComponent implements OnInit {
     MatIconModule,
     MatInputModule,
     MatSelectModule,
+    MatTooltipModule,
     ImageUploaderComponent,
   ],
   templateUrl: './lote-product-create-dialog.html',
@@ -548,6 +550,7 @@ export class LoteProductCreateDialogComponent {
   private readonly categoriaRepository = inject(CategoriaRepository);
   private readonly marcaRepository = inject(MarcaRepository);
   private readonly tallaRepository = inject(TallaRepository);
+  private readonly dialog = inject(MatDialog);
   private readonly ref = inject(MatDialogRef<LoteProductCreateDialogComponent>);
   private readonly snack = inject(MatSnackBar);
 
@@ -560,6 +563,11 @@ export class LoteProductCreateDialogComponent {
   readonly colores = coloresProducto;
   readonly imagenes = signal<string[]>([]);
   readonly saving = signal(false);
+  readonly opcionesLocales = {
+    marcas: signal<string[]>([]),
+    categorias: signal<string[]>([]),
+    tallas: signal<string[]>([]),
+  };
 
   readonly form = this.fb.nonNullable.group({
     nombre: ['', Validators.required],
@@ -590,6 +598,7 @@ export class LoteProductCreateDialogComponent {
         imagenes: this.imagenes(),
         activo: true,
       } as Partial<Producto>);
+      await this.persistirOpcionesPendientes(raw);
       this.message('Producto agregado al lote.');
       this.form.reset({
         nombre: '',
@@ -614,6 +623,30 @@ export class LoteProductCreateDialogComponent {
 
   finish(): void {
     this.ref.close();
+  }
+
+  agregarOpcionRapida(tipo: 'marca' | 'categoria' | 'talla'): void {
+    const label = tipo === 'marca' ? 'marca' : tipo === 'categoria' ? 'categoría' : 'talla';
+    this.dialog.open(QuickCatalogValueDialogComponent, { width: 'min(400px, 92vw)', data: { label } })
+      .afterClosed().subscribe((nombre?: string) => {
+        const valor = nombre?.trim();
+        if (!valor) return;
+        const destino = tipo === 'marca' ? this.opcionesLocales.marcas : tipo === 'categoria' ? this.opcionesLocales.categorias : this.opcionesLocales.tallas;
+        const existente = destino().find((item) => item.localeCompare(valor, undefined, { sensitivity: 'accent' }) === 0);
+        destino.update((items) => existente ? items : [...items, valor]);
+        this.form.controls[tipo].setValue(existente ?? valor);
+      });
+  }
+
+  private async persistirOpcionesPendientes(raw: { marca: string; categoria: string; talla: string }): Promise<void> {
+    const tareas: Promise<string>[] = [];
+    if (this.opcionesLocales.marcas().includes(raw.marca)) tareas.push(this.marcaRepository.create({ nombre: raw.marca }));
+    if (this.opcionesLocales.categorias().includes(raw.categoria)) tareas.push(this.categoriaRepository.create({ nombre: raw.categoria }));
+    if (this.opcionesLocales.tallas().includes(raw.talla)) tareas.push(this.tallaRepository.create({ nombre: raw.talla }));
+    await Promise.all(tareas);
+    this.opcionesLocales.marcas.set([]);
+    this.opcionesLocales.categorias.set([]);
+    this.opcionesLocales.tallas.set([]);
   }
 
   message(text: string): void {

@@ -1,20 +1,18 @@
-
-    <h2 mat-dialog-title>Agregar productos al lote</h2>
-    <mat-dialog-content><p class="muted">Registra un producto y continúa agregando los que necesites.</p>
-      <form class="form-grid" [formGroup]="form">
-        <mat-form-field appearance="outline"><mat-label>Nombre</mat-label><input matInput formControlName="nombre" /></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Marca</mat-label><mat-select formControlName="marca"><mat-option value="">Sin definir</mat-option>@for (item of marcas$ | async; track item.id) { <mat-option [value]="item.nombre">{{ item.nombre }}</mat-option> }</mat-select></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Categoría</mat-label><mat-select formControlName="categoria">@for (item of categorias$ | async; track item.id) { <mat-option [value]="item.nombre">{{ item.nombre }}</mat-option> }</mat-select></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Talla</mat-label><mat-select formControlName="talla">@for (item of tallas$ | async; track item.id) { <mat-option [value]="item.nombre">{{ item.nombre }}</mat-option> }</mat-select></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Color</mat-label><mat-select formControlName="color"><mat-option value="">Sin especificar</mat-option>@for (col of colores; track col) { <mat-option [value]="col">{{ col }}</mat-option> }</mat-select></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Género</mat-label><mat-select formControlName="genero"><mat-option value="">Sin definir</mat-option>@for (item of generos; track item) { <mat-option [value]="item">{{ item }}</mat-option> }</mat-select></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Estado</mat-label><mat-select formControlName="estado">@for (item of estados; track item) { <mat-option [value]="item">{{ item }}</mat-option> }</mat-select></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Precio compra</mat-label><input matInput type="number" formControlName="precioCompra" /></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Precio venta</mat-label><input matInput type="number" formControlName="precioVenta" /></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Código</mat-label><input matInput formControlName="codigo" readonly /><mat-hint>Autogenerado</mat-hint></mat-form-field>
-        <mat-form-field appearance="outline" class="full"><mat-label>Descripción</mat-label><textarea matInput rows="2" formControlName="descripcion"></textarea></mat-form-field>
-        <div class="full"><app-image-uploader [images]="imagenes()" [maxImages]="5" (uploaded)="imagenes.set($event)" (error)="message($event)" /></div>
-      </form>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end"><button mat-button type="button" (click)="finish()">Finalizar</button><button mat-flat-button class="primary-action" type="button" [disabled]="form.invalid || saving()" (click)="saveAndContinue()"><mat-icon>add</mat-icon>{{ saving() ? 'Guardando...' : 'Guardar y agregar otro' }}</button></mat-dialog-actions>
-  
+<h2 mat-dialog-title>Agregar productos al lote</h2>
+<mat-dialog-content><p class="muted">Registra un producto y continúa agregando los que necesites.</p>
+  <form class="form-grid" [formGroup]="form">
+    <mat-form-field appearance="outline"><mat-label>Nombre</mat-label><input matInput formControlName="nombre" /></mat-form-field>
+    <div class="catalog-field"><mat-form-field appearance="outline"><mat-label>Marca</mat-label><mat-select formControlName="marca"><mat-option value="">Sin definir</mat-option>@for (item of marcas$ | async; track item.id) { <mat-option [value]="item.nombre">{{ item.nombre }}</mat-option> } @for (item of opcionesLocales.marcas(); track item) { <mat-option [value]="item">{{ item }}</mat-option> }</mat-select></mat-form-field><button mat-icon-button type="button" class="quick-option-button" (click)="agregarOpcionRapida('marca')" matTooltip="Registrar marca" aria-label="Registrar marca"><mat-icon>add</mat-icon></button></div>
+    <div class="catalog-field"><mat-form-field appearance="outline"><mat-label>Categoría</mat-label><mat-select formControlName="categoria">@for (item of categorias$ | async; track item.id) { <mat-option [value]="item.nombre">{{ item.nombre }}</mat-option> } @for (item of opcionesLocales.categorias(); track item) { <mat-option [value]="item">{{ item }}</mat-option> }</mat-select></mat-form-field><button mat-icon-button type="button" class="quick-option-button" (click)="agregarOpcionRapida('categoria')" matTooltip="Registrar categoría" aria-label="Registrar categoría"><mat-icon>add</mat-icon></button></div>
+    <div class="catalog-field"><mat-form-field appearance="outline"><mat-label>Talla</mat-label><mat-select formControlName="talla">@for (item of tallas$ | async; track item.id) { <mat-option [value]="item.nombre">{{ item.nombre }}</mat-option> } @for (item of opcionesLocales.tallas(); track item) { <mat-option [value]="item">{{ item }}</mat-option> }</mat-select></mat-form-field><button mat-icon-button type="button" class="quick-option-button" (click)="agregarOpcionRapida('talla')" matTooltip="Registrar talla" aria-label="Registrar talla"><mat-icon>add</mat-icon></button></div>
+    <mat-form-field appearance="outline"><mat-label>Color</mat-label><mat-select formControlName="color"><mat-option value="">Sin especificar</mat-option>@for (col of colores; track col) { <mat-option [value]="col">{{ col }}</mat-option> }</mat-select></mat-form-field>
+    <mat-form-field appearance="outline"><mat-label>Género</mat-label><mat-select formControlName="genero"><mat-option value="">Sin definir</mat-option>@for (item of generos; track item) { <mat-option [value]="item">{{ item }}</mat-option> }</mat-select></mat-form-field>
+    <mat-form-field appearance="outline"><mat-label>Estado</mat-label><mat-select formControlName="estado">@for (item of estados; track item) { <mat-option [value]="item">{{ item }}</mat-option> }</mat-select></mat-form-field>
+    <mat-form-field appearance="outline"><mat-label>Precio compra</mat-label><input matInput type="number" formControlName="precioCompra" /></mat-form-field>
+    <mat-form-field appearance="outline"><mat-label>Precio venta</mat-label><input matInput type="number" formControlName="precioVenta" /></mat-form-field>
+    <mat-form-field appearance="outline"><mat-label>Código</mat-label><input matInput formControlName="codigo" readonly /><mat-hint>Autogenerado</mat-hint></mat-form-field>
+    <mat-form-field appearance="outline" class="full"><mat-label>Descripción</mat-label><textarea matInput rows="2" formControlName="descripcion"></textarea></mat-form-field>
+    <div class="full"><app-image-uploader [images]="imagenes()" [maxImages]="5" (uploaded)="imagenes.set($event)" (error)="message($event)" /></div>
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end"><button mat-button type="button" (click)="finish()">Finalizar</button><button mat-flat-button class="primary-action" type="button" [disabled]="form.invalid || saving()" (click)="saveAndContinue()"><mat-icon>add</mat-icon>{{ saving() ? 'Guardando...' : 'Guardar y agregar otro' }}</button></mat-dialog-actions>
