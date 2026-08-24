@@ -10,6 +10,7 @@
 .compact-metrics { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .compact-metrics .metric-card { min-height: 108px; }
 .compact-metrics .metric-card strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.compact-metrics .metric-card small { margin-top: 4px; color: var(--hz-gray); }
 .report-panel { overflow: hidden; }
 .report-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 12px 0; border: 0; border-bottom: 1px solid var(--hz-border); background: transparent; color: var(--hz-black); text-align: left; }
 .report-row:last-child { border-bottom: 0; }
@@ -27,6 +28,7 @@
 .brand-dialog-title small { color: var(--hz-gray); font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
 .brand-dialog-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; color: var(--hz-primary-hover); background: var(--hz-primary-soft); }
 .brand-dialog-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 4px 0 20px; }
+.lote-dialog-summary { grid-template-columns: repeat(4, 1fr); }
 .brand-dialog-summary span { display: grid; gap: 5px; padding: 12px; border: 1px solid var(--hz-border); border-radius: 8px; background: var(--hz-background); }
 .brand-dialog-summary small, .brand-product-values small { color: var(--hz-gray); font-size: .74rem; }
 .brand-dialog-summary strong { color: var(--hz-black); }
@@ -52,6 +54,6 @@
   .report-row > span:last-of-type { grid-column: 2; text-align: left; }
   .report-row mat-icon { grid-column: 2; grid-row: 1; justify-self: end; }
   .reservation-stats { grid-template-columns: 1fr; }
-  .brand-dialog-summary { grid-template-columns: 1fr; }
+  .brand-dialog-summary, .lote-dialog-summary { grid-template-columns: 1fr; }
   .brand-products-grid { grid-template-columns: 1fr; }
 }

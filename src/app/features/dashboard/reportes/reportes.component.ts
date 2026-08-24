@@ -14,6 +14,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { catchError, combineLatest, map, of, shareReplay, startWith } from 'rxjs';
 import { Cliente } from '../../../core/models/cliente.model';
 import { Lote } from '../../../core/models/lote.model';
+import { loteFechaCompra } from '../../../core/models/lote.model';
 import { Producto } from '../../../core/models/producto.model';
 import { Reserva } from '../../../core/models/reserva.model';
 import { Venta } from '../../../core/models/venta.model';
@@ -29,6 +30,7 @@ interface VentaDetalleReporte { venta: Venta; producto?: Producto; }
 interface RankingReporte { nombre: string; cantidad: number; ingreso: number; ganancia: number; detalles: VentaDetalleReporte[]; }
 interface ClienteReporte extends RankingReporte { cliente?: Cliente; }
 interface ReportesData { detalles: VentaDetalleReporte[]; ventas: Venta[]; productos: Producto[]; clientes: Cliente[]; lotes: Lote[]; reservas: Reserva[]; }
+interface RankingDialogData extends RankingReporte { tipo: 'Marca' | 'Categoría' | 'Lote'; productos?: Producto[]; }
 type ReportTab = 'ventas' | 'marcas' | 'productos' | 'categorias' | 'lotes' | 'clientes' | 'reservas';
 
 @Component({
@@ -82,7 +84,16 @@ export class ReportesComponent {
   }
   filtroDe(tab: string) { return this.filtros[tab as ReportTab]; }
   limpiarFechas(tab: string): void { this.filtros[tab as ReportTab].reset({ desde: null, hasta: null }); }
-  abrirMarca(marca: RankingReporte): void { this.dialog.open(MarcaVendidaDialogComponent, { width: 'min(860px, 96vw)', maxHeight: '90vh', data: marca }); }
+  abrirMarca(marca: RankingReporte): void { this.abrirRanking(marca, 'Marca'); }
+  abrirCategoria(categoria: RankingReporte): void { this.abrirRanking(categoria, 'Categoría'); }
+  abrirLote(lote: RankingReporte, productos: Producto[]): void {
+    const loteId = lote.detalles[0]?.venta.loteId;
+    this.dialog.open(MarcaVendidaDialogComponent, { width: 'min(860px, 96vw)', maxHeight: '90vh', data: { ...lote, tipo: 'Lote', productos: loteId ? productos.filter((producto) => producto.loteId === loteId) : [] } satisfies RankingDialogData });
+  }
+
+  private abrirRanking(ranking: RankingReporte, tipo: RankingDialogData['tipo']): void {
+    this.dialog.open(MarcaVendidaDialogComponent, { width: 'min(860px, 96vw)', maxHeight: '90vh', data: { ...ranking, tipo } satisfies RankingDialogData });
+  }
 
   private crearVista(data: ReportesData) {
     const filtro = this.filtros[this.pestanaActiva()].getRawValue();
@@ -92,7 +103,13 @@ export class ReportesComponent {
     const marcas = this.rank(vista.detalles, (detalle) => detalle.producto?.marca || 'Sin marca');
     const categorias = this.rank(vista.detalles, (detalle) => detalle.producto?.categoria || 'Sin categoría');
     const lotesPorId = new Map(vista.lotes.map((lote) => [lote.id, lote.nombre]));
-    const lotes = this.rank(vista.detalles, (detalle) => lotesPorId.get(detalle.venta.loteId) || 'Sin lote');
+    const lotes = this.rank(vista.detalles, (detalle) => lotesPorId.get(detalle.venta.loteId) || 'Sin lote').sort((a, b) => b.ganancia - a.ganancia || b.ingreso - a.ingreso);
+    const lotesComprados = vista.lotes.filter((lote) => this.fechaEnRango(loteFechaCompra(lote.fechaCompra), filtro.desde, filtro.hasta));
+    const idsLotesComprados = new Set(lotesComprados.map((lote) => lote.id));
+    const lotesConVentas = new Set(vista.detalles.map((detalle) => detalle.venta.loteId).filter((id): id is string => !!id && idsLotesComprados.has(id))).size;
+    const lotesDisponibles = lotesComprados.filter((lote) => vista.productos.some((producto) => producto.activo !== false && producto.loteId === lote.id && producto.estado === 'disponible')).length;
+    const loteMayorGanancia = [...lotes].filter((lote) => lote.ganancia > 0).sort((a, b) => b.ganancia - a.ganancia)[0];
+    const loteMenorGanancia = [...lotes].sort((a, b) => a.ganancia - b.ganancia)[0];
     const clientesPorId = new Map(vista.clientes.map((cliente) => [cliente.id, cliente]));
     const clientes = this.rank(vista.detalles, (detalle) => detalle.venta.clienteNombre || 'Venta sin cliente').map((item) => ({ ...item, cliente: item.detalles[0]?.venta.clienteId ? clientesPorId.get(item.detalles[0].venta.clienteId) : undefined })).slice(0, 10) as ClienteReporte[];
     const reservasActivas = vista.reservas.filter((reserva) => reserva.estado === 'activa');
@@ -101,6 +118,7 @@ export class ReportesComponent {
       ...vista,
       metricas: { operaciones, prendas: vista.detalles.length, ingreso: vista.ventas.reduce((total, venta) => total + Number(venta.precioVenta), 0), ganancia: vista.ventas.reduce((total, venta) => total + Number(venta.ganancia), 0), descuento: vista.ventas.reduce((total, venta) => total + Number(venta.descuentoAplicado ?? 0), 0) },
       productosMasVendidos, marcas, categorias, lotes, clientes,
+      metricasLotes: { comprados: lotesComprados.length, vendidos: lotesConVentas, disponibles: lotesDisponibles, mejorLote: loteMayorGanancia?.nombre || 'Sin ganancia positiva', mejorGanancia: loteMayorGanancia?.ganancia ?? 0, peorLote: loteMenorGanancia?.nombre || '—', peorGanancia: loteMenorGanancia?.ganancia ?? 0, tienePerdida: (loteMenorGanancia?.ganancia ?? 0) < 0 },
       reservas: { total: vista.reservas.length, activas: reservasActivas.length, vencidas: reservasActivas.filter((reserva) => reserva.fechaVencimiento && new Date(reserva.fechaVencimiento).getTime() < hoy).length, convertidas: vista.reservas.filter((reserva) => reserva.estado === 'confirmada').length },
     };
   }
@@ -114,6 +132,13 @@ export class ReportesComponent {
     return { ...data, ventas, detalles: data.detalles.filter((detalle) => ventasIds.has(detalle.venta.id)), reservas: data.reservas.filter((reserva) => enRango(reserva.fechaReserva)) };
   }
 
+  private fechaEnRango(fecha: Date, desde: Date | null, hasta: Date | null): boolean {
+    const inicio = desde ? new Date(desde).setHours(0, 0, 0, 0) : 0;
+    const fin = hasta ? new Date(hasta).setHours(23, 59, 59, 999) : Number.POSITIVE_INFINITY;
+    const valor = fecha.getTime();
+    return valor >= inicio && valor <= fin;
+  }
+
   private crearFiltro() { return this.fb.group({ desde: [null as Date | null], hasta: [null as Date | null] }); }
   private rank(detalles: VentaDetalleReporte[], nombre: (detalle: VentaDetalleReporte) => string): RankingReporte[] {
     const grupos = new Map<string, VentaDetalleReporte[]>();
@@ -124,9 +149,23 @@ export class ReportesComponent {
 
 @Component({ selector: 'app-marca-vendida-dialog', standalone: true, imports: [CurrencyPipe, DatePipe, MatButtonModule, MatDialogModule, MatIconModule], templateUrl: './marca-vendida-dialog.html', styleUrl: './reportes.css' })
 export class MarcaVendidaDialogComponent {
-  readonly data = inject<RankingReporte>(MAT_DIALOG_DATA);
+  readonly data = inject<RankingDialogData>(MAT_DIALOG_DATA);
 
   image(detalle: VentaDetalleReporte): string {
     return cloudinaryCardUrl(detalle.producto?.imagenes?.[0] ?? '');
+  }
+
+  imageProducto(producto: Producto): string {
+    return cloudinaryCardUrl(producto.imagenes?.[0] ?? '');
+  }
+
+  resumenLote(): { costo: number; disponibles: number; vendidas: number; ganancia: number } {
+    const productos = this.data.productos ?? [];
+    return {
+      costo: productos.reduce((total, producto) => total + Number(producto.precioCompra ?? 0), 0),
+      disponibles: productos.filter((producto) => producto.estado === 'disponible').length,
+      vendidas: productos.filter((producto) => producto.estado === 'vendido').length,
+      ganancia: this.data.ganancia,
+    };
   }
 }
