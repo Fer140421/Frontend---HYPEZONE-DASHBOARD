@@ -255,6 +255,7 @@ export class VentaService {
     const clienteRef = input.clienteNuevo
       ? doc(collection(this.firestore, 'clientes'))
       : undefined;
+    const fidelidad = await this.getConfiguracionFidelidad();
     const precios = nuevos.map(item => Number(item.precioVenta));
     if (precios.some(precio => !Number.isFinite(precio) || precio < 0)) throw new Error('Precio de venta inválido.');
 
@@ -268,9 +269,55 @@ export class VentaService {
       const totalOperacion = precios.reduce((sum, price) => sum + price, 0);
       const timestamp = serverTimestamp();
       const clienteId = input.clienteId || clienteRef?.id;
+
+      // Each detail stores the points it granted. Reversing those values first makes
+      // an edit idempotent: saving the same edit twice never grants points twice.
+      const puntosOriginalesPorCliente = new Map<string, number>();
+      originales.forEach((venta) => {
+        if (!venta.clienteId) return;
+        const puntos = Number(venta.puntosGanados ?? 0);
+        puntosOriginalesPorCliente.set(
+          venta.clienteId,
+          (puntosOriginalesPorCliente.get(venta.clienteId) ?? 0) + (Number.isFinite(puntos) ? puntos : 0),
+        );
+      });
+      const clienteIdsExistentes = new Set([
+        ...puntosOriginalesPorCliente.keys(),
+        ...(input.clienteId ? [input.clienteId] : []),
+      ]);
+      const clientesExistentes = new Map(
+        await Promise.all(
+          [...clienteIdsExistentes].map(async (id) => {
+            const ref = doc(this.firestore, `clientes/${id}`);
+            return [id, { ref, snapshot: await transaction.get(ref) }] as const;
+          }),
+        ),
+      );
+      if ([...clientesExistentes.values()].some((cliente) => !cliente.snapshot.exists())) {
+        throw new Error('El cliente seleccionado no existe.');
+      }
+
+      const puntosNuevos = clienteId ? nuevos.length * fidelidad.puntosPorPrenda : 0;
+      const ajustesPuntos = new Map<string, number>();
+      puntosOriginalesPorCliente.forEach((puntos, id) => ajustesPuntos.set(id, -puntos));
+      if (input.clienteId) {
+        ajustesPuntos.set(input.clienteId, (ajustesPuntos.get(input.clienteId) ?? 0) + puntosNuevos);
+      }
+
+      ajustesPuntos.forEach((ajuste, id) => {
+        const cliente = clientesExistentes.get(id)!;
+        const datos = cliente.snapshot.data() as { puntosDisponibles?: number; puntosAcumulados?: number; recompensasDisponibles?: number };
+        transaction.update(cliente.ref, {
+          ...this.ajustarPuntosFidelidad(datos, ajuste, fidelidad),
+          updatedAt: timestamp,
+        });
+      });
       if (clienteRef && input.clienteNuevo) {
         transaction.set(clienteRef, removeUndefinedDeep({
           ...input.clienteNuevo,
+          puntosDisponibles: puntosNuevos % fidelidad.puntosParaRecompensa,
+          puntosAcumulados: puntosNuevos,
+          recompensasDisponibles: Math.floor(puntosNuevos / fidelidad.puntosParaRecompensa),
           activo: true,
           schemaVersion: 1,
           createdAt: timestamp,
@@ -293,7 +340,8 @@ export class VentaService {
         const existing = originalesPorProducto.get(item.producto.id!);
         const ventaData = { ...common, productoId:item.producto.id!, loteId:product.loteId||deleteField(),
           nombreProducto:product.nombre, precioCompra:this.readPurchasePrice(product), precioVenta:precios[index],
-          ganancia:precios[index]-this.readPurchasePrice(product), activo:true, schemaVersion:3 };
+          ganancia:precios[index]-this.readPurchasePrice(product), activo:true, schemaVersion:3,
+          puntosGanados: clienteId ? fidelidad.puntosPorPrenda : 0 };
         if (existing?.id) transaction.update(doc(this.firestore, `ventas/${existing.id}`), ventaData);
         if (existing?.id) {
           transaction.update(productoRefs.get(item.producto.id!)!, { precioVenta: precios[index], updatedAt: timestamp });
@@ -373,6 +421,42 @@ export class VentaService {
     const oferta = Number(producto.precioOferta);
     const precioVenta = Number(producto.precioVenta);
     return Number.isFinite(oferta) && oferta > 0 && oferta < precioVenta ? oferta : precioVenta;
+  }
+
+  /** Applies a point delta, converting completed point cycles into rewards as needed. */
+  private ajustarPuntosFidelidad(
+    cliente: { puntosDisponibles?: number; puntosAcumulados?: number; recompensasDisponibles?: number },
+    ajuste: number,
+    fidelidad: ConfiguracionFidelidad,
+  ): Pick<NonNullable<typeof cliente>, 'puntosDisponibles' | 'puntosAcumulados' | 'recompensasDisponibles'> {
+    const puntosParaRecompensa = Number(fidelidad.puntosParaRecompensa);
+    if (!Number.isFinite(puntosParaRecompensa) || puntosParaRecompensa <= 0) {
+      throw new Error('La configuración de fidelidad no tiene una meta de puntos válida.');
+    }
+
+    let puntosDisponibles = Math.max(0, Number(cliente.puntosDisponibles ?? 0));
+    let recompensasDisponibles = Math.max(0, Number(cliente.recompensasDisponibles ?? 0));
+    if (ajuste >= 0) {
+      const puntosConCompra = puntosDisponibles + ajuste;
+      puntosDisponibles = puntosConCompra % puntosParaRecompensa;
+      recompensasDisponibles += Math.floor(puntosConCompra / puntosParaRecompensa);
+    } else {
+      // When an old detail is removed, consume available points first and then
+      // undo any reward cycle that supplied the remaining points.
+      let puntosARetirar = -ajuste;
+      while (puntosARetirar > puntosDisponibles && recompensasDisponibles > 0) {
+        puntosARetirar -= puntosDisponibles;
+        puntosDisponibles = puntosParaRecompensa;
+        recompensasDisponibles -= 1;
+      }
+      puntosDisponibles = Math.max(0, puntosDisponibles - puntosARetirar);
+    }
+
+    return {
+      puntosDisponibles,
+      puntosAcumulados: Math.max(0, Number(cliente.puntosAcumulados ?? 0) + ajuste),
+      recompensasDisponibles,
+    };
   }
 
   private async getConfiguracionFidelidad(): Promise<ConfiguracionFidelidad> {
