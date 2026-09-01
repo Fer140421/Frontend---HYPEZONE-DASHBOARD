@@ -26,7 +26,15 @@ service cloud.firestore {
     match /productos/{id} {
       allow read: if hasPermission('products.view');
       allow create: if hasPermission('products.create');
-      allow update: if hasPermission('products.update');
+      // Sales staff may only change availability and the final sale price.
+      allow update: if hasPermission('products.update') || (
+        hasPermission('sales.create') &&
+        resource.data.estado == 'disponible' &&
+        request.resource.data.estado in ['reservado', 'vendido'] &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'estado', 'precioVenta', 'updatedAt'
+        ])
+      );
       allow delete: if hasPermission('products.delete');
     }
 
@@ -34,7 +42,13 @@ service cloud.firestore {
     match /productosPublicos/{id} {
       allow read: if resource.data.activo == true || hasPermission('products.view');
       allow create: if hasPermission('products.create');
-      allow update: if hasPermission('products.update');
+      allow update: if hasPermission('products.update') || (
+        hasPermission('sales.create') &&
+        request.resource.data.estado in ['reservado', 'vendido'] &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'estado', 'precioVenta', 'updatedAt'
+        ])
+      );
       allow delete: if hasPermission('products.delete');
     }
 

@@ -1,0 +1,45 @@
+<h2 mat-dialog-title>Compras de {{ data.cliente.nombreCompleto }}</h2>
+<mat-dialog-content>
+  <p class="purchases-summary">
+    {{ data.compras.length }}
+    {{ data.compras.length === 1 ? 'prenda comprada' : 'prendas compradas' }}
+    <strong>Total: {{ total | currency: 'BOB' : 'symbol-narrow' }}</strong>
+  </p>
+
+  @if (data.compras.length) {
+    <div class="purchases-list">
+      @for (compra of data.compras; track compra.id) {
+        <article class="purchase-item">
+          @if (image(compra); as src) {
+            <img
+              [src]="src"
+              [alt]="compra.nombreProducto"
+              loading="lazy"
+              decoding="async"
+              width="72"
+              height="72"
+            />
+          } @else {
+            <span class="purchase-placeholder"><mat-icon>checkroom</mat-icon></span>
+          }
+          <div>
+            <strong>{{ compra.nombreProducto }}</strong
+            ><span
+              >{{ compra.fechaVenta | date: 'mediumDate' }} ·
+              {{ compra.metodoPago || 'Efectivo' }}</span
+            >
+          </div>
+          <strong>{{ compra.precioVenta | currency: 'BOB' : 'symbol-narrow' }}</strong>
+        </article>
+      }
+    </div>
+  } @else {
+    <div class="purchases-empty">
+      <mat-icon>shopping_bag</mat-icon
+      ><span>Este cliente todavía no tiene compras registradas.</span>
+    </div>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end"
+  ><button mat-button mat-dialog-close>Cerrar</button></mat-dialog-actions
+>
