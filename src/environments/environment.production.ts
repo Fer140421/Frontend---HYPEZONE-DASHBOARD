@@ -5,12 +5,12 @@ export const environment: AppEnvironment = {
   environmentName: 'PROD',
   showEnvironmentBanner: false,
   firebase: {
-    apiKey: 'AIzaSyDpTKEr3JpbSoZqSHrx3zDQy453XYorS7M',
-    authDomain: 'hypezone-3ed2a.firebaseapp.com',
-    projectId: 'hypezone-3ed2a',
-    storageBucket: 'hypezone-3ed2a.firebasestorage.app',
-    messagingSenderId: '443930038160',
-    appId: '1:443930038160:web:d79a7caa6ab1ca8bae2d15',
+    apiKey: 'AIzaSyCCJF6KPmI4nB6TdKaKwsRe-LRuNDmLuEY',
+    authDomain: 'hypezone-dashboard-prod.firebaseapp.com',
+    projectId: 'hypezone-dashboard-prod',
+    storageBucket: 'hypezone-dashboard-prod.firebasestorage.app',
+    messagingSenderId: '304252666657',
+    appId: '1:304252666657:web:67e0aaffb983758555f460',
   },
   cloudinary: {
     cloudName: 'dawdr6c4j',
