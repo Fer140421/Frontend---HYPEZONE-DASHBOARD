@@ -8,7 +8,7 @@ El proyecto HypeZone Dashboard cuenta con una separación estricta entre los ent
 
 | Entorno | Alias CLI | Firebase Project ID | Propósito |
 | --- | --- | --- | --- |
-| **DEV** | `dev` | `hypezone-dev` | Entorno de desarrollo, pruebas e implementación de nuevas características. |
+| **DEV** | `dev` | `hypezone-dashboard-dev` | Entorno de desarrollo, pruebas e implementación de nuevas características. |
 | **PROD** | `prod` | `hypezone-3ed2a` | Entorno de producción en vivo. |
 
 Toda la implementación actual de autorización dinámica (Authorization V2), migración de esquema y Cloud Functions se realizó exclusivamente para el entorno **DEV**.
@@ -18,7 +18,7 @@ Toda la implementación actual de autorización dinámica (Authorization V2), mi
 ## Archivos de Entorno en Angular
 
 - `src/environments/environment.ts`: Configuración base local.
-- `src/environments/environment.development.ts`: Configuración de desarrollo (`hypezone-dev`), utilizada por `ng serve` y `npm run start:dev`.
+- `src/environments/environment.development.ts`: Configuración de desarrollo (`hypezone-dashboard-dev`), utilizada por `ng serve` y `npm run start:dev`.
 - `src/environments/environment.production.ts`: Configuración de producción (`hypezone-3ed2a`), utilizada por `npm run build:prod`.
 
 ---
@@ -29,7 +29,7 @@ Toda la implementación actual de autorización dinámica (Authorization V2), mi
 {
   "projects": {
     "prod": "hypezone-3ed2a",
-    "dev": "hypezone-dev"
+    "dev": "hypezone-dashboard-dev"
   }
 }
 ```

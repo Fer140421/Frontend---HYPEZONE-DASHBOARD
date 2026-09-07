@@ -1,6 +1,6 @@
 import { AppEnvironment } from '../../../environments/environment.model';
 
-const PROD_PROJECT_ID = 'hypezone-3ed2a';
+const PROD_PROJECT_ID = 'hypezone-dashboard-prod';
 const DEV_PROJECT_PLACEHOLDER = 'HYPEZONE_DEV_PROJECT_ID';
 
 export function validateEnvironment(environment: AppEnvironment): void {

@@ -1,7 +1,9 @@
 {
   "projects": {
-    "prod": "hypezone-3ed2a",
-    "dev": "hypezone-dev"
+    "prod": "hypezone-dashboard-prod",
+    "dev": "hypezone-dashboard-dev",
+    "hypezone-dashboard-prod": "hypezone-dashboard-prod",
+    "hypezone-dashboard-dev": "hypezone-dashboard-dev"
   },
   "targets": {},
   "etags": {}

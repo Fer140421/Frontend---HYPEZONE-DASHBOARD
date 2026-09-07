@@ -9,8 +9,8 @@
     "build": "ng build",
     "build:dev": "ng build --configuration development",
     "build:prod": "ng build --configuration production",
-    "seed:firebase:dev": "node scripts/seed-firebase-dev-roles.cjs --project hypezone-dev",
-    "seed:firebase:prod": "node scripts/seed-firebase-prod-roles.cjs --project hypezone-3ed2a",
+    "seed:firebase:dev": "node scripts/seed-firebase-dev-roles.cjs --project hypezone-dashboard-dev --owner-uid LQsG3kOxmNMfsWtka0xbravEous2",
+    "seed:firebase:prod": "node scripts/seed-firebase-prod-roles.cjs --project hypezone-dashboard-prod",
     "fidelidad:reconstruir": "node scripts/rebuild-fidelity-points.cjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
@@ -22,8 +22,10 @@
     "deploy:prod:rules": "firebase use prod && firebase deploy --only firestore:rules",
     "deploy:prod:functions": "npm run functions:build && firebase use prod && firebase deploy --only functions",
     "deploy:prod:hosting": "npm run build:prod && firebase use prod && firebase deploy --only hosting",
-    "sync:public-products:dev": "node scripts/sync-public-products.cjs --project hypezone-dev --apply",
-    "sync:public-products:prod": "node scripts/sync-public-products.cjs --project hypezone-3ed2a --apply",
+    "sync:public-products:dev": "node scripts/sync-public-products.cjs --project hypezone-dashboard-dev --apply",
+    "sync:public-products:prod": "node scripts/sync-public-products.cjs --project hypezone-dashboard-prod --apply",
+    "migrate:public-products:dev": "node scripts/migrate-public-products.cjs --source hypezone-3ed2a --target hypezone-dashboard-dev",
+    "migrate:public-products:prod": "node scripts/migrate-public-products.cjs --source hypezone-3ed2a --target hypezone-dashboard-prod",
     "emulators": "firebase emulators:start"
   },
   "prettier": {

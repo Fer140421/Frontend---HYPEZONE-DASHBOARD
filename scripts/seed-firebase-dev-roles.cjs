@@ -6,9 +6,10 @@ const { execFileSync } = require('node:child_process');
 const ts = require('typescript');
 
 const root = path.resolve(__dirname, '..');
-const expectedProjectId = 'hypezone-dev';
+const expectedProjectId = 'hypezone-dashboard-dev';
 const requestedProjectId = process.argv.find((value, index, args) => args[index - 1] === '--project');
 const apply = process.argv.includes('--apply');
+const bootstrapOwnerUid = process.argv.find((value, index, args) => args[index - 1] === '--owner-uid');
 
 function fail(message) {
   throw new Error(`[seed-firebase-dev] ${message}`);
@@ -107,8 +108,22 @@ async function findOwner(token) {
     const user = decodeDocument(document);
     return user.role === 'owner' || user.roleId === 'owner';
   });
-  if (owners.length !== 1) fail(`Se esperaba exactamente un usuario owner y se encontraron ${owners.length}.`);
   return owners[0];
+}
+
+async function authUser(token, uid) {
+  const response = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/projects/${expectedProjectId}/accounts:lookup`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ localId: [uid] }),
+    },
+  );
+  if (!response.ok) fail(`No se pudo consultar Firebase Auth para users/${uid}: ${response.status}: ${await response.text()}`);
+  const account = (await response.json()).users?.[0];
+  if (!account) fail(`El UID ${uid} no existe en Firebase Auth de DEV.`);
+  return account;
 }
 
 function samePermissions(actual, expected) {
@@ -132,15 +147,30 @@ async function main() {
   }
 
   const token = await accessToken();
-  const ownerDocument = await findOwner(token);
-  const ownerUid = ownerDocument.name.split('/').at(-1);
+  const previousOwner = await findOwner(token);
+  if (!bootstrapOwnerUid && !previousOwner) fail('No se encontró ningún owner en DEV. Indica --owner-uid para inicializar el owner desde Firebase Auth.');
+  const previousOwnerData = previousOwner ? decodeDocument(previousOwner) : {};
+  const ownerUid = bootstrapOwnerUid ?? previousOwner.name.split('/').at(-1);
+  const bootstrapOwner = bootstrapOwnerUid ? await authUser(token, ownerUid) : null;
   const roles = {
     owner: { name: 'Owner', description: 'Acceso completo del propietario protegido.', active: true, system: true, permissions: rolePermissions.owner },
     admin: { name: 'Admin', description: 'Administración operativa según el catálogo de permisos.', active: true, system: true, permissions: rolePermissions.admin },
     seller: { name: 'Seller', description: 'Operación comercial según el catálogo de permisos.', active: true, system: true, permissions: rolePermissions.seller },
   };
   const ownerPatch = {
+    // Al reemplazar el usuario de Firebase Auth, conserva datos de perfil y
+    // materializa el perfil owner en el UID nuevo.
+    ...(bootstrapOwnerUid ? {
+      uid: ownerUid,
+      email: typeof bootstrapOwner.email === 'string'
+        ? bootstrapOwner.email
+        : (typeof previousOwnerData.email === 'string' ? previousOwnerData.email : ''),
+      displayName: typeof bootstrapOwner.displayName === 'string' && bootstrapOwner.displayName.trim()
+        ? bootstrapOwner.displayName
+        : (typeof previousOwnerData.displayName === 'string' ? previousOwnerData.displayName : 'Owner DEV'),
+    } : {}),
     roleId: 'owner',
+    role: 'owner',
     active: true,
     protectedOwner: true,
     permissionOverrides: {},
@@ -152,7 +182,7 @@ async function main() {
   console.log('  CREAR/REEMPLAZAR roles/owner');
   console.log('  CREAR/REEMPLAZAR roles/admin');
   console.log('  CREAR/REEMPLAZAR roles/seller');
-  console.log(`  ACTUALIZAR users/${ownerUid} (conserva role; agrega/actualiza roleId, active, protectedOwner, permissionOverrides y effectivePermissions)`);
+  console.log(`  ${bootstrapOwnerUid ? 'CREAR/ACTUALIZAR' : 'ACTUALIZAR'} users/${ownerUid} (perfil owner y permisos efectivos)`);
 
   if (!apply) {
     console.log('Vista previa completada. No se realizaron escrituras. Usa --apply para ejecutar el seed.');

@@ -6,9 +6,12 @@ const { execFileSync } = require('node:child_process');
 const ts = require('typescript');
 
 const root = path.resolve(__dirname, '..');
-const expectedProjectId = 'hypezone-3ed2a';
+const expectedProjectId = 'hypezone-dashboard-prod';
 const requestedProjectId = process.argv.find((value, index, args) => args[index - 1] === '--project');
 const apply = process.argv.includes('--apply');
+const bootstrapOwnerUid = process.argv.find((value, index, args) => args[index - 1] === '--owner-uid');
+const bootstrapOwnerEmail = process.argv.find((value, index, args) => args[index - 1] === '--owner-email');
+const bootstrapOwnerName = process.argv.find((value, index, args) => args[index - 1] === '--owner-name');
 
 function fail(message) {
   throw new Error(`[seed-firebase-prod] ${message}`);
@@ -115,6 +118,10 @@ function samePermissions(actual, expected) {
 
 async function main() {
   const detected = validateProdTarget();
+  const bootstrapRequested = !!bootstrapOwnerUid || !!bootstrapOwnerEmail || !!bootstrapOwnerName;
+  if (bootstrapRequested && (!bootstrapOwnerUid || !bootstrapOwnerEmail || !bootstrapOwnerName)) {
+    fail('El bootstrap del owner requiere --owner-uid, --owner-email y --owner-name.');
+  }
   const { PERMISSION_KEYS, defaultPermissions } = loadPermissionCatalog();
   const rolePermissions = {
     owner: defaultPermissions('owner'),
@@ -126,14 +133,18 @@ async function main() {
   }
 
   const token = await accessToken();
-  const ownerDocument = await findOwner(token);
-  const ownerUid = ownerDocument.name.split('/').at(-1);
+  const ownerUid = bootstrapOwnerUid ?? (await findOwner(token)).name.split('/').at(-1);
   const roles = {
     owner: { name: 'Owner', description: 'Acceso completo del propietario protegido.', active: true, system: true, permissions: rolePermissions.owner },
     admin: { name: 'Admin', description: 'Administración operativa según el catálogo de permisos.', active: true, system: true, permissions: rolePermissions.admin },
     seller: { name: 'Seller', description: 'Operación comercial según el catálogo de permisos.', active: true, system: true, permissions: rolePermissions.seller },
   };
   const ownerPatch = {
+    ...(bootstrapRequested ? {
+      uid: ownerUid,
+      email: bootstrapOwnerEmail.trim().toLowerCase(),
+      displayName: bootstrapOwnerName.trim(),
+    } : {}),
     roleId: 'owner',
     role: 'owner',
     active: true,
@@ -147,7 +158,7 @@ async function main() {
   console.log('  CREAR/REEMPLAZAR roles/owner');
   console.log('  CREAR/REEMPLAZAR roles/admin');
   console.log('  CREAR/REEMPLAZAR roles/seller');
-  console.log(`  ACTUALIZAR users/${ownerUid} (agrega/actualiza role, roleId, active, protectedOwner, permissionOverrides y effectivePermissions)`);
+  console.log(`  ${bootstrapRequested ? 'CREAR/ACTUALIZAR' : 'ACTUALIZAR'} users/${ownerUid} (perfil owner y permisos efectivos)`);
 
   if (!apply) {
     console.log('Vista previa completada. No se realizaron escrituras en PROD. Usa --apply para ejecutar el seed en PROD.');
@@ -168,7 +179,7 @@ async function main() {
   if (owner.role !== 'owner' || owner.roleId !== 'owner' || owner.active !== true || owner.protectedOwner !== true || !samePermissions(owner.permissionOverrides, {}) || !samePermissions(owner.effectivePermissions, rolePermissions.owner)) {
     fail(`Falló la verificación de users/${ownerUid}.`);
   }
-  console.log('Seed de Roles y Permisos de Owner aplicado y verificado CORRECTAMENTE en Firebase PROD (hypezone-3ed2a).');
+  console.log('Seed de Roles y Permisos de Owner aplicado y verificado CORRECTAMENTE en Firebase PROD (hypezone-dashboard-prod).');
 }
 
 main().catch((error) => {
