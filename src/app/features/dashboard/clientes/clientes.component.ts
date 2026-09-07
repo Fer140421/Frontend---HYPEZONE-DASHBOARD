@@ -52,6 +52,7 @@ import {
   PaginationState,
   paginateItems,
 } from '../../../shared/utils/pagination.util';
+import { downloadCsv } from '../../../shared/utils/csv-export.util';
 
 export interface ClienteFormDialogData {
   cliente?: Cliente;
@@ -172,6 +173,22 @@ export class ClientesComponent implements OnInit {
 
   updatePage(event: PageEvent): void {
     this.pagination$.next({ pageIndex: event.pageIndex, pageSize: event.pageSize });
+  }
+
+  async downloadCsv(): Promise<void> {
+    const clientes = await firstValueFrom(this.clientes.getAll(true).pipe(take(1)));
+    downloadCsv('clientes.csv', [
+      { header: 'ID', value: (cliente) => cliente.id },
+      { header: 'Nombre completo', value: (cliente) => cliente.nombreCompleto },
+      { header: 'Celular', value: (cliente) => cliente.celular },
+      { header: 'CI', value: (cliente) => cliente.ci },
+      { header: 'Puntos disponibles', value: (cliente) => cliente.puntosDisponibles ?? 0 },
+      { header: 'Puntos acumulados', value: (cliente) => cliente.puntosAcumulados ?? 0 },
+      { header: 'Recompensas disponibles', value: (cliente) => cliente.recompensasDisponibles ?? 0 },
+      { header: 'Estado', value: (cliente) => cliente.activo === false ? 'Inactivo' : 'Activo' },
+      { header: 'Creado el', value: (cliente) => cliente.createdAt },
+      { header: 'Actualizado el', value: (cliente) => cliente.updatedAt },
+    ], clientes);
   }
 
   whatsappLink(celular: string | undefined): string | null {

@@ -15,7 +15,7 @@ import { MatSortModule } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Observable, BehaviorSubject, combineLatest, map, of, shareReplay, startWith, switchMap } from 'rxjs';
+import { Observable, BehaviorSubject, combineLatest, firstValueFrom, map, of, shareReplay, startWith, switchMap, take } from 'rxjs';
 import { Lote } from '../../../core/models/lote.model';
 import {
   CategoriaProducto,
@@ -54,6 +54,7 @@ import {
   PaginationState,
   paginateItems,
 } from '../../../shared/utils/pagination.util';
+import { downloadCsv } from '../../../shared/utils/csv-export.util';
 
 @Component({
   selector: 'app-productos',
@@ -352,6 +353,33 @@ export class ProductosComponent implements OnInit {
 
   updatePage(event: PageEvent): void {
     this.pagination$.next({ pageIndex: event.pageIndex, pageSize: event.pageSize });
+  }
+
+  async downloadCsv(): Promise<void> {
+    const productos = await firstValueFrom(this.productoRepository.getAll(true).pipe(take(1)));
+    downloadCsv('productos.csv', [
+      { header: 'ID', value: (producto) => producto.id },
+      { header: 'Código', value: (producto) => producto.codigo },
+      { header: 'Nombre', value: (producto) => producto.nombre },
+      { header: 'Marca', value: (producto) => producto.marca },
+      { header: 'Categoría', value: (producto) => producto.categoria },
+      { header: 'Descripción', value: (producto) => producto.descripcion },
+      { header: 'Talla', value: (producto) => producto.talla },
+      { header: 'Color', value: (producto) => producto.color },
+      { header: 'Género', value: (producto) => producto.genero },
+      { header: 'ID lote', value: (producto) => producto.loteId },
+      { header: 'Precio compra', value: (producto) => precioCompraProducto(producto) },
+      { header: 'Precio venta', value: (producto) => precioProducto(producto) },
+      { header: 'Precio oferta', value: (producto) => producto.precioOferta },
+      { header: 'ID descuento', value: (producto) => producto.descuentoId },
+      { header: 'Estado', value: (producto) => producto.estado },
+      { header: 'Estado publicación', value: (producto) => producto.estadoPublicacion },
+      { header: 'Imágenes', value: (producto) => imagenesProducto(producto).join(' | ') },
+      { header: 'Notas', value: (producto) => producto.notas },
+      { header: 'Activo', value: (producto) => producto.activo === false ? 'No' : 'Sí' },
+      { header: 'Creado el', value: (producto) => producto.createdAt },
+      { header: 'Actualizado el', value: (producto) => producto.updatedAt },
+    ], productos);
   }
 
   openView(producto: Producto): void {

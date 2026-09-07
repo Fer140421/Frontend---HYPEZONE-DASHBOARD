@@ -2,6 +2,10 @@
   title="Clientes"
   description="Administra clientes con registro rapido, filtros y reactivacion."
 >
+  <button mat-stroked-button type="button" (click)="downloadCsv()">
+    <mat-icon>download</mat-icon>
+    Descargar CSV
+  </button>
   @if (auth.can('clients.create')) {
     <button mat-flat-button class="primary-action" type="button" (click)="openCreate()">
       <mat-icon>person_add</mat-icon>

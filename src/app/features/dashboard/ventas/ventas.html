@@ -7,6 +7,12 @@
   "
   [backUrl]="mode() !== 'list' ? '/dashboard/ventas' : null"
 >
+  @if (mode() === 'list') {
+    <button mat-stroked-button type="button" (click)="downloadCsv()">
+      <mat-icon>download</mat-icon>
+      Descargar CSV
+    </button>
+  }
   @if (mode() === 'list' && auth.can('sales.create')) {
     <button mat-flat-button class="primary-action" routerLink="/dashboard/ventas/nueva">
       <mat-icon>point_of_sale</mat-icon>

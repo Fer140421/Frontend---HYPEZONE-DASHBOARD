@@ -43,6 +43,7 @@ import {
   PaginationState,
   paginateItems,
 } from '../../../shared/utils/pagination.util';
+import { downloadCsv } from '../../../shared/utils/csv-export.util';
 import {
   ClienteFormDialogComponent,
   ClienteFormDialogData,
@@ -472,6 +473,39 @@ export class VentasComponent implements OnInit {
 
   updatePage(event: PageEvent): void {
     this.pagination$.next({ pageIndex: event.pageIndex, pageSize: event.pageSize });
+  }
+
+  async downloadCsv(): Promise<void> {
+    const ventas = await firstValueFrom(this.ventaRepository.getAll(true).pipe(take(1)));
+    downloadCsv('ventas.csv', [
+      { header: 'ID', value: (venta) => venta.id },
+      { header: 'ID operación', value: (venta) => venta.operacionId },
+      { header: 'ID reserva', value: (venta) => venta.reservaId },
+      { header: 'Fecha de venta', value: (venta) => venta.fechaVenta },
+      { header: 'ID producto', value: (venta) => venta.productoId },
+      { header: 'Producto', value: (venta) => venta.nombreProducto },
+      { header: 'ID lote', value: (venta) => venta.loteId },
+      { header: 'Precio compra', value: (venta) => venta.precioCompra },
+      { header: 'Precio original', value: (venta) => venta.precioOriginal },
+      { header: 'Descuento aplicado', value: (venta) => venta.descuentoAplicado },
+      { header: 'Precio venta', value: (venta) => venta.precioVenta },
+      { header: 'Ganancia', value: (venta) => venta.ganancia },
+      { header: 'Método de pago', value: (venta) => venta.metodoPago },
+      { header: 'ID cliente', value: (venta) => venta.clienteId },
+      { header: 'Cliente', value: (venta) => venta.clienteNombre },
+      { header: 'Teléfono cliente', value: (venta) => venta.clienteTelefono },
+      { header: 'CI cliente', value: (venta) => venta.clienteCi },
+      { header: 'Puntos ganados', value: (venta) => venta.puntosGanados },
+      { header: 'Recompensa canjeada', value: (venta) => venta.recompensaCanjeada ? 'Sí' : 'No' },
+      { header: 'Descuento fidelidad (%)', value: (venta) => venta.descuentoFidelidadPorcentaje },
+      { header: 'ID producto recompensa', value: (venta) => venta.productoRecompensaId },
+      { header: 'Cantidad detalles', value: (venta) => venta.cantidadDetalles },
+      { header: 'Total operación', value: (venta) => venta.totalOperacion },
+      { header: 'Notas', value: (venta) => venta.notas },
+      { header: 'Estado', value: (venta) => venta.activo === false ? 'Inactivo' : 'Activo' },
+      { header: 'Creado el', value: (venta) => venta.createdAt },
+      { header: 'Actualizado el', value: (venta) => venta.updatedAt },
+    ], ventas);
   }
 
   viewSale(venta: Venta): void {

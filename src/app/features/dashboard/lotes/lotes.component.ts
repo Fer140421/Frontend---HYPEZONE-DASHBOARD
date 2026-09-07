@@ -63,6 +63,7 @@ import {
   PaginationState,
   paginateItems,
 } from '../../../shared/utils/pagination.util';
+import { downloadCsv } from '../../../shared/utils/csv-export.util';
 
 interface LotesData {
   resumenes: LoteResumen[];
@@ -291,6 +292,35 @@ export class LotesComponent implements OnInit {
 
   updatePage(event: PageEvent): void {
     this.pagination$.next({ pageIndex: event.pageIndex, pageSize: event.pageSize });
+  }
+
+  async downloadCsv(): Promise<void> {
+    const { resumenes } = await firstValueFrom(this.baseData$.pipe(take(1)));
+    downloadCsv('lotes.csv', [
+      { header: 'ID', value: (resumen) => resumen.lote.id },
+      { header: 'Nombre', value: (resumen) => resumen.lote.nombre },
+      { header: 'Descripción', value: (resumen) => resumen.lote.descripcion },
+      { header: 'Fecha de compra', value: (resumen) => loteFechaCompra(resumen.lote.fechaCompra) },
+      { header: 'ID proveedor', value: (resumen) => resumen.lote.proveedorId },
+      { header: 'Proveedor', value: (resumen) => resumen.lote.proveedor },
+      { header: 'Lugar de compra', value: (resumen) => resumen.lote.lugarCompra },
+      { header: 'Costo total', value: (resumen) => resumen.lote.costoTotal },
+      { header: 'Cantidad productos registrada', value: (resumen) => resumen.lote.cantidadProductos },
+      { header: 'Cantidad productos calculada', value: (resumen) => resumen.cantidadProductos },
+      { header: 'Productos disponibles', value: (resumen) => resumen.cantidadDisponibles },
+      { header: 'Productos reservados', value: (resumen) => resumen.cantidadReservados },
+      { header: 'Productos vendidos', value: (resumen) => resumen.cantidadVendidos },
+      { header: 'Inversión asignada', value: (resumen) => resumen.inversionAsignada },
+      { header: 'Valor esperado', value: (resumen) => resumen.valorEsperado },
+      { header: 'Ingreso real', value: (resumen) => resumen.ingresoReal },
+      { header: 'Ganancia real', value: (resumen) => resumen.gananciaReal },
+      { header: 'Recuperación inversión (%)', value: (resumen) => resumen.recuperacionInversion },
+      { header: 'Estado operativo', value: (resumen) => resumen.estadoOperativo },
+      { header: 'Notas', value: (resumen) => resumen.lote.notas },
+      { header: 'Estado', value: (resumen) => resumen.lote.activo === false ? 'Inactivo' : 'Activo' },
+      { header: 'Creado el', value: (resumen) => resumen.lote.createdAt },
+      { header: 'Actualizado el', value: (resumen) => resumen.lote.updatedAt },
+    ], resumenes);
   }
 
   async save(): Promise<void> {

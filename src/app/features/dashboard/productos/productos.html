@@ -1,6 +1,10 @@
 
     @if (mode() === 'list') {
       <app-page-header title="Productos" description="Inventario completo con filtros.">
+        <button mat-stroked-button type="button" (click)="downloadCsv()">
+          <mat-icon>download</mat-icon>
+          Descargar CSV
+        </button>
         @if (auth.can('products.create')) {
           <button mat-flat-button class="primary-action" routerLink="/dashboard/productos/nuevo">
             <mat-icon>add</mat-icon>

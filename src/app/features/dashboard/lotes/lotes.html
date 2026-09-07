@@ -1,5 +1,9 @@
 @if (mode() === 'list') {
   <app-page-header title="Lotes" description="Inventario y rentabilidad calculados desde productos y ventas.">
+    <button mat-stroked-button type="button" (click)="downloadCsv()">
+      <mat-icon>download</mat-icon>
+      Descargar CSV
+    </button>
     @if (auth.can('lots.create')) {
       <button mat-flat-button class="primary-action" routerLink="/dashboard/lotes/nuevo">
         <mat-icon>add</mat-icon>
