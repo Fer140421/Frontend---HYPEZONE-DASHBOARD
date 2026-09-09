@@ -96,10 +96,6 @@
               <th mat-header-cell *matHeaderCellDef>Asignado</th>
               <td mat-cell *matCellDef="let r">{{ r.inversionAsignada | currency: 'BOB' : 'symbol-narrow' }}</td>
             </ng-container>
-            <ng-container matColumnDef="esperado">
-              <th mat-header-cell *matHeaderCellDef>Esperado</th>
-              <td mat-cell *matCellDef="let r">{{ r.valorEsperado | currency: 'BOB' : 'symbol-narrow' }}</td>
-            </ng-container>
             <ng-container matColumnDef="ingreso">
               <th mat-header-cell *matHeaderCellDef>Ingreso real</th>
               <td mat-cell *matCellDef="let r">{{ r.ingresoReal | currency: 'BOB' : 'symbol-narrow' }}</td>
@@ -233,7 +229,6 @@
             <span>Prendas disponibles <strong>{{ detail.resumen.cantidadDisponibles }}</strong></span>
             <span>Prendas vendidas <strong>{{ detail.resumen.cantidadVendidos }}</strong></span>
             <span>Inversión asignada <strong>{{ detail.resumen.inversionAsignada | currency: 'BOB' : 'symbol-narrow' }}</strong></span>
-            <span>Valor esperado <strong>{{ detail.resumen.valorEsperado | currency: 'BOB' : 'symbol-narrow' }}</strong></span>
             <span>Ingreso real <strong>{{ detail.resumen.ingresoReal | currency: 'BOB' : 'symbol-narrow' }}</strong></span>
             <span>Ganancia neta <strong style="color: #10b981;">{{ detail.resumen.gananciaReal | currency: 'BOB' : 'symbol-narrow' }}</strong></span>
             <span>Recuperación <strong>{{ detail.resumen.recuperacionInversion | number: '1.0-1' }}%</strong></span>
@@ -243,9 +238,23 @@
     </div>
 
     @if (Math.abs(detail.diferenciaInversion) > 0.01) {
-      <div class="warning-banner" style="margin-top: 16px;">
-        <mat-icon>warning</mat-icon>
-        <span>El costo total declarado no coincide con la suma asignada a las prendas (Diferencia: {{ detail.diferenciaInversion | currency: 'BOB' : 'symbol-narrow' }}).</span>
+      <div class="warning-banner" style="margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <mat-icon>warning</mat-icon>
+          <span>El costo total declarado no coincide con la suma asignada a las prendas (Diferencia: {{ detail.diferenciaInversion | currency: 'BOB' : 'symbol-narrow' }}).</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button mat-stroked-button type="button" (click)="recalcularCostoDesdePrendas(detail)">
+            <mat-icon>functions</mat-icon>
+            Sumar prendas a costo lote
+          </button>
+          @if (detail.productos.length > 0 && auth.can('lots.update')) {
+            <button mat-flat-button color="accent" type="button" (click)="prorratearCostoAPrendas(detail)">
+              <mat-icon>pie_chart</mat-icon>
+              Prorratear a prendas
+            </button>
+          }
+        </div>
       </div>
     }
 
@@ -272,7 +281,7 @@
             mat-flat-button
             class="primary-action"
             type="button"
-            (click)="openProductDialog(detail.resumen.lote)"
+            (click)="openProductDialog(detail)"
             [disabled]="detail.resumen.lote.activo === false"
             matTooltip="Registrar prenda directamente en este lote"
           >

@@ -111,4 +111,24 @@ export class LoteManagementService {
       transaction.update(loteRef, { activo: true, updatedAt: serverTimestamp() });
     });
   }
+
+  async prorratearPreciosAProductos(loteId: string, costoTotal: number): Promise<{ actualizados: number; precioUnitario: number }> {
+    const productosSnapshot = await getDocs(
+      query(collection(this.firestore, 'productos'), where('loteId', '==', loteId)),
+    );
+    const productosActivos = productosSnapshot.docs.filter(
+      (docItem) => (docItem.data() as Producto).activo !== false,
+    );
+    if (productosActivos.length === 0) {
+      throw new Error('No hay prendas asociadas a este lote para prorratear.');
+    }
+    const precioUnitario = Math.round((costoTotal / productosActivos.length) * 100) / 100;
+    const batch = writeBatch(this.firestore);
+    const timestamp = serverTimestamp();
+    for (const docItem of productosActivos) {
+      batch.update(docItem.ref, { precioCompra: precioUnitario, updatedAt: timestamp });
+    }
+    await batch.commit();
+    return { actualizados: productosActivos.length, precioUnitario };
+  }
 }

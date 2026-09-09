@@ -4,7 +4,7 @@ table { min-width: 1500px; }
 
 .lote-edit-layout {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 3fr) minmax(0, 1.2fr);
   gap: 16px;
   align-items: start;
 }
@@ -18,16 +18,16 @@ table { min-width: 1500px; }
 .compact-stats {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .compact-stats span {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   color: var(--hz-gray);
-  padding-bottom: 6px;
+  padding-bottom: 4px;
   border-bottom: 1px dashed var(--hz-border);
 }
 
@@ -37,7 +37,7 @@ table { min-width: 1500px; }
 
 .compact-stats strong {
   color: var(--hz-black);
-  font-size: 0.95rem;
+  font-size: 0.88rem;
 }
 
 .section-header-actions {

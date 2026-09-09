@@ -135,7 +135,7 @@ export class LotesComponent implements OnInit {
   });
 
   get columns(): string[] {
-    return ['nombre', 'fecha', 'costo', 'productos', 'disponibles', 'vendidos', 'inversion', 'esperado', 'ingreso', 'ganancia', 'recuperacion', 'estado', 'acciones'];
+    return ['nombre', 'fecha', 'costo', 'productos', 'disponibles', 'vendidos', 'inversion', 'ingreso', 'ganancia', 'recuperacion', 'estado', 'acciones'];
   }
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
   readonly mode = signal<'list' | 'new' | 'detail' | 'edit'>('list');
@@ -334,21 +334,67 @@ export class LotesComponent implements OnInit {
 
     this.dialog.open(LoteDetailDialogComponent, {
       data: { detail },
-      width: '92vw',
-      maxWidth: '820px',
+      width: 'min(828px, calc(100vw - 32px))',
+      maxWidth: '828px',
       maxHeight: '90vh',
     });
   }
 
-  openProductDialog(lote: Lote): void {
-    if (!this.auth.can('products.create') || !lote.id || lote.activo === false) {
+  openProductDialog(loteDetail?: LoteDetail): void {
+    const lote = loteDetail?.resumen.lote;
+    if (!this.auth.can('products.create') || !lote?.id || lote.activo === false) {
       return;
     }
+    const sugerencia = loteDetail && loteDetail.productos.length > 0 && Number(lote.costoTotal) > 0
+      ? Math.round((Number(lote.costoTotal) / (loteDetail.productos.length + 1)) * 100) / 100
+      : 0;
+
     this.dialog.open(LoteProductCreateDialogComponent, {
       width: 'min(920px, 96vw)',
       maxHeight: '94vh',
-      data: { loteId: lote.id },
+      data: { loteId: lote.id, sugerenciaPrecioCompra: sugerencia },
     });
+  }
+
+  recalcularCostoDesdePrendas(detail: LoteDetail): void {
+    const suma = detail.resumen.inversionAsignada;
+    this.form.patchValue({ costoTotal: suma });
+    this.message(`Costo total del lote actualizado a ${suma} BOB en base a las prendas.`);
+  }
+
+  async prorratearCostoAPrendas(detail: LoteDetail): Promise<void> {
+    if (!this.auth.can('lots.update') || !detail.resumen.lote.id) {
+      return;
+    }
+    const costoTotal = this.form.controls.costoTotal.getRawValue();
+    if (!costoTotal || costoTotal <= 0) {
+      this.message('Ingresa primero un costo total del lote válido.');
+      return;
+    }
+    if (detail.productos.length === 0) {
+      this.message('Este lote no tiene prendas registradas para distribuir el costo.');
+      return;
+    }
+
+    const unitarioEsperado = Math.round((costoTotal / detail.productos.length) * 100) / 100;
+    this.dialog
+      .open(ConfirmDialogComponent, {
+        data: {
+          title: 'Prorratear costo del lote',
+          message: `Se asignará un precio de compra unitario de ${unitarioEsperado} BOB a cada una de las ${detail.productos.length} prendas del lote. ¿Deseas continuar?`,
+          confirmText: 'Prorratear y actualizar prendas',
+        },
+      })
+      .afterClosed()
+      .subscribe(async (confirmed) => {
+        if (!confirmed) return;
+        try {
+          const res = await this.management.prorratearPreciosAProductos(detail.resumen.lote.id!, costoTotal);
+          this.message(`Se actualizaron ${res.actualizados} prendas con costo unitario de ${res.precioUnitario} BOB.`);
+        } catch (error) {
+          this.showError(error);
+        }
+      });
   }
 
   async associate(lote: Lote): Promise<void> {
@@ -554,7 +600,7 @@ export class LoteProductCreateDialogComponent {
   private readonly ref = inject(MatDialogRef<LoteProductCreateDialogComponent>);
   private readonly snack = inject(MatSnackBar);
 
-  readonly data = inject<{ loteId: string }>(MAT_DIALOG_DATA);
+  readonly data = inject<{ loteId: string; sugerenciaPrecioCompra?: number }>(MAT_DIALOG_DATA);
   readonly categorias$ = this.categoriaRepository.getAll();
   readonly marcas$ = this.marcaRepository.getAll();
   readonly tallas$ = this.tallaRepository.getAll();
@@ -582,6 +628,12 @@ export class LoteProductCreateDialogComponent {
     estado: ['disponible', Validators.required],
     codigo: [generateProductCode()],
   });
+
+  constructor() {
+    if (this.data?.sugerenciaPrecioCompra) {
+      this.form.patchValue({ precioCompra: this.data.sugerenciaPrecioCompra });
+    }
+  }
 
   async saveAndContinue(): Promise<void> {
     if (this.form.invalid || this.saving()) {

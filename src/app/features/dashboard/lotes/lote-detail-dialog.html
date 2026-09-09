@@ -1,133 +1,54 @@
-<div class="dialog-header">
-  <div class="header-main">
-    <div>
-      <h2 mat-dialog-title class="dialog-title">{{ detail.resumen.lote.nombre }}</h2>
+<div class="detail-modal">
+  <header class="detail-header">
+    <div class="lot-mark"><mat-icon>inventory_2</mat-icon></div>
+    <div class="title-block">
+      <div class="title-row">
+        <h2 mat-dialog-title>{{ detail.resumen.lote.nombre }}</h2>
+        <app-status-chip [status]="detail.resumen.estadoColor === 'rojo' ? 'inactivo' : 'activo'" [label]="detail.resumen.estadoColor === 'rojo' ? 'Inactivo' : 'Activo'" />
+        <span class="lot-id">ID: #LOT-{{ detail.resumen.lote.id | slice:0:6 | uppercase }}</span>
+      </div>
+      <span class="lot-id lot-id-mobile">#LOT-{{ detail.resumen.lote.id | slice:0:6 | uppercase }}</span>
     </div>
-  </div>
-  <button mat-icon-button mat-dialog-close aria-label="Cerrar diálogo">
-    <mat-icon>close</mat-icon>
-  </button>
+    <button mat-icon-button mat-dialog-close class="close-button" aria-label="Cerrar diálogo"><mat-icon>close</mat-icon></button>
+  </header>
+
+  <mat-dialog-content class="detail-dialog-content">
+    <section class="lot-information">
+      <div class="information-item"><span class="information-label">Fecha de Compra</span><strong><mat-icon>calendar_today</mat-icon>{{ fecha(detail.resumen.lote.fechaCompra) | date: 'MMM d, y' }}</strong></div>
+      <div class="information-item location"><span class="information-label">Lugar / Origen</span><strong><mat-icon>location_on</mat-icon>{{ detail.resumen.lote.lugarCompra || detail.resumen.lote.proveedor || 'Sin especificar' }}</strong></div>
+      <div class="information-item description"><span class="information-label"><mat-icon>description</mat-icon>Descripción & Notas:</span><em>{{ detail.resumen.lote.descripcion || detail.resumen.lote.notas || 'Sin descripción ni notas' }}</em></div>
+    </section>
+
+    <section class="metrics-layout">
+      <div class="inventory-metrics">
+        <div class="inventory-stat total"><span>Total</span><strong>{{ detail.resumen.cantidadProductos }}</strong><small>Registrada{{ detail.resumen.cantidadProductos === 1 ? '' : 's' }}</small></div>
+        <div class="inventory-stat available"><span>Stock</span><strong>{{ detail.resumen.cantidadDisponibles }}</strong><small>Disponible{{ detail.resumen.cantidadDisponibles === 1 ? '' : 's' }}</small></div>
+        <div class="inventory-stat"><span>Salidas</span><strong>{{ detail.resumen.cantidadVendidos }}</strong><small>Vendida{{ detail.resumen.cantidadVendidos === 1 ? '' : 's' }}</small></div>
+      </div>
+      <div class="financial-metrics">
+        <div class="finance-stat"><span>Costo lote</span><strong>{{ detail.resumen.lote.costoTotal | currency: 'BOB' : 'symbol-narrow' }}</strong><small>100% Asignado</small></div>
+        <div class="finance-stat income"><span>Ingreso real</span><strong>{{ detail.resumen.ingresoReal | currency: 'BOB' : 'symbol-narrow' }}</strong><small>{{ detail.resumen.ingresoReal ? 'Con ventas registradas' : 'Sin ventas aún' }}</small></div>
+        <div class="finance-stat recovery"><div class="recovery-heading"><span>Recup.</span><b>{{ (detail.resumen.recuperacionInversion || 0) | number: '1.0-1' }}%</b></div><div class="recovery-track"><i [style.width.%]="Math.min(detail.resumen.recuperacionInversion || 0, 100)"></i></div><small>Ganancia: <b>{{ detail.resumen.gananciaReal | currency: 'BOB' : 'symbol-narrow' }}</b></small></div>
+      </div>
+    </section>
+
+    @if (Math.abs(detail.diferenciaInversion || 0) > 0.01) { <div class="warning-banner"><mat-icon>warning</mat-icon>El costo total no coincide con la suma asignada a las prendas (diferencia: {{ detail.diferenciaInversion | currency: 'BOB' : 'symbol-narrow' }}).</div> }
+
+    <section class="garments-section">
+      <div class="garments-header"><h3><mat-icon>sell</mat-icon><span class="desktop-title">PRENDAS EN ESTE LOTE</span><span class="mobile-title">PRENDAS</span><b>{{ itemsUnificados.length }}</b></h3><div class="garments-tools"><label class="product-search"><mat-icon>search</mat-icon><input type="search" placeholder="Buscar prenda..." [value]="searchTerm" (input)="setSearch($any($event.target).value)" /></label></div></div>
+      <div class="product-list">
+        <div class="product-table-head"><span>Producto / Prenda</span><span>Costo Compra</span><span>P. Venta Sugerido</span><span>Margen Estimado</span><span>Estado</span></div>
+        @for (item of filteredItems; track item.producto.id) {
+          <article class="product-row">
+            <div class="product-identity">@if (foto(item.producto); as img) { <img [src]="img" [alt]="item.producto.nombre" /> } @else { <div class="product-image-placeholder"><mat-icon>image</mat-icon></div> }<div><strong>{{ item.producto.nombre }}</strong><small>SKU: {{ item.producto.codigo || item.producto.id }}</small></div></div>
+            <div class="product-cost"><span class="mobile-field">Costo</span>{{ precioCompra(item.producto) | currency: 'BOB' : 'symbol-narrow' }}</div>
+            <div class="product-price"><span class="mobile-field">Venta</span><strong>{{ precio(item.producto) | currency: 'BOB' : 'symbol-narrow' }}</strong></div>
+            <div class="product-margin"><span class="mobile-field">Margen</span><strong>{{ precio(item.producto) - precioCompra(item.producto) | currency: 'BOB' : 'symbol-narrow' }}</strong><small>(+{{ marginPercent(item.producto) | number: '1.0-0' }}%)</small></div>
+            <div class="product-status"><app-status-chip [status]="item.producto.estado" /></div>
+          </article>
+        } @empty { <p class="empty-products">No hay prendas que coincidan con la búsqueda.</p> }
+      </div>
+    </section>
+  </mat-dialog-content>
+  <mat-dialog-actions class="dialog-actions"><button mat-flat-button type="button" mat-dialog-close>Cerrar</button></mat-dialog-actions>
 </div>
-
-<mat-dialog-content class="detail-dialog-content">
-  <!-- Informacion General -->
-  <div class="detail-section">
-    <h3 class="section-subtitle"><mat-icon>info</mat-icon> Información General</h3>
-    <div class="info-grid">
-      <div class="info-item">
-        <span class="info-label">Estado operativo</span>
-        <div>
-          <app-status-chip [status]="detail.resumen.estadoColor === 'rojo' ? 'inactivo' : (detail.resumen.estadoColor === 'amarillo' ? 'amarillo' : 'activo')" [label]="detail.resumen.estadoColor === 'rojo' ? 'Inactivo' : 'Activo'" />
-        </div>
-      </div>
-      <div class="info-item">
-        <span class="info-label">Fecha de compra</span>
-        <strong class="info-val">{{ fecha(detail.resumen.lote.fechaCompra) | date: 'mediumDate' }}</strong>
-      </div>
-      <div class="info-item">
-        <span class="info-label">Costo total</span>
-        <strong class="info-val highlight">{{ detail.resumen.lote.costoTotal | currency: 'BOB' : 'symbol-narrow' }}</strong>
-      </div>
-      <div class="info-item">
-        <span class="info-label">Proveedor</span>
-        <strong class="info-val">{{ detail.resumen.lote.proveedor || 'No registrado' }}</strong>
-      </div>
-      <div class="info-item">
-        <span class="info-label">Lugar de compra</span>
-        <strong class="info-val">{{ detail.resumen.lote.lugarCompra || 'No registrado' }}</strong>
-      </div>
-      @if (detail.resumen.lote.descripcion) {
-        <div class="info-item full">
-          <span class="info-label">Descripción</span>
-          <p class="info-text">{{ detail.resumen.lote.descripcion }}</p>
-        </div>
-      }
-      @if (detail.resumen.lote.notas) {
-        <div class="info-item full">
-          <span class="info-label">Notas</span>
-          <p class="info-text">{{ detail.resumen.lote.notas }}</p>
-        </div>
-      }
-    </div>
-  </div>
-
-  <!-- Rendimiento Financiero -->
-  <div class="detail-section">
-    <h3 class="section-subtitle"><mat-icon>analytics</mat-icon> Rendimiento Financiero</h3>
-    <div class="stats-badge-grid">
-      <div class="stat-badge">
-        <span class="stat-lbl">Productos</span>
-        <strong class="stat-num">{{ detail.resumen.cantidadProductos }}</strong>
-      </div>
-      <div class="stat-badge">
-        <span class="stat-lbl">Disponibles</span>
-        <strong class="stat-num color-blue">{{ detail.resumen.cantidadDisponibles }}</strong>
-      </div>
-      <div class="stat-badge">
-        <span class="stat-lbl">Vendidos</span>
-        <strong class="stat-num color-green">{{ detail.resumen.cantidadVendidos }}</strong>
-      </div>
-      <div class="stat-badge">
-        <span class="stat-lbl">Inversión Asignada</span>
-        <strong class="stat-num">{{ detail.resumen.inversionAsignada | currency: 'BOB' : 'symbol-narrow' }}</strong>
-      </div>
-      <div class="stat-badge">
-        <span class="stat-lbl">Valor Esperado</span>
-        <strong class="stat-num">{{ detail.resumen.valorEsperado | currency: 'BOB' : 'symbol-narrow' }}</strong>
-      </div>
-      <div class="stat-badge">
-        <span class="stat-lbl">Ingreso Real</span>
-        <strong class="stat-num color-teal">{{ detail.resumen.ingresoReal | currency: 'BOB' : 'symbol-narrow' }}</strong>
-      </div>
-      <div class="stat-badge highlight-stat">
-        <span class="stat-lbl">Ganancia Real</span>
-        <strong class="stat-num color-emerald">{{ detail.resumen.gananciaReal | currency: 'BOB' : 'symbol-narrow' }}</strong>
-      </div>
-      <div class="stat-badge">
-        <span class="stat-lbl">Recuperación</span>
-        <strong class="stat-num">{{ (detail.resumen.recuperacionInversion || 0) | number: '1.0-1' }}%</strong>
-      </div>
-    </div>
-  </div>
-
-  @if (Math.abs(detail.diferenciaInversion || 0) > 0.01) {
-    <div class="warning-banner">
-      <mat-icon>warning</mat-icon>
-      <span>El costo total del lote no coincide con la suma asignada a los productos (Diferencia: {{ (detail.diferenciaInversion || 0) | currency: 'BOB' : 'symbol-narrow' }}).</span>
-    </div>
-  }
-
-  <!-- Prendas en este Lote -->
-  <div class="detail-section">
-    <h3 class="section-subtitle"><mat-icon>inventory_2</mat-icon> Prendas en este Lote ({{ itemsUnificados.length }})</h3>
-    <div class="items-mini-list">
-      @for (item of itemsUnificados; track item.producto.id) {
-        <div class="mini-list-item">
-          @if (foto(item.producto); as img) {
-            <img [src]="img" [alt]="item.producto.nombre" class="mini-thumb" />
-          } @else {
-            <div class="mini-thumb placeholder"><mat-icon>image</mat-icon></div>
-          }
-          <div class="mini-info">
-            <strong class="mini-name">{{ item.producto.nombre }}</strong>
-            <div class="mini-attributes">
-              <span>Compra: {{ precioCompra(item.producto) | currency: 'BOB' : 'symbol-narrow' }}</span>
-              <span>· Venta: {{ precio(item.producto) | currency: 'BOB' : 'symbol-narrow' }}</span>
-              @if (item.venta) {
-                <span>· Tipo de pago: <strong>{{ item.venta.metodoPago || 'Efectivo' }}</strong></span>
-                <span>· Fecha de venta: <strong>{{ fecha(item.venta.fechaVenta) | date: 'mediumDate' }}</strong></span>
-              }
-            </div>
-          </div>
-          <app-status-chip [status]="item.producto.estado" />
-        </div>
-      } @empty {
-        <p class="muted">No hay prendas registradas en este lote.</p>
-      }
-    </div>
-  </div>
-</mat-dialog-content>
-
-<mat-dialog-actions align="end" class="dialog-actions">
-  <button mat-stroked-button type="button" mat-dialog-close>Cerrar</button>
-</mat-dialog-actions>

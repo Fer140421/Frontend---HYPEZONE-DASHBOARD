@@ -1,7 +1,7 @@
-import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
+import { CurrencyPipe, DatePipe, DecimalPipe, SlicePipe, UpperCasePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { loteFechaCompra } from '../../../core/models/lote.model';
 import {
@@ -30,6 +30,8 @@ export interface LoteDetailDialogData {
     CurrencyPipe,
     DatePipe,
     DecimalPipe,
+    SlicePipe,
+    UpperCasePipe,
     MatButtonModule,
     MatDialogModule,
     MatIconModule,
@@ -40,8 +42,8 @@ export interface LoteDetailDialogData {
 })
 export class LoteDetailDialogComponent {
   readonly Math = Math;
-  private readonly dialogRef = inject(MatDialogRef<LoteDetailDialogComponent>);
   readonly data = inject<LoteDetailDialogData>(MAT_DIALOG_DATA);
+  searchTerm = '';
 
   get detail(): LoteDetail {
     return this.data.detail;
@@ -59,6 +61,22 @@ export class LoteDetailDialogComponent {
       producto,
       venta: producto.id ? ventaMap.get(producto.id) : undefined,
     }));
+  }
+
+  get filteredItems(): LoteItemUnified[] {
+    const query = this.searchTerm.trim().toLocaleLowerCase();
+    return query
+      ? this.itemsUnificados.filter(({ producto }) => producto.nombre.toLocaleLowerCase().includes(query))
+      : this.itemsUnificados;
+  }
+
+  setSearch(value: string): void {
+    this.searchTerm = value;
+  }
+
+  marginPercent(producto: Producto): number {
+    const costo = this.precioCompra(producto);
+    return costo > 0 ? ((this.precio(producto) - costo) / costo) * 100 : 0;
   }
 
   fecha(value: unknown): Date | null {
