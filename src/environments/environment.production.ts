@@ -4,6 +4,7 @@ export const environment: AppEnvironment = {
   production: true,
   environmentName: 'PROD',
   showEnvironmentBanner: false,
+  storeUrl: 'https://hypezone-store.web.app/home',
   firebase: {
     apiKey: 'AIzaSyCCJF6KPmI4nB6TdKaKwsRe-LRuNDmLuEY',
     authDomain: 'hypezone-dashboard-prod.firebaseapp.com',

@@ -16,6 +16,7 @@ export interface AppEnvironment {
   production: boolean;
   environmentName: 'DEV' | 'PROD';
   showEnvironmentBanner: boolean;
+  storeUrl: string;
   firebase: FirebaseWebConfig;
   cloudinary: CloudinaryConfig;
 }

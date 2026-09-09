@@ -4,6 +4,7 @@ export const environment: AppEnvironment = {
   production: false,
   environmentName: 'DEV',
   showEnvironmentBanner: true,
+  storeUrl: 'https://hypezone-store.web.app/home',
   firebase: {
     projectId: 'hypezone-dashboard-dev',
     appId: '1:787315432623:web:82547b98579eee0278885a',

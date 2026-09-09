@@ -5,6 +5,21 @@
     "hypezone-dashboard-prod": "hypezone-dashboard-prod",
     "hypezone-dashboard-dev": "hypezone-dashboard-dev"
   },
-  "targets": {},
+  "targets": {
+    "hypezone-dashboard-dev": {
+      "hosting": {
+        "prod": [
+          "hypezone-dashboard-prod"
+        ]
+      }
+    },
+    "hypezone-dashboard-prod": {
+      "hosting": {
+        "prod": [
+          "hypezone-dashboard-prod"
+        ]
+      }
+    }
+  },
   "etags": {}
 }

@@ -43,6 +43,7 @@ export class DashboardLayoutComponent {
   readonly auth = inject(AuthService);
   readonly showEnvironmentBanner = environment.showEnvironmentBanner;
   readonly environmentName = environment.environmentName;
+  readonly storeUrl = environment.storeUrl;
 
   readonly isHandset$ = this.breakpointObserver.observe('(max-width: 900px)').pipe(
     map((result) => result.matches),
