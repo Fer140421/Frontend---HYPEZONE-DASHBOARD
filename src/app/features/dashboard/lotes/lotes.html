@@ -425,7 +425,7 @@
         class="primary-action" 
         type="button" 
         (click)="save()"
-        [disabled]="form.invalid || !auth.can('lots.update')"
+        [disabled]="form.invalid || saving() || !auth.can('lots.update')"
       >
         <mat-icon>check_circle</mat-icon>
         Guardar cambios del lote
@@ -489,10 +489,10 @@
           mat-flat-button 
           class="primary-action" 
           type="submit" 
-          [disabled]="form.invalid || !auth.can('lots.create')"
+          [disabled]="form.invalid || saving() || !auth.can('lots.create')"
         >
           <mat-icon>check_circle</mat-icon>
-          Guardar lote
+          {{ saving() ? 'Procesando...' : auth.can('products.create') ? 'Continuar' : 'Guardar lote' }}
         </button>
       </div>
     }

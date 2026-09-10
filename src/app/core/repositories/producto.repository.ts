@@ -12,7 +12,6 @@ export function sanitizePublicProduct(item: Partial<Producto>): Record<string, u
   if (item.categoria !== undefined) publicData['categoria'] = item.categoria;
   if (item.descripcion !== undefined) publicData['descripcion'] = item.descripcion;
   if (item.talla !== undefined) publicData['talla'] = item.talla;
-  if (item.color !== undefined) publicData['color'] = item.color;
   if (item.genero !== undefined) publicData['genero'] = item.genero;
   if (item.precioVenta !== undefined) publicData['precioVenta'] = item.precioVenta;
   if (item.precioOferta !== undefined) publicData['precioOferta'] = item.precioOferta;

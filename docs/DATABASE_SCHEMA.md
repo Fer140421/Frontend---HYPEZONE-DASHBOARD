@@ -89,8 +89,7 @@ erDiagram
 | `categoria` | `string` | Sí | Categoría (`zapatillas`, `polera`, `chompa`, `canguro`, `pantalon`, `camisa`, `short`, `accesorio`, `otro`). |
 | `descripcion` | `string` | Sí | Detalle o características del producto. |
 | `talla` | `string` | Sí | Talla de la prenda o calzado (`XS`, `S`, `M`, `L`, `XL`, `38`, `40`, etc.). |
-| `color` | `string` | No | Color principal del producto. |
-| `genero` | `string` | No | Público objetivo (`hombre`, `mujer`, `unisex`, `nino`, `nina`). |
+| `genero` | `string` | No | Público objetivo (`mujer`, `hombre`, `unisex`, `niño`, `niña`). |
 | `precioCompra` | `number` | Sí | Costo de adquisición en Bs. |
 | `precioVenta` | `number` | Sí | Precio de venta al público en Bs. |
 | `precioOferta` | `number` | No | Precio promocional con descuento (opcional). |

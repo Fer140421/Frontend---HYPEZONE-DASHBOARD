@@ -19,12 +19,13 @@ import { Observable, BehaviorSubject, combineLatest, map, of, shareReplay, start
 import { Lote } from '../../../core/models/lote.model';
 import {
   CategoriaProducto,
-  coloresProducto,
   estadosProducto,
   generosProducto,
   GeneroProducto,
   generateProductCode,
   imagenesProducto,
+  labelGenero,
+  normalizeGenero,
   precioCompraProducto,
   precioProducto,
   Producto,
@@ -61,6 +62,7 @@ import {
   imports: [
     AsyncPipe,
     CurrencyPipe,
+    TitleCasePipe,
     RouterLink,
     ReactiveFormsModule,
     MatButtonModule,
@@ -218,8 +220,6 @@ export class ProductosComponent implements OnInit {
     lotes: this.lotes$,
   }).pipe(shareReplay({ bufferSize: 1, refCount: true }));
 
-  readonly colores = coloresProducto;
-
   readonly form = this.fb.nonNullable.group({
     loteId: [''],
     nombre: ['', Validators.required],
@@ -227,7 +227,6 @@ export class ProductosComponent implements OnInit {
     categoria: ['otro', Validators.required],
     descripcion: ['', Validators.required],
     talla: ['', Validators.required],
-    color: [''],
     genero: [''],
     precioCompra: [0, [Validators.required, Validators.min(0)]],
     precioVenta: [0, [Validators.required, Validators.min(0)]],
@@ -281,7 +280,6 @@ export class ProductosComponent implements OnInit {
               categoria: 'otro',
               descripcion: '',
               talla: '',
-              color: '',
               genero: '',
               precioCompra: 0,
               precioVenta: 0,
@@ -301,8 +299,7 @@ export class ProductosComponent implements OnInit {
           categoria: producto.categoria ?? 'otro',
           descripcion: producto.descripcion,
           talla: producto.talla,
-          color: producto.color ?? '',
-          genero: producto.genero ?? '',
+          genero: normalizeGenero(producto.genero) ?? '',
           precioCompra: precioCompraProducto(producto),
           precioVenta: precioProducto(producto),
           estado: producto.estado,
@@ -396,8 +393,9 @@ export class ProductosComponent implements OnInit {
     const payload: Partial<Producto> = {
       ...raw,
       loteId: raw.loteId || undefined,
-      genero: (raw.genero || undefined) as GeneroProducto | undefined,
+      genero: (normalizeGenero(raw.genero) || undefined) as GeneroProducto | undefined,
       codigo: raw.codigo || generateProductCode(),
+      estado: this.currentId() ? raw.estado : 'disponible',
       imagenes: this.imagenes(),
       activo: true,
     } as Partial<Producto>;
@@ -587,7 +585,6 @@ interface ProductPriceDialogData {
   imports: [
     CurrencyPipe,
     DecimalPipe,
-    TitleCasePipe,
     MatButtonModule,
     MatIconModule,
     MatDialogModule,
@@ -614,32 +611,7 @@ export class ProductViewDialogComponent {
   readonly margenPorcentaje =
     this.precioCompra > 0 ? ((this.precioVenta - this.precioCompra) / this.precioCompra) * 100 : 0;
 
-  readonly colorHex = computed(() => {
-    const colorName = this.data.producto.color;
-    if (!colorName) return null;
-    const name = colorName.toLowerCase().trim();
-    const colorMap: Record<string, string> = {
-      negro: '#18181b',
-      blanco: '#ffffff',
-      gris: '#6b7280',
-      plomo: '#4b5563',
-      rojo: '#ef4444',
-      azul: '#2563eb',
-      'azul marino': '#1e3a8a',
-      verde: '#10b981',
-      'verde olivo': '#556b2f',
-      amarillo: '#eab308',
-      naranja: '#f97316',
-      rosado: '#ec4899',
-      rosa: '#ec4899',
-      morado: '#8b5cf6',
-      beige: '#f5f5dc',
-      marrón: '#78350f',
-      marron: '#78350f',
-      celeste: '#38bdf8',
-    };
-    return colorMap[name] ?? null;
-  });
+  readonly labelGenero = labelGenero;
 
   selectImage(index: number): void {
     if (index >= 0 && index < this.rawImages.length) {
@@ -696,6 +668,7 @@ export class ProductPriceDialogComponent {
   standalone: true,
   imports: [
     AsyncPipe,
+    TitleCasePipe,
     ReactiveFormsModule,
     MatButtonModule,
     MatDialogModule,
@@ -722,7 +695,6 @@ export class ProductEditDialogComponent {
   readonly tallas$ = this.tallaRepository.getAll().pipe(shareReplay({ bufferSize: 1, refCount: true }));
   readonly estados = estadosProducto;
   readonly generos = generosProducto;
-  readonly colores = coloresProducto;
   readonly imagenes = signal(imagenesProducto(this.data.producto));
   readonly opcionesLocales = { marcas: signal<string[]>([]), categorias: signal<string[]>([]), tallas: signal<string[]>([]) };
   private readonly dialog = inject(MatDialog);
@@ -734,8 +706,7 @@ export class ProductEditDialogComponent {
     categoria: [this.data.producto.categoria ?? 'otro', Validators.required],
     descripcion: [this.data.producto.descripcion, Validators.required],
     talla: [this.data.producto.talla, Validators.required],
-    color: [this.data.producto.color ?? ''],
-    genero: [this.data.producto.genero ?? ''],
+    genero: [normalizeGenero(this.data.producto.genero) ?? ''],
     precioCompra: [precioCompraProducto(this.data.producto), [Validators.required, Validators.min(0)]],
     precioVenta: [precioProducto(this.data.producto), [Validators.required, Validators.min(0)]],
     estado: [this.data.producto.estado, Validators.required],
@@ -746,7 +717,7 @@ export class ProductEditDialogComponent {
   save(): void {
     const raw = this.form.getRawValue();
     this.dialogRef.close({
-      payload: { ...raw, loteId: raw.loteId || undefined, genero: (raw.genero || undefined) as GeneroProducto | undefined, imagenes: this.imagenes(), activo: true } satisfies Partial<Producto>,
+      payload: { ...raw, loteId: raw.loteId || undefined, genero: (normalizeGenero(raw.genero) || undefined) as GeneroProducto | undefined, imagenes: this.imagenes(), activo: true } satisfies Partial<Producto>,
       catalogos: { marca: this.opcionesLocales.marcas().includes(raw.marca) ? raw.marca : '', categoria: this.opcionesLocales.categorias().includes(raw.categoria) ? raw.categoria : '', talla: this.opcionesLocales.tallas().includes(raw.talla) ? raw.talla : '' },
     } satisfies ProductEditResult);
   }

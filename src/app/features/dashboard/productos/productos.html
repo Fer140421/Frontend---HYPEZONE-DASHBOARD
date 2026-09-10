@@ -272,7 +272,10 @@
         backUrl="/dashboard/productos"
       />
 
-      <section class="detail-grid wide">
+      <section
+        class="detail-grid wide"
+        [class.single-column]="mode() !== 'detail' || !currentProducto()"
+      >
         <mat-card>
           <mat-card-header>
             <mat-card-title>Ficha del producto</mat-card-title>
@@ -316,31 +319,24 @@
                 </mat-select>
               </mat-form-field><button mat-icon-button type="button" class="quick-option-button" (click)="agregarOpcionRapida('talla')" matTooltip="Registrar talla" aria-label="Registrar talla"><mat-icon>add</mat-icon></button></div>
               <mat-form-field appearance="outline">
-                <mat-label>Color</mat-label>
-                <mat-select formControlName="color">
-                  <mat-option value="">Sin especificar</mat-option>
-                  @for (col of colores; track col) {
-                    <mat-option [value]="col">{{ col }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Genero</mat-label>
+                <mat-label>Género</mat-label>
                 <mat-select formControlName="genero">
                   <mat-option value="">Sin definir</mat-option>
-                  @for (genero of generos; track genero) {
-                    <mat-option [value]="genero">{{ genero }}</mat-option>
+                  @for (gen of generos; track gen.value) {
+                    <mat-option [value]="gen.value">{{ gen.label }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Estado</mat-label>
-                <mat-select formControlName="estado">
-                  @for (estado of estados; track estado) {
-                    <mat-option [value]="estado">{{ estado }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+              @if (mode() === 'detail') {
+                <mat-form-field appearance="outline">
+                  <mat-label>Estado</mat-label>
+                  <mat-select formControlName="estado">
+                    @for (estado of estados; track estado) {
+                      <mat-option [value]="estado">{{ estado | titlecase }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              }
               <mat-form-field appearance="outline">
                 <mat-label>Precio compra</mat-label>
                 <input matInput type="number" formControlName="precioCompra" />
@@ -348,11 +344,6 @@
               <mat-form-field appearance="outline">
                 <mat-label>Precio venta</mat-label>
                 <input matInput type="number" formControlName="precioVenta" />
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Código</mat-label>
-                <input matInput formControlName="codigo" readonly />
-                <mat-hint>Autogenerado</mat-hint>
               </mat-form-field>
               <mat-form-field appearance="outline" class="full">
                 <mat-label>Descripcion</mat-label>
@@ -371,9 +362,14 @@
                 />
               </div>
 
-              <button mat-flat-button class="primary-action" type="submit" [disabled]="form.invalid">
-                Guardar producto
-              </button>
+              <div class="full product-form-actions">
+                <button mat-button type="button" routerLink="/dashboard/productos">
+                  Cancelar
+                </button>
+                <button mat-flat-button class="primary-action" type="submit" [disabled]="form.invalid">
+                  Guardar producto
+                </button>
+              </div>
             </form>
             }
           </mat-card-content>

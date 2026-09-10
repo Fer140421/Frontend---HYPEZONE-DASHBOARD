@@ -135,26 +135,11 @@
 
         <div class="spec-card">
           <div class="spec-icon-wrap">
-            <mat-icon>palette</mat-icon>
-          </div>
-          <div class="spec-info">
-            <span class="spec-label">Color</span>
-            <div class="color-val-wrap">
-              @if (colorHex(); as hex) {
-                <span class="color-dot" [style.background]="hex" [class.is-white]="hex === '#ffffff'"></span>
-              }
-              <strong class="spec-value">{{ data.producto.color || 'Sin especificar' }}</strong>
-            </div>
-          </div>
-        </div>
-
-        <div class="spec-card">
-          <div class="spec-icon-wrap">
             <mat-icon>wc</mat-icon>
           </div>
           <div class="spec-info">
             <span class="spec-label">Género</span>
-            <strong class="spec-value">{{ (data.producto.genero | titlecase) || 'Unisex' }}</strong>
+            <strong class="spec-value">{{ labelGenero(data.producto.genero) }}</strong>
           </div>
         </div>
       </div>

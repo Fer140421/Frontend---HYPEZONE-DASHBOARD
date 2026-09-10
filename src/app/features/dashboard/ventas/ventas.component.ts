@@ -643,7 +643,7 @@ export class VentaViewDialogComponent {
   productMeta(detalle: Venta): string {
     const producto = this.product(detalle);
     return producto
-      ? [producto.marca, producto.categoria, producto.talla && `Talla ${producto.talla}`, producto.color]
+      ? [producto.marca, producto.categoria, producto.talla && `Talla ${producto.talla}`]
           .filter(Boolean)
           .join(' · ')
       : 'Producto vendido';

@@ -1,3 +1,14 @@
+:host .product-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+:host .detail-grid.single-column {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 :host .catalog-field { display: flex; align-items: center; min-width: 0; gap: 2px; }
 :host .catalog-field mat-form-field { flex: 1 1 auto; min-width: 0; }
 :host .quick-option-button { align-self: flex-start; flex: 0 0 auto; width: 36px; height: 36px; margin-top: 10px; color: var(--hz-primary-hover); }

@@ -21,12 +21,12 @@ import { Lote, emptyLote, loteFechaCompra } from '../../../core/models/lote.mode
 import { Proveedor } from '../../../core/models/proveedor.model';
 import { LoteResumen } from '../../../core/models/lote-resumen.model';
 import {
-  coloresProducto,
   estadosProducto,
   generosProducto,
   GeneroProducto,
   generateProductCode,
   imagenesProducto,
+  normalizeGenero,
   precioCompraProducto,
   precioProducto,
   Producto,
@@ -141,6 +141,7 @@ export class LotesComponent implements OnInit {
   readonly mode = signal<'list' | 'new' | 'detail' | 'edit'>('list');
   readonly viewType = inject(ViewPreferenceService).getViewSignal('lotes', 'table');
   readonly currentId = signal<string | null>(null);
+  readonly saving = signal(false);
   readonly filtersOpen = signal(false);
   readonly filters = this.fb.nonNullable.group({
     estado: ['activos' as EstadoFiltro],
@@ -297,22 +298,35 @@ export class LotesComponent implements OnInit {
     if (this.currentId() ? !this.auth.can('lots.update') : !this.auth.can('lots.create')) {
       return;
     }
-    const raw = this.form.getRawValue();
-    const proveedores = await firstValueFrom(this.proveedoresSource$.pipe(take(1)));
-    const proveedor = proveedores.find((item) => item.id === raw.proveedorId);
-    const payload: Partial<Lote> = {
-      nombre: raw.nombre.trim(),
-      descripcion: raw.descripcion.trim() || undefined,
-      fechaCompra: Timestamp.fromDate(raw.fechaCompra),
-      proveedorId: raw.proveedorId || undefined,
-      proveedor: proveedor?.nombreCompleto || undefined,
-      lugarCompra: raw.lugarCompra.trim() || undefined,
-      costoTotal: Number(raw.costoTotal),
-      notas: raw.notas.trim() || undefined,
-      schemaVersion: 3,
-    };
-
+    if (this.form.invalid || this.saving()) {
+      this.form.markAllAsTouched();
+      return;
+    }
+    this.saving.set(true);
     try {
+      let registrarProductos = false;
+      if (!this.currentId() && this.auth.can('products.create')) {
+        const choice = await firstValueFrom(this.dialog.open(LoteNextStepDialogComponent, {
+          width: 'min(480px, 92vw)',
+        }).afterClosed());
+        if (choice !== 'now' && choice !== 'later') return;
+        registrarProductos = choice === 'now';
+      }
+      const raw = this.form.getRawValue();
+      const proveedores = await firstValueFrom(this.proveedoresSource$.pipe(take(1)));
+      const proveedor = proveedores.find((item) => item.id === raw.proveedorId);
+      const payload: Partial<Lote> = {
+        nombre: raw.nombre.trim(),
+        descripcion: raw.descripcion.trim() || undefined,
+        fechaCompra: Timestamp.fromDate(raw.fechaCompra),
+        proveedorId: raw.proveedorId || undefined,
+        proveedor: proveedor?.nombreCompleto || undefined,
+        lugarCompra: raw.lugarCompra.trim() || undefined,
+        costoTotal: Number(raw.costoTotal),
+        notas: raw.notas.trim() || undefined,
+        schemaVersion: 3,
+      };
+
       if (this.currentId()) {
         await this.lotes.update(this.currentId()!, payload);
         this.message('Lote actualizado correctamente.');
@@ -320,10 +334,19 @@ export class LotesComponent implements OnInit {
       } else {
         const id = await this.lotes.create({ ...payload, cantidadProductos: 0, activo: true });
         this.message('Lote creado correctamente.');
-        await this.router.navigate(['/dashboard/lotes', id, 'editar']);
+        await this.router.navigate(['/dashboard/lotes']);
+        if (registrarProductos) {
+          this.dialog.open(LoteProductCreateDialogComponent, {
+            width: 'min(920px, 96vw)',
+            maxHeight: '94vh',
+            data: { loteId: id },
+          });
+        }
       }
     } catch (error) {
       this.showError(error);
+    } finally {
+      this.saving.set(false);
     }
   }
 
@@ -573,6 +596,24 @@ export class LotesComponent implements OnInit {
 }
 
 @Component({
+  selector: 'app-lote-next-step-dialog',
+  standalone: true,
+  imports: [MatDialogModule, MatButtonModule],
+  template: `
+    <h2 mat-dialog-title>¿Registrar productos ahora?</h2>
+    <mat-dialog-content>
+      Guardaremos los datos del lote. Puedes registrar sus productos ahora o agregarlos después desde el listado de lotes.
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button type="button" mat-dialog-close>Volver</button>
+      <button mat-stroked-button type="button" mat-dialog-close="later">Luego</button>
+      <button mat-flat-button class="primary-action" type="button" mat-dialog-close="now">Sí, registrar productos</button>
+    </mat-dialog-actions>
+  `,
+})
+export class LoteNextStepDialogComponent {}
+
+@Component({
   selector: 'app-lote-product-create-dialog',
   standalone: true,
   imports: [
@@ -604,9 +645,7 @@ export class LoteProductCreateDialogComponent {
   readonly categorias$ = this.categoriaRepository.getAll();
   readonly marcas$ = this.marcaRepository.getAll();
   readonly tallas$ = this.tallaRepository.getAll();
-  readonly estados = estadosProducto;
   readonly generos = generosProducto;
-  readonly colores = coloresProducto;
   readonly imagenes = signal<string[]>([]);
   readonly saving = signal(false);
   readonly opcionesLocales = {
@@ -621,11 +660,9 @@ export class LoteProductCreateDialogComponent {
     categoria: ['otro', Validators.required],
     descripcion: ['', Validators.required],
     talla: ['', Validators.required],
-    color: [''],
     genero: [''],
     precioCompra: [0, [Validators.required, Validators.min(0)]],
     precioVenta: [0, [Validators.required, Validators.min(0)]],
-    estado: ['disponible', Validators.required],
     codigo: [generateProductCode()],
   });
 
@@ -644,9 +681,10 @@ export class LoteProductCreateDialogComponent {
       const raw = this.form.getRawValue();
       await this.productos.create({
         ...raw,
+        estado: 'disponible',
         codigo: raw.codigo || generateProductCode(),
         loteId: this.data.loteId,
-        genero: (raw.genero || undefined) as GeneroProducto | undefined,
+        genero: (normalizeGenero(raw.genero) || undefined) as GeneroProducto | undefined,
         imagenes: this.imagenes(),
         activo: true,
       } as Partial<Producto>);
@@ -658,11 +696,9 @@ export class LoteProductCreateDialogComponent {
         categoria: 'otro',
         descripcion: '',
         talla: '',
-        color: '',
         genero: '',
         precioCompra: 0,
         precioVenta: 0,
-        estado: 'disponible',
         codigo: generateProductCode(),
       });
       this.imagenes.set([]);
@@ -673,7 +709,8 @@ export class LoteProductCreateDialogComponent {
     }
   }
 
-  finish(): void {
+  cancel(): void {
+    if (this.saving()) return;
     this.ref.close();
   }
 
