@@ -7,6 +7,9 @@ export interface Venta extends AuditableEntity {
   schemaVersion?: number;
   operacionId?: string;
   reservaId?: string;
+  cajaId?: string;
+  usuarioVentaId?: string;
+  usuarioVentaNombre?: string;
   cantidadDetalles?: number;
   totalOperacion?: number;
   productoId: string;

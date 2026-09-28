@@ -1,0 +1,226 @@
+<app-page-header
+  title="Control de Cajas"
+  description="Supervisión y control del estado de cajas, ventas en turno y arqueos."
+/>
+
+@if (kpis$ | async; as kpis) {
+  <section class="metric-grid">
+    <mat-card class="metric-card">
+      <mat-icon>lock_open</mat-icon>
+      <span>Cajas abiertas</span>
+      <strong>{{ kpis.cajasAbiertasCount }} / {{ kpis.totalCajas }}</strong>
+    </mat-card>
+
+    <mat-card class="metric-card">
+      <mat-icon>point_of_sale</mat-icon>
+      <span>Ventas en turno activo</span>
+      <strong>{{ kpis.totalVendidoAbiertas | currency: 'BOB' : 'symbol-narrow' }}</strong>
+    </mat-card>
+
+    <mat-card class="metric-card">
+      <mat-icon>checkroom</mat-icon>
+      <span>Prendas vendidas en turno</span>
+      <strong>{{ kpis.totalPrendasAbiertas }}</strong>
+    </mat-card>
+
+    <mat-card class="metric-card">
+      <mat-icon>account_balance</mat-icon>
+      <span>Diferencia neta (Arqueos)</span>
+      <strong [class.text-danger]="kpis.diferenciaNeta < 0" [class.text-success]="kpis.diferenciaNeta >= 0">
+        {{ (kpis.diferenciaNeta > 0 ? '+' : '') + (kpis.diferenciaNeta | currency: 'BOB' : 'symbol-narrow') }}
+      </strong>
+    </mat-card>
+  </section>
+}
+
+<mat-card class="list-card">
+  <mat-card-content>
+    <div class="list-filter-bar">
+      <mat-form-field appearance="outline" class="list-search">
+        <mat-label>Buscar por cajero</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput [formControl]="filters.controls.search" placeholder="Nombre o correo..." />
+      </mat-form-field>
+      <button mat-stroked-button type="button" class="filter-trigger" (click)="openFilters()">
+        <mat-icon>tune</mat-icon>
+        <span>Filtros</span>
+      </button>
+    </div>
+
+    <app-filter-drawer
+      [open]="filtersOpen()"
+      (closed)="filtersOpen.set(false)"
+      (applied)="applyFilters()"
+    >
+      <div class="filter-drawer-form">
+        <mat-form-field appearance="outline">
+          <mat-label>Estado de caja</mat-label>
+          <mat-select [formControl]="filters.controls.estado">
+            <mat-option value="todas">Todas las cajas</mat-option>
+            <mat-option value="abiertas">Solo abiertas</mat-option>
+            <mat-option value="cerradas">Solo cerradas</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </app-filter-drawer>
+
+    @if (listViewModel$ | async; as vm) {
+      <div class="list-toolbar-row">
+        <span class="muted" style="font-size: 0.85rem; font-weight: 600">
+          {{ vm.cajas.total }} {{ vm.cajas.total === 1 ? 'sesión de caja' : 'sesiones de caja' }}
+        </span>
+      </div>
+
+      @if (vm.cajas.total === 0) {
+        <app-empty-state
+          icon="account_balance_wallet"
+          title="Sin registros de cajas"
+          description="No se encontraron sesiones de caja con los filtros aplicados."
+        />
+      } @else {
+        <div class="table-scroll">
+          <table mat-table [dataSource]="vm.cajas.items">
+            <!-- Estado -->
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let caja">
+                <span
+                  class="status-badge"
+                  [class.open]="caja.estado === 'abierta'"
+                  [class.closed]="caja.estado === 'cerrada'"
+                >
+                  <mat-icon class="badge-icon">{{ caja.estado === 'abierta' ? 'lock_open' : 'lock' }}</mat-icon>
+                  {{ caja.estado | uppercase }}
+                </span>
+              </td>
+            </ng-container>
+
+            <!-- Cajero -->
+            <ng-container matColumnDef="usuarioNombre">
+              <th mat-header-cell *matHeaderCellDef>Cajero</th>
+              <td mat-cell *matCellDef="let caja">
+                <strong>{{ caja.usuarioNombre }}</strong>
+                @if (caja.usuarioEmail) {
+                  <small class="user-email-sub">{{ caja.usuarioEmail }}</small>
+                }
+              </td>
+            </ng-container>
+
+            <!-- Apertura -->
+            <ng-container matColumnDef="fechaApertura">
+              <th mat-header-cell *matHeaderCellDef>Apertura</th>
+              <td mat-cell *matCellDef="let caja">
+                {{ caja.fechaApertura | date: 'dd/MM/yyyy HH:mm' }}
+              </td>
+            </ng-container>
+
+            <!-- Cierre -->
+            <ng-container matColumnDef="fechaCierre">
+              <th mat-header-cell *matHeaderCellDef>Cierre</th>
+              <td mat-cell *matCellDef="let caja">
+                @if (caja.fechaCierre) {
+                  {{ caja.fechaCierre | date: 'dd/MM/yyyy HH:mm' }}
+                } @else {
+                  <span class="en-curso-label">En curso</span>
+                }
+              </td>
+            </ng-container>
+
+            <!-- Monto Inicial -->
+            <ng-container matColumnDef="montoInicial">
+              <th mat-header-cell *matHeaderCellDef>Monto inicial</th>
+              <td mat-cell *matCellDef="let caja">
+                {{ caja.montoInicial | currency: 'BOB' : 'symbol-narrow' }}
+              </td>
+            </ng-container>
+
+            <!-- Prendas -->
+            <ng-container matColumnDef="totalPrendas">
+              <th mat-header-cell *matHeaderCellDef>Prendas vendidas</th>
+              <td mat-cell *matCellDef="let caja">
+                <strong>{{ caja.totalPrendas }}</strong>
+                <small class="cell-subtitle">{{ caja.totalPrendas === 1 ? 'prenda' : 'prendas' }}</small>
+              </td>
+            </ng-container>
+
+            <!-- Total Vendido -->
+            <ng-container matColumnDef="totalVendido">
+              <th mat-header-cell *matHeaderCellDef>Total vendido</th>
+              <td mat-cell *matCellDef="let caja">
+                <strong>{{ caja.totalVendido | currency: 'BOB' : 'symbol-narrow' }}</strong>
+                <small class="cell-subtitle">Ef: {{ caja.totalEfectivo | currency: 'BOB' : 'symbol-narrow' }} · QR: {{ caja.totalQR | currency: 'BOB' : 'symbol-narrow' }}</small>
+              </td>
+            </ng-container>
+
+            <!-- Esperado Efectivo -->
+            <ng-container matColumnDef="totalEsperado">
+              <th mat-header-cell *matHeaderCellDef>Esperado en caja</th>
+              <td mat-cell *matCellDef="let caja">
+                {{ caja.totalEsperado | currency: 'BOB' : 'symbol-narrow' }}
+              </td>
+            </ng-container>
+
+            <!-- Monto Final Real -->
+            <ng-container matColumnDef="montoFinal">
+              <th mat-header-cell *matHeaderCellDef>Contado real</th>
+              <td mat-cell *matCellDef="let caja">
+                @if (caja.montoFinalReal !== undefined) {
+                  <strong>{{ caja.montoFinalReal | currency: 'BOB' : 'symbol-narrow' }}</strong>
+                } @else {
+                  <span class="text-muted">-</span>
+                }
+              </td>
+            </ng-container>
+
+            <!-- Diferencia -->
+            <ng-container matColumnDef="diferencia">
+              <th mat-header-cell *matHeaderCellDef>Diferencia</th>
+              <td mat-cell *matCellDef="let caja">
+                @if (caja.diferencia !== undefined) {
+                  <span
+                    class="diff-tag"
+                    [class.exact]="caja.diferencia === 0"
+                    [class.surplus]="caja.diferencia > 0"
+                    [class.deficit]="caja.diferencia < 0"
+                  >
+                    {{ (caja.diferencia > 0 ? '+' : '') + (caja.diferencia | currency: 'BOB' : 'symbol-narrow') }}
+                  </span>
+                } @else {
+                  <span class="text-muted">-</span>
+                }
+              </td>
+            </ng-container>
+
+            <!-- Acciones -->
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="sticky-actions">Acciones</th>
+              <td mat-cell *matCellDef="let caja" class="sticky-actions">
+                <button
+                  mat-icon-button
+                  type="button"
+                  (click)="verDetalleCaja(caja)"
+                  matTooltip="Ver detalle y prendas vendidas"
+                >
+                  <mat-icon>visibility</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+          </table>
+        </div>
+
+        <mat-paginator
+          [length]="vm.cajas.total"
+          [pageIndex]="vm.cajas.pageIndex"
+          [pageSize]="vm.cajas.pageSize"
+          [pageSizeOptions]="pageSizeOptions"
+          (page)="updatePage($event)"
+        />
+      }
+    } @else {
+      <app-loading text="Cargando control de cajas..." />
+    }
+  </mat-card-content>
+</mat-card>

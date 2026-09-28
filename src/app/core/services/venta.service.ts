@@ -24,7 +24,7 @@ export interface ClienteNuevoInput {
 
 export type VentaInput = Pick<
   Venta,
-  'clienteId' | 'clienteNombre' | 'clienteTelefono' | 'clienteCi' | 'fechaVenta' | 'notas'
+  'clienteId' | 'clienteNombre' | 'clienteTelefono' | 'clienteCi' | 'fechaVenta' | 'notas' | 'cajaId' | 'usuarioVentaId' | 'usuarioVentaNombre'
 > & {
   precioVenta: number;
   metodoPago: MetodoPago;
@@ -138,6 +138,9 @@ export class VentaService {
         metodoPago: input.metodoPago,
         fechaVenta: input.fechaVenta,
         notas: input.notas || undefined,
+        cajaId: input.cajaId || undefined,
+        usuarioVentaId: input.usuarioVentaId || undefined,
+        usuarioVentaNombre: input.usuarioVentaNombre || undefined,
         activo: true,
         schemaVersion: 1,
         createdAt: timestamp,
@@ -166,6 +169,9 @@ export class VentaService {
         transaction.set(ventaRefs[index], removeUndefinedDeep<Partial<Venta>>({
           operacionId: operacionRef.id, cantidadDetalles: detalles.length, totalOperacion,
           productoId, loteId: current.loteId || undefined,
+          cajaId: input.cajaId || undefined,
+          usuarioVentaId: input.usuarioVentaId || undefined,
+          usuarioVentaNombre: input.usuarioVentaNombre || undefined,
           nombreProducto: current.nombre, precioCompra, precioVenta,
           precioOriginal: Number(current.precioVenta),
           descuentoAplicado: Math.max(0, Number(current.precioVenta) - precioVenta),

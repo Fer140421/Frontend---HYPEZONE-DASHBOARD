@@ -1,0 +1,112 @@
+<h2 mat-dialog-title>
+  <mat-icon class="dialog-title-icon warning-icon">lock</mat-icon>
+  Cierre de caja y arqueo
+</h2>
+
+@if (cargando()) {
+  <mat-dialog-content class="loading-content">
+    <mat-icon class="spin-icon">sync</mat-icon>
+    <p>Calculando ventas y balance de la sesión...</p>
+  </mat-dialog-content>
+} @else {
+  <form [formGroup]="form" (ngSubmit)="cerrarCaja()">
+    <mat-dialog-content class="mat-typography dialog-content">
+      <div class="session-meta-chip">
+        <mat-icon>schedule</mat-icon>
+        <span>Sesión iniciada el {{ data.caja.fechaApertura | date: 'dd/MM/yyyy HH:mm' }}</span>
+      </div>
+
+      @if (resumen(); as r) {
+        <div class="summary-cards-grid">
+          <div class="summary-box">
+            <span class="box-label">Monto inicial</span>
+            <strong class="box-val">{{ r.montoInicial | currency: 'BOB' : 'symbol-narrow' }}</strong>
+          </div>
+          <div class="summary-box">
+            <span class="box-label">Ventas en efectivo</span>
+            <strong class="box-val text-success">+{{ r.totalVentasEfectivo | currency: 'BOB' : 'symbol-narrow' }}</strong>
+          </div>
+          <div class="summary-box">
+            <span class="box-label">Ventas QR</span>
+            <strong class="box-val text-info">{{ r.totalVentasQR | currency: 'BOB' : 'symbol-narrow' }}</strong>
+          </div>
+          <div class="summary-box highlight-box">
+            <span class="box-label">Efectivo esperado en caja</span>
+            <strong class="box-val text-primary">{{ r.totalEsperadoEfectivo | currency: 'BOB' : 'symbol-narrow' }}</strong>
+            <small class="box-sub">Inicial + {{ r.cantidadVentas }} venta(s) en efectivo</small>
+          </div>
+        </div>
+      }
+
+      <div class="form-fields">
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Efectivo contado físicamente (Bs)</mat-label>
+          <span matPrefix>Bs&nbsp;</span>
+          <input
+            matInput
+            type="number"
+            formControlName="montoFinalReal"
+            placeholder="0.00"
+            step="0.50"
+            min="0"
+            required
+            autocomplete="off"
+            autofocus
+          />
+          <mat-icon matSuffix>account_balance_wallet</mat-icon>
+          @if (form.controls.montoFinalReal.hasError('required') && form.controls.montoFinalReal.touched) {
+            <mat-error>El monto contado en caja es obligatorio.</mat-error>
+          }
+          @if (form.controls.montoFinalReal.hasError('min')) {
+            <mat-error>El monto no puede ser negativo.</mat-error>
+          }
+        </mat-form-field>
+
+        @if (diferencia() !== null) {
+          <div
+            class="diff-indicator"
+            [class.diff-balanced]="diferencia() === 0"
+            [class.diff-surplus]="(diferencia() ?? 0) > 0"
+            [class.diff-deficit]="(diferencia() ?? 0) < 0"
+          >
+            @if (diferencia() === 0) {
+              <mat-icon>check_circle</mat-icon>
+              <span>¡Caja cuadrada perfectamente! (Diferencia: Bs 0.00)</span>
+            } @else if ((diferencia() ?? 0) > 0) {
+              <mat-icon>add_circle</mat-icon>
+              <span>Sobrante de dinero: +{{ diferencia() | currency: 'BOB' : 'symbol-narrow' }}</span>
+            } @else {
+              <mat-icon>error</mat-icon>
+              <span>Faltante de dinero: {{ diferencia() | currency: 'BOB' : 'symbol-narrow' }}</span>
+            }
+          </div>
+        }
+
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Observaciones de cierre (Opcional)</mat-label>
+          <textarea
+            matInput
+            formControlName="notas"
+            rows="2"
+            placeholder="Ej: Retiro entregado al administrador..."
+          ></textarea>
+        </mat-form-field>
+      </div>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end">
+      <button mat-button type="button" (click)="cancelar()" [disabled]="guardando()">
+        Cancelar
+      </button>
+      <button
+        mat-flat-button
+        color="warn"
+        type="submit"
+        [disabled]="form.invalid || guardando()"
+      >
+        <mat-icon>lock</mat-icon>
+        {{ guardando() ? 'Cerrando caja...' : 'Confirmar cierre de caja' }}
+      </button>
+    </mat-dialog-actions>
+  </form>
+}

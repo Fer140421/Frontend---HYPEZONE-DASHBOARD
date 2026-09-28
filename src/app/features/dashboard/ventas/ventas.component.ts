@@ -14,7 +14,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { BehaviorSubject, combineLatest, firstValueFrom, map, shareReplay, startWith, take } from 'rxjs';
 import { Cliente } from '../../../core/models/cliente.model';
 import { Producto, imagenesProducto, precioProducto } from '../../../core/models/producto.model';
@@ -24,7 +24,10 @@ import { FidelidadConfigRepository } from '../../../core/repositories/fidelidad-
 import { ProductoRepository } from '../../../core/repositories/producto.repository';
 import { VentaRepository } from '../../../core/repositories/venta.repository';
 import { VentaService } from '../../../core/services/venta.service';
+import { CajaService } from '../../../core/services/caja.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { CajaAperturaDialogComponent } from './caja-apertura-dialog/caja-apertura-dialog.component';
+import { CajaCierreDialogComponent } from './caja-cierre-dialog/caja-cierre-dialog.component';
 import { CONFIGURACION_FIDELIDAD_DEFAULT, ConfiguracionFidelidad } from '../../../core/models/fidelidad.model';
 import {
   cloudinaryCardUrl,
@@ -55,7 +58,6 @@ import {
     AsyncPipe,
     CurrencyPipe,
     DatePipe,
-    RouterLink,
     ReactiveFormsModule,
     MatButtonModule,
     MatCardModule,
@@ -88,7 +90,10 @@ export class VentasComponent implements OnInit {
   private readonly productoRepository = inject(ProductoRepository);
   private readonly ventaRepository = inject(VentaRepository);
   private readonly ventaService = inject(VentaService);
+  private readonly cajaService = inject(CajaService);
   readonly auth = inject(AuthService);
+  readonly cajaActiva = this.cajaService.miCajaAbierta;
+  private dialogAperturaAbierto = false;
   private readonly destroyRef = inject(DestroyRef);
   private readonly pagination$ = new BehaviorSubject<PaginationState>({
     pageIndex: 0,
@@ -177,11 +182,16 @@ export class VentasComponent implements OnInit {
 
   readonly ventasFiltradas$ = combineLatest([
     this.ventasSource$,
+    this.cajaService.miCajaAbierta$,
     this.filters.controls.producto.valueChanges.pipe(startWith(this.filters.controls.producto.getRawValue())),
     this.appliedFilters$,
   ]).pipe(
-    map(([ventas, productoValue, filters]) => {
+    map(([ventas, cajaActiva, productoValue, filters]) => {
       this.ventasActuales = ventas;
+      if (!cajaActiva || !cajaActiva.id) {
+        return [];
+      }
+      const cajaId = cajaActiva.id;
       const producto = productoValue.toLowerCase().trim();
       const desde = filters.desde
         ? new Date(filters.desde).setHours(0, 0, 0, 0)
@@ -191,6 +201,7 @@ export class VentasComponent implements OnInit {
         : Number.POSITIVE_INFINITY;
       return ventas.filter(
         (venta) =>
+          venta.cajaId === cajaId &&
           (!producto || venta.nombreProducto.toLowerCase().includes(producto)) &&
           (!filters.metodoPago || venta.metodoPago === filters.metodoPago) &&
           new Date(venta.fechaVenta).getTime() >= desde &&
@@ -245,15 +256,14 @@ export class VentasComponent implements OnInit {
 
     this.route.url
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((segments) =>
-        this.mode.set(
-          segments.some((segment) => segment.path === 'nueva')
-            ? 'new'
-            : segments.some((segment) => segment.path === 'editar')
-              ? 'edit'
-              : 'list',
-        ),
-      );
+      .subscribe((segments) => {
+        const isNew = segments.some((segment) => segment.path === 'nueva');
+        const isEdit = segments.some((segment) => segment.path === 'editar');
+        this.mode.set(isNew ? 'new' : isEdit ? 'edit' : 'list');
+        if (isNew) {
+          void this.verificarAperturaParaVenta();
+        }
+      });
 
     combineLatest([this.route.paramMap, this.productosSource$, this.ventasSource$])
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -487,8 +497,74 @@ export class VentasComponent implements OnInit {
     void this.router.navigate(['/dashboard/ventas', venta.operacionId ?? venta.id, 'editar']);
   }
 
+  iniciarNuevaVenta(): void {
+    if (!this.cajaActiva()) {
+      this.abrirDialogoApertura(true, false);
+    } else {
+      void this.router.navigate(['/dashboard/ventas/nueva']);
+    }
+  }
+
+  abrirDialogoApertura(navegarANuevaAlCompletar = false, redirigirAlCancelar = false): void {
+    if (this.dialogAperturaAbierto) return;
+    this.dialogAperturaAbierto = true;
+
+    const ref = this.dialog.open(CajaAperturaDialogComponent, {
+      width: 'min(460px, 94vw)',
+      disableClose: true,
+    });
+
+    ref.afterClosed().subscribe((abierta: boolean) => {
+      this.dialogAperturaAbierto = false;
+      if (abierta) {
+        this.snackBar.open('¡Caja abierta exitosamente! Ya puedes realizar ventas.', 'OK', { duration: 3200 });
+        if (navegarANuevaAlCompletar && this.mode() !== 'new') {
+          void this.router.navigate(['/dashboard/ventas/nueva']);
+        }
+      } else {
+        this.snackBar.open('Debes abrir caja antes de poder realizar ventas.', 'Cerrar', { duration: 3500 });
+        if (redirigirAlCancelar && this.mode() === 'new') {
+          void this.router.navigate(['/dashboard/ventas']);
+        }
+      }
+    });
+  }
+
+  abrirDialogoCierre(): void {
+    const caja = this.cajaActiva();
+    if (!caja) return;
+
+    const ref = this.dialog.open(CajaCierreDialogComponent, {
+      width: 'min(520px, 95vw)',
+      data: { caja },
+    });
+
+    ref.afterClosed().subscribe((cerrada: boolean) => {
+      if (cerrada) {
+        this.snackBar.open('Caja cerrada y arqueada correctamente.', 'OK', { duration: 3500 });
+        if (this.mode() === 'new') {
+          void this.router.navigate(['/dashboard/ventas']);
+        }
+      }
+    });
+  }
+
+  private async verificarAperturaParaVenta(): Promise<void> {
+    const caja = await firstValueFrom(this.cajaService.miCajaAbierta$.pipe(take(1)));
+    if (!caja && this.mode() === 'new') {
+      this.abrirDialogoApertura(false, true);
+    }
+  }
+
   async registrarVenta(): Promise<void> {
     if (this.saleForm.invalid || !this.detalles.length || this.procesandoVenta() || (this.mode() === 'edit' ? !this.auth.can('sales.update') : !this.auth.can('sales.create'))) {
+      return;
+    }
+
+    const cajaActual = this.cajaActiva();
+    if (this.mode() !== 'edit' && !cajaActual?.id) {
+      this.snackBar.open('No tienes una caja abierta. Abre tu caja antes de registrar la venta.', 'OK', { duration: 4000 });
+      this.abrirDialogoApertura(false, true);
       return;
     }
 
@@ -502,6 +578,13 @@ export class VentasComponent implements OnInit {
       const input = {
         metodoPago: raw.metodoPago as MetodoPago,
         fechaVenta: raw.fechaVenta.toISOString(),
+        cajaId: cajaActual?.id,
+        usuarioVentaId: this.auth.firebaseUser()?.uid,
+        usuarioVentaNombre:
+          this.auth.profile()?.displayName ||
+          this.auth.firebaseUser()?.displayName ||
+          this.auth.firebaseUser()?.email ||
+          'Usuario',
         clienteId: raw.clienteId || undefined,
         clienteNombre: raw.clienteNombre || undefined,
         clienteTelefono: raw.clienteTelefono || undefined,

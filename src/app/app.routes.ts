@@ -149,6 +149,12 @@ export const routes: Routes = [
           import('./features/dashboard/ventas/ventas.component').then((m) => m.VentasComponent),
       },
       {
+        path: 'cajas',
+        canActivate: [permissionGuard], data: { permission: 'sales.view' },
+        loadComponent: () =>
+          import('./features/dashboard/cajas/cajas.component').then((m) => m.CajasComponent),
+      },
+      {
         path: 'configuracion',
         canActivate: [permissionGuard],
         data: { permission: 'settings.view' },
