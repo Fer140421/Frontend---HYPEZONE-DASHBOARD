@@ -1,0 +1,113 @@
+<h2 mat-dialog-title class="dialog-title">
+  <mat-icon class="dialog-icon">payments</mat-icon>
+  <span>{{ data?.gasto ? 'Editar gasto operativo' : 'Registrar gasto operativo' }}</span>
+</h2>
+
+<form [formGroup]="form" (ngSubmit)="guardar()">
+  <mat-dialog-content class="mat-typography dialog-content">
+    <div class="form-grid">
+      <mat-form-field appearance="outline" class="col-full">
+        <mat-label>Concepto o descripción</mat-label>
+        <input
+          matInput
+          formControlName="concepto"
+          placeholder="Ej: Pasajes compra mayorista, Bolsas de envío, Almuerzo..."
+          required
+          autofocus
+        />
+        <mat-icon matSuffix>edit_note</mat-icon>
+        @if (form.controls.concepto.hasError('required') && form.controls.concepto.touched) {
+          <mat-error>El concepto es obligatorio.</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Importe (Bs)</mat-label>
+        <span matPrefix>Bs&nbsp;</span>
+        <input
+          matInput
+          type="number"
+          formControlName="monto"
+          placeholder="0.00"
+          step="0.50"
+          min="0.01"
+          required
+        />
+        <mat-icon matSuffix>attach_money</mat-icon>
+        @if (form.controls.monto.hasError('required') && form.controls.monto.touched) {
+          <mat-error>El importe es obligatorio.</mat-error>
+        }
+        @if (form.controls.monto.hasError('min')) {
+          <mat-error>Debe ser mayor a 0.</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Categoría</mat-label>
+        <mat-select formControlName="categoria" required>
+          @for (cat of categorias; track cat.id) {
+            <mat-option [value]="cat.id">
+              <div class="option-flex">
+                <mat-icon class="option-icon">{{ cat.icon }}</mat-icon>
+                <span>{{ cat.label }}</span>
+              </div>
+            </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha del gasto</mat-label>
+        <input matInput type="date" formControlName="fecha" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Forma de pago</mat-label>
+        <mat-select formControlName="metodoPago" required>
+          <mat-option value="caja_efectivo">Efectivo (Caja física)</mat-option>
+          <mat-option value="cuenta_banco">Cuenta de banco / Transferencia</mat-option>
+          <mat-option value="qr">Pago QR / Billetera móvil</mat-option>
+          <mat-option value="otro">Otro medio</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      @if (cajaActiva()) {
+        <div class="caja-toggle-card col-full">
+          <div class="caja-toggle-info">
+            <mat-icon class="text-primary">account_balance_wallet</mat-icon>
+            <div>
+              <strong>Pagar con dinero de la caja activa</strong>
+              <p>Descontará este efectivo en el arqueo y cierre de tu turno actual.</p>
+            </div>
+          </div>
+          <mat-slide-toggle formControlName="pagarDeCajaActiva" color="primary"></mat-slide-toggle>
+        </div>
+      } @else {
+        <div class="caja-notice col-full">
+          <mat-icon>info</mat-icon>
+          <span>No hay una caja abierta actualmente. Este gasto se registrará como egreso general del negocio sin descontar de ningún arqueo físico.</span>
+        </div>
+      }
+
+      <mat-form-field appearance="outline" class="col-full">
+        <mat-label>Notas adicionales (Opcional)</mat-label>
+        <textarea
+          matInput
+          formControlName="notas"
+          rows="2"
+          placeholder="Ej: Proveedor Juan, factura N° 124, etc."
+        ></textarea>
+      </mat-form-field>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions class="dialog-actions" align="end">
+    <button mat-button type="button" (click)="cancelar()" [disabled]="guardando()">
+      Cancelar
+    </button>
+    <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || guardando()">
+      <mat-icon>check</mat-icon>
+      {{ guardando() ? 'Guardando...' : (data?.gasto ? 'Actualizar gasto' : 'Registrar gasto') }}
+    </button>
+  </mat-dialog-actions>
+</form>

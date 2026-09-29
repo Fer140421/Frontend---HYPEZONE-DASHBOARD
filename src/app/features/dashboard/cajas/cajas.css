@@ -86,10 +86,13 @@
 .dialog-detalle-content {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  min-width: min(680px, 92vw);
-  max-height: 80vh;
-  padding-top: 10px !important;
+  gap: 16px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  max-height: calc(85vh - 120px);
+  padding: 8px 16px !important;
+  overflow-y: auto;
 }
 
 .caja-info-header {
@@ -200,5 +203,24 @@
 @media (max-width: 650px) {
   .caja-info-header {
     grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .financial-summary-grid {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px;
+  }
+}
+
+@media (max-width: 450px) {
+  .caja-info-header {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .financial-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 }

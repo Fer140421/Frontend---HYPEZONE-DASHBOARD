@@ -1,6 +1,6 @@
 import { UserRole } from '../models/user-profile.model';
 
-export type PermissionModule = 'dashboard' | 'products' | 'lots' | 'providers' | 'clients' | 'sales' | 'catalogs' | 'settings' | 'users' | 'roles' | 'permissions';
+export type PermissionModule = 'dashboard' | 'products' | 'lots' | 'providers' | 'clients' | 'sales' | 'expenses' | 'catalogs' | 'settings' | 'users' | 'roles' | 'permissions';
 export type CrudPermissionAction = 'view' | 'create' | 'update' | 'delete';
 export type PermissionAction = CrudPermissionAction | 'clean' | 'managePermissions' | 'disable';
 /**
@@ -33,7 +33,8 @@ export const PERMISSION_CATALOG = [
   define({ key: 'lots.delete', module: 'lots', action: 'delete', label: 'Eliminar lotes', description: 'Desactivar lotes.', order: 33, sensitive: true, defaultRoles: ['owner', 'admin'] }),
   ...(['providers', 'clients'] as const).flatMap((module, index) => (['view', 'create', 'update', 'delete'] as const).map((action, actionIndex) => define({ key: `${module}.${action}`, module, action, label: `${action} ${module}`, description: `${action} ${module}.`, order: 40 + index * 10 + actionIndex, sensitive: action === 'delete', defaultRoles: module === 'clients' && action !== 'delete' ? ['owner', 'admin', 'seller'] : ['owner', 'admin'] }))),
   ...(['view', 'create', 'update', 'delete'] as const).map((action, index) => define({ key: `sales.${action}`, module: 'sales', action, label: `${action} sales`, description: `${action} sales.`, order: 60 + index, sensitive: action !== 'view', defaultRoles: action === 'create' ? ['owner', 'admin', 'seller'] : ['owner', 'admin'] })),
-  ...(['view', 'create', 'update', 'delete'] as const).map((action, index) => define({ key: `catalogs.${action}`, module: 'catalogs', action, label: `${action} catalogs`, description: `${action} catalogs.`, order: 65 + index, sensitive: action === 'delete', defaultRoles: ['owner', 'admin'] })),
+  ...(['view', 'create', 'update', 'delete'] as const).map((action, index) => define({ key: `expenses.${action}`, module: 'expenses', action, label: `${action} expenses`, description: `${action} expenses.`, order: 64 + index, sensitive: action === 'delete', defaultRoles: action === 'delete' ? ['owner', 'admin'] : ['owner', 'admin', 'seller'] })),
+  ...(['view', 'create', 'update', 'delete'] as const).map((action, index) => define({ key: `catalogs.${action}`, module: 'catalogs', action, label: `${action} catalogs`, description: `${action} catalogs.`, order: 68 + index, sensitive: action === 'delete', defaultRoles: ['owner', 'admin'] })),
   define({ key: 'settings.view', module: 'settings', action: 'view', label: 'Ver configuración', description: 'Acceder a configuración.', order: 69, sensitive: true, defaultRoles: ['owner'] }),
   define({ key: 'users.view', module: 'users', action: 'view', label: 'Ver usuarios', description: 'Listar usuarios administrativos.', order: 70, sensitive: true, defaultRoles: ['owner'] }),
   define({ key: 'users.create', module: 'users', action: 'create', label: 'Crear usuarios', description: 'Crear cuentas administrativas.', order: 71, sensitive: true, defaultRoles: ['owner'] }),

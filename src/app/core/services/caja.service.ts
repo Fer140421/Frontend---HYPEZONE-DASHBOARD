@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { Firestore, collection, getDocs, query, where } from '@angular/fire/firestore';
 import { Observable, firstValueFrom, of, shareReplay, switchMap, take } from 'rxjs';
 import { Caja, CierreCajaCalculo } from '../models/caja.model';
+import { Gasto } from '../models/gasto.model';
 import { Venta } from '../models/venta.model';
 import { CajaRepository } from '../repositories/caja.repository';
 import { AuthService } from './auth.service';
@@ -88,15 +89,31 @@ export class CajaService {
       .reduce((sum, v) => sum + Number(v.precioVenta || 0), 0);
 
     const totalVentas = totalVentasEfectivo + totalVentasQR;
-    const totalEsperadoEfectivo = Number(montoInicial || 0) + totalVentasEfectivo;
+
+    // Consultar gastos pagados con efectivo desde esta caja
+    const gastosRef = collection(this.firestore, 'gastos');
+    const qGastos = query(gastosRef, where('cajaId', '==', cajaId));
+    const snapGastos = await getDocs(qGastos);
+
+    const gastos = snapGastos.docs
+      .map((d) => d.data() as Gasto)
+      .filter((g) => g.activo !== false);
+
+    const totalGastosEfectivo = gastos
+      .filter((g) => g.metodoPago === 'caja_efectivo')
+      .reduce((sum, g) => sum + Number(g.monto || 0), 0);
+
+    const totalEsperadoEfectivo = Number(montoInicial || 0) + totalVentasEfectivo - totalGastosEfectivo;
 
     return {
       montoInicial: Number(montoInicial || 0),
       totalVentasEfectivo,
       totalVentasQR,
       totalVentas,
+      totalGastosEfectivo,
       totalEsperadoEfectivo,
       cantidadVentas: ventas.length,
+      cantidadGastos: gastos.length,
     };
   }
 
@@ -127,6 +144,7 @@ export class CajaService {
       totalVentasEfectivo: resumen.totalVentasEfectivo,
       totalVentasQR: resumen.totalVentasQR,
       totalVentas: resumen.totalVentas,
+      totalGastosEfectivo: resumen.totalGastosEfectivo,
       totalEsperadoEfectivo: resumen.totalEsperadoEfectivo,
       diferencia,
       usuarioCierreId: user?.uid,
@@ -142,5 +160,14 @@ export class CajaService {
     return snap.docs
       .map((d) => d.data() as Venta)
       .filter((v) => v.activo !== false);
+  }
+
+  async getGastosPorCaja(cajaId: string): Promise<Gasto[]> {
+    const ref = collection(this.firestore, 'gastos');
+    const q = query(ref, where('cajaId', '==', cajaId));
+    const snap = await getDocs(q);
+    return snap.docs
+      .map((d) => d.data() as Gasto)
+      .filter((g) => g.activo !== false);
   }
 }

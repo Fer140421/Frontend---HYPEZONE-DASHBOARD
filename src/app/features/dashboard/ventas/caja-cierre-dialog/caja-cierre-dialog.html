@@ -26,6 +26,12 @@
             <span class="box-label">Ventas en efectivo</span>
             <strong class="box-val text-success">+{{ r.totalVentasEfectivo | currency: 'BOB' : 'symbol-narrow' }}</strong>
           </div>
+          @if (r.totalGastosEfectivo > 0) {
+            <div class="summary-box">
+              <span class="box-label">Egresos / Gastos caja</span>
+              <strong class="box-val text-danger">-{{ r.totalGastosEfectivo | currency: 'BOB' : 'symbol-narrow' }}</strong>
+            </div>
+          }
           <div class="summary-box">
             <span class="box-label">Ventas QR</span>
             <strong class="box-val text-info">{{ r.totalVentasQR | currency: 'BOB' : 'symbol-narrow' }}</strong>
@@ -33,7 +39,7 @@
           <div class="summary-box highlight-box">
             <span class="box-label">Efectivo esperado en caja</span>
             <strong class="box-val text-primary">{{ r.totalEsperadoEfectivo | currency: 'BOB' : 'symbol-narrow' }}</strong>
-            <small class="box-sub">Inicial + {{ r.cantidadVentas }} venta(s) en efectivo</small>
+            <small class="box-sub">Inicial + Efectivo{{ r.totalGastosEfectivo > 0 ? ' - Gastos' : '' }}</small>
           </div>
         </div>
       }

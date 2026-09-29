@@ -1,0 +1,208 @@
+<app-page-header
+  title="Gastos y Egresos Operativos"
+  description="Registro y control de gastos de tienda, fletes, bolsas, pasajes y retiros de caja."
+>
+  @if (auth.can('expenses.create')) {
+    <button mat-flat-button class="primary-action" type="button" (click)="abrirModalCrear()">
+      <mat-icon>add</mat-icon>
+      <span>Registrar gasto</span>
+    </button>
+  }
+</app-page-header>
+
+@if (kpis$ | async; as kpis) {
+  <section class="metric-grid">
+    <mat-card class="metric-card">
+      <mat-icon class="icon-danger">payments</mat-icon>
+      <span>Total gastos registrados</span>
+      <strong class="text-danger">{{ kpis.total | currency: 'BOB' : 'symbol-narrow' }}</strong>
+    </mat-card>
+
+    <mat-card class="metric-card">
+      <mat-icon class="icon-warning">account_balance_wallet</mat-icon>
+      <span>Pagados de Caja física</span>
+      <strong>{{ kpis.totalCaja | currency: 'BOB' : 'symbol-narrow' }}</strong>
+    </mat-card>
+
+    <mat-card class="metric-card">
+      <mat-icon class="icon-info">account_balance</mat-icon>
+      <span>Pagados por Banco / QR</span>
+      <strong>{{ kpis.totalBanco | currency: 'BOB' : 'symbol-narrow' }}</strong>
+    </mat-card>
+
+    <mat-card class="metric-card">
+      <mat-icon>receipt_long</mat-icon>
+      <span>Total comprobantes</span>
+      <strong>{{ kpis.cantidad }}</strong>
+    </mat-card>
+  </section>
+}
+
+<mat-card class="list-card">
+  <mat-card-content>
+    <div class="list-filter-bar">
+      <mat-form-field appearance="outline" class="list-search">
+        <mat-label>Buscar por concepto o responsable</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput [formControl]="filters.controls.search" placeholder="Pasaje, bolsas, Juan..." />
+      </mat-form-field>
+      <button mat-stroked-button type="button" class="filter-trigger" (click)="openFilters()">
+        <mat-icon>tune</mat-icon>
+        <span>Filtros</span>
+      </button>
+    </div>
+
+    <app-filter-drawer
+      [open]="filtersOpen()"
+      (closed)="filtersOpen.set(false)"
+      (applied)="applyFilters()"
+    >
+      <div class="filter-drawer-form">
+        <mat-form-field appearance="outline">
+          <mat-label>Categoría</mat-label>
+          <mat-select [formControl]="filters.controls.categoria">
+            <mat-option value="todas">Todas las categorías</mat-option>
+            @for (cat of categorias; track cat.id) {
+              <mat-option [value]="cat.id">{{ cat.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Forma de pago</mat-label>
+          <mat-select [formControl]="filters.controls.metodoPago">
+            <mat-option value="todos">Todos los métodos</mat-option>
+            <mat-option value="caja_efectivo">Efectivo de caja</mat-option>
+            <mat-option value="cuenta_banco">Cuenta de banco</mat-option>
+            <mat-option value="qr">Pago QR</mat-option>
+            <mat-option value="otro">Otro medio</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <button mat-stroked-button type="button" (click)="clearFilters()">
+          <mat-icon>restart_alt</mat-icon>
+          <span>Limpiar filtros</span>
+        </button>
+      </div>
+    </app-filter-drawer>
+
+    @if (pagedGastos$ | async; as paged) {
+      @if (paged.total === 0) {
+        <app-empty-state
+          icon="money_off"
+          title="Sin gastos registrados"
+          description="No se encontraron registros de gastos que coincidan con los filtros aplicados."
+        />
+      } @else {
+        <div class="table-scroll">
+          <table mat-table [dataSource]="paged.items" class="app-table">
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let g">{{ g.fecha | date: 'dd/MM/yyyy' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="concepto">
+              <th mat-header-cell *matHeaderCellDef>Concepto</th>
+              <td mat-cell *matCellDef="let g">
+                <strong>{{ g.concepto }}</strong>
+                @if (g.notas) {
+                  <small class="cell-subtitle">{{ g.notas }}</small>
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="categoria">
+              <th mat-header-cell *matHeaderCellDef>Categoría</th>
+              <td mat-cell *matCellDef="let g">
+                <span class="cat-chip">{{ obtenerCategoriaLabel(g.categoria) }}</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="metodoPago">
+              <th mat-header-cell *matHeaderCellDef>Forma de pago</th>
+              <td mat-cell *matCellDef="let g">
+                <span
+                  class="badge-pill"
+                  [class.caja-efectivo]="g.metodoPago === 'caja_efectivo'"
+                  [class.cuenta-banco]="g.metodoPago === 'cuenta_banco'"
+                  [class.qr-pago]="g.metodoPago === 'qr'"
+                >
+                  {{ g.metodoPago === 'caja_efectivo' ? 'CAJA EFECTIVO' : (g.metodoPago === 'cuenta_banco' ? 'BANCO' : (g.metodoPago | uppercase)) }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="caja">
+              <th mat-header-cell *matHeaderCellDef>Caja de turno</th>
+              <td mat-cell *matCellDef="let g">
+                @if (g.cajaId) {
+                  <span class="caja-vinculada">
+                    <mat-icon>check_circle</mat-icon>
+                    Vinculada
+                  </span>
+                } @else {
+                  <span class="text-muted">Fuera de caja</span>
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="usuarioNombre">
+              <th mat-header-cell *matHeaderCellDef>Registrado por</th>
+              <td mat-cell *matCellDef="let g">{{ g.usuarioNombre }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="monto">
+              <th mat-header-cell *matHeaderCellDef>Importe</th>
+              <td mat-cell *matCellDef="let g">
+                <strong class="text-danger">-{{ g.monto | currency: 'BOB' : 'symbol-narrow' }}</strong>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let g">
+                <div class="row-actions">
+                  @if (auth.can('expenses.update')) {
+                    <button
+                      mat-icon-button
+                      type="button"
+                      matTooltip="Editar gasto"
+                      (click)="editarGasto(g)"
+                    >
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  }
+                  @if (auth.can('expenses.delete')) {
+                    <button
+                      mat-icon-button
+                      color="warn"
+                      type="button"
+                      matTooltip="Eliminar gasto"
+                      (click)="eliminarGasto(g)"
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  }
+                </div>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+          </table>
+        </div>
+
+        <mat-paginator
+          [length]="paged.total"
+          [pageSize]="paged.pageSize"
+          [pageIndex]="paged.pageIndex"
+          [pageSizeOptions]="pageSizeOptions"
+          (page)="updatePage($event)"
+          showFirstLastButtons
+        />
+      }
+    } @else {
+      <app-loading message="Cargando gastos operativos..." />
+    }
+  </mat-card-content>
+</mat-card>

@@ -5,7 +5,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { combineLatest, map, shareReplay } from 'rxjs';
 import { marcaImagen } from '../../../core/models/catalogo.model';
-import { precioCompraProducto } from '../../../core/models/producto.model';
+import { precioCompraProducto, precioProducto } from '../../../core/models/producto.model';
+import { GastoRepository } from '../../../core/repositories/gasto.repository';
 import { LoteRepository } from '../../../core/repositories/lote.repository';
 import { MarcaRepository } from '../../../core/repositories/marca.repository';
 import { ProductoRepository } from '../../../core/repositories/producto.repository';
@@ -19,7 +20,19 @@ export interface ResumenMetricCard {
   icon: string;
   imageUrl?: string;
   currency?: boolean;
-  type: 'ganancia' | 'vendido' | 'invertido' | 'top_marca' | 'productos' | 'disponibles' | 'vendidos' | 'lotes';
+  type:
+    | 'ganancia'
+    | 'vendido'
+    | 'invertido'
+    | 'utilidad_neta'
+    | 'gastos'
+    | 'stock_costo'
+    | 'stock_venta'
+    | 'top_marca'
+    | 'productos'
+    | 'disponibles'
+    | 'vendidos'
+    | 'lotes';
   subtext: string;
   featured?: boolean;
 }
@@ -45,6 +58,7 @@ export class ResumenComponent {
   private readonly ventaRepository = inject(VentaRepository);
   private readonly loteRepository = inject(LoteRepository);
   private readonly marcaRepository = inject(MarcaRepository);
+  private readonly gastoRepository = inject(GastoRepository);
 
   // Fuentes compartidas durante la vida de la vista.
   private readonly productosSource$ = this.productoRepository.getAll(true).pipe(
@@ -59,21 +73,31 @@ export class ResumenComponent {
   private readonly marcasSource$ = this.marcaRepository.getAll().pipe(
     shareReplay({ bufferSize: 1, refCount: true }),
   );
+  private readonly gastosSource$ = this.gastoRepository.getAll().pipe(
+    shareReplay({ bufferSize: 1, refCount: true }),
+  );
 
   readonly vm$ = combineLatest([
     this.productosSource$,
     this.ventasSource$,
     this.lotesSource$,
     this.marcasSource$,
+    this.gastosSource$,
   ]).pipe(
-    map(([productos, ventas, lotes, marcas]) => {
+    map(([productos, ventas, lotes, marcas, gastos]) => {
       const activos = productos.filter((p) => p.activo !== false);
       const disponibles = activos.filter((p) => p.estado === 'disponible');
       const vendidos = activos.filter((p) => p.estado === 'vendido');
       const ventasActivas = ventas.filter((venta) => venta.activo !== false);
-      const totalInvertido = activos.reduce((total, p) => total + precioCompraProducto(p), 0);
+      const gastosActivos = gastos.filter((g) => g.activo !== false);
+
       const totalVendido = ventasActivas.reduce((total, venta) => total + Number(venta.precioVenta), 0);
-      const gananciaReal = ventasActivas.reduce((total, venta) => total + Number(venta.ganancia), 0);
+      const margenBrutoVentas = ventasActivas.reduce((total, venta) => total + Number(venta.ganancia || 0), 0);
+      const totalGastos = gastosActivos.reduce((total, g) => total + Number(g.monto || 0), 0);
+      const utilidadNetaReal = margenBrutoVentas - totalGastos;
+
+      const valorStockCosto = disponibles.reduce((total, p) => total + precioCompraProducto(p), 0);
+      const valorStockVenta = disponibles.reduce((total, p) => total + precioProducto(p), 0);
 
       // Cálculo de la marca más vendida
       const productoMap = new Map(productos.map((p) => [p.id, p]));
@@ -119,29 +143,37 @@ export class ResumenComponent {
 
       const financialCards: ResumenMetricCard[] = [
         {
-          label: 'Ganancia real',
-          value: gananciaReal,
-          icon: 'paid',
+          label: 'Utilidad Neta Real',
+          value: utilidadNetaReal,
+          icon: 'account_balance_wallet',
           currency: true,
-          type: 'ganancia',
-          subtext: 'Margen de utilidad neto',
+          type: 'utilidad_neta',
+          subtext: 'Margen ventas menos gastos',
           featured: true,
         },
         {
-          label: 'Total vendido',
-          value: totalVendido,
-          icon: 'point_of_sale',
+          label: 'Margen Bruto Ventas',
+          value: margenBrutoVentas,
+          icon: 'paid',
           currency: true,
-          type: 'vendido',
-          subtext: 'Ingreso acumulado',
+          type: 'ganancia',
+          subtext: `${ventasActivas.length} venta(s) realizadas`,
         },
         {
-          label: 'Total invertido',
-          value: totalInvertido,
+          label: 'Gastos Operativos',
+          value: totalGastos,
           icon: 'payments',
           currency: true,
-          type: 'invertido',
-          subtext: 'Costo total de inventario',
+          type: 'gastos',
+          subtext: 'Fletes, bolsas, pasajes y servicios',
+        },
+        {
+          label: 'Capital en Stock (A costo)',
+          value: valorStockCosto,
+          icon: 'inventory_2',
+          currency: true,
+          type: 'stock_costo',
+          subtext: `${disponibles.length} prendas listas para venta`,
         },
       ];
 

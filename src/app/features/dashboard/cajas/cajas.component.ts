@@ -16,8 +16,10 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BehaviorSubject, combineLatest, map, shareReplay, startWith } from 'rxjs';
 import { Caja } from '../../../core/models/caja.model';
+import { Gasto } from '../../../core/models/gasto.model';
 import { Venta } from '../../../core/models/venta.model';
 import { CajaRepository } from '../../../core/repositories/caja.repository';
+import { GastoRepository } from '../../../core/repositories/gasto.repository';
 import { VentaRepository } from '../../../core/repositories/venta.repository';
 import { AuthService } from '../../../core/services/auth.service';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
@@ -43,12 +45,15 @@ export interface CajaItemVM {
   totalPrendas: number;
   totalEfectivo: number;
   totalQR: number;
+  totalGastos: number;
+  totalGastosEfectivo: number;
   totalEsperado: number;
   montoFinalReal?: number;
   diferencia?: number;
   notasApertura?: string;
   notasCierre?: string;
   ventas: Venta[];
+  gastos: Gasto[];
 }
 
 @Component({
@@ -85,6 +90,7 @@ export class CajasComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly cajaRepository = inject(CajaRepository);
   private readonly ventaRepository = inject(VentaRepository);
+  private readonly gastoRepository = inject(GastoRepository);
   private readonly destroyRef = inject(DestroyRef);
   readonly auth = inject(AuthService);
 
@@ -117,9 +123,10 @@ export class CajasComponent implements OnInit {
 
   private readonly cajasSource$ = this.cajaRepository.getAll(true);
   private readonly ventasSource$ = this.ventaRepository.getAll(true);
+  private readonly gastosSource$ = this.gastoRepository.getAll(true);
 
-  readonly cajasVM$ = combineLatest([this.cajasSource$, this.ventasSource$]).pipe(
-    map(([cajas, ventas]) => {
+  readonly cajasVM$ = combineLatest([this.cajasSource$, this.ventasSource$, this.gastosSource$]).pipe(
+    map(([cajas, ventas, gastos]) => {
       const sorted = [...cajas].sort(
         (a, b) => new Date(b.fechaApertura).getTime() - new Date(a.fechaApertura).getTime(),
       );
@@ -127,6 +134,9 @@ export class CajasComponent implements OnInit {
       return sorted.map((caja): CajaItemVM => {
         const ventasDeCaja = ventas.filter(
           (v) => v.cajaId === caja.id && v.activo !== false,
+        );
+        const gastosDeCaja = gastos.filter(
+          (g) => g.cajaId === caja.id && g.activo !== false,
         );
 
         const totalVendido = ventasDeCaja.reduce(
@@ -140,7 +150,13 @@ export class CajasComponent implements OnInit {
         const totalQR = ventasDeCaja
           .filter((v) => v.metodoPago === 'qr')
           .reduce((sum, v) => sum + Number(v.precioVenta || 0), 0);
-        const totalEsperado = Number(caja.montoInicial || 0) + totalEfectivo;
+
+        const totalGastos = gastosDeCaja.reduce((sum, g) => sum + Number(g.monto || 0), 0);
+        const totalGastosEfectivo = gastosDeCaja
+          .filter((g) => g.metodoPago === 'caja_efectivo')
+          .reduce((sum, g) => sum + Number(g.monto || 0), 0);
+
+        const totalEsperado = Number(caja.montoInicial || 0) + totalEfectivo - totalGastosEfectivo;
 
         return {
           id: caja.id ?? '',
@@ -154,12 +170,15 @@ export class CajasComponent implements OnInit {
           totalPrendas,
           totalEfectivo,
           totalQR,
+          totalGastos,
+          totalGastosEfectivo,
           totalEsperado: caja.totalEsperadoEfectivo ?? totalEsperado,
           montoFinalReal: caja.montoFinalReal,
           diferencia: caja.diferencia,
           notasApertura: caja.notasApertura,
           notasCierre: caja.notasCierre,
           ventas: ventasDeCaja,
+          gastos: gastosDeCaja,
         };
       });
     }),
@@ -250,7 +269,10 @@ export class CajasComponent implements OnInit {
 
   verDetalleCaja(caja: CajaItemVM): void {
     this.dialog.open(CajaDetalleDialogComponent, {
-      width: 'min(720px, 95vw)',
+      width: 'min(720px, 96vw)',
+      maxWidth: '96vw',
+      maxHeight: '92vh',
+      autoFocus: false,
       data: { caja },
     });
   }
@@ -278,6 +300,7 @@ export class CajaDetalleDialogComponent {
   readonly data = inject<{ caja: CajaItemVM }>(MAT_DIALOG_DATA);
 
   readonly displayedColumns = ['fechaVenta', 'nombreProducto', 'metodoPago', 'precioVenta'];
+  readonly displayedColumnsGastos = ['fecha', 'concepto', 'categoria', 'metodoPago', 'monto'];
 
   cerrar(): void {
     this.ref.close();

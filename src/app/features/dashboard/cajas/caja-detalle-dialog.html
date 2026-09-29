@@ -47,6 +47,12 @@
       <span class="fin-label">Cobrado con QR</span>
       <strong class="fin-val text-info">{{ data.caja.totalQR | currency: 'BOB' : 'symbol-narrow' }}</strong>
     </div>
+    @if (data.caja.totalGastosEfectivo > 0) {
+      <div class="fin-card">
+        <span class="fin-label">Gastos pagados de caja</span>
+        <strong class="fin-val text-danger">-{{ data.caja.totalGastosEfectivo | currency: 'BOB' : 'symbol-narrow' }}</strong>
+      </div>
+    }
     <div class="fin-card highlight">
       <span class="fin-label">Total esperado en caja</span>
       <strong class="fin-val">{{ data.caja.totalEsperado | currency: 'BOB' : 'symbol-narrow' }}</strong>
@@ -127,6 +133,58 @@
 
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
         <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+    </div>
+  }
+
+  @if (data.caja.gastos && data.caja.gastos.length > 0) {
+    <h3 class="sales-list-title" style="margin-top: 24px;">
+      <mat-icon>payments</mat-icon>
+      Gastos pagados con efectivo de esta caja ({{ data.caja.gastos.length }})
+    </h3>
+
+    <div class="table-scroll">
+      <table mat-table [dataSource]="data.caja.gastos" class="detalle-table">
+        <ng-container matColumnDef="fecha">
+          <th mat-header-cell *matHeaderCellDef>Hora / Fecha</th>
+          <td mat-cell *matCellDef="let g">{{ g.fecha | date: 'dd/MM HH:mm' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="concepto">
+          <th mat-header-cell *matHeaderCellDef>Concepto</th>
+          <td mat-cell *matCellDef="let g">
+            <strong>{{ g.concepto }}</strong>
+            @if (g.notas) {
+              <small class="cell-subtitle">{{ g.notas }}</small>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="categoria">
+          <th mat-header-cell *matHeaderCellDef>Categoría</th>
+          <td mat-cell *matCellDef="let g">
+            <span class="pago-tag">{{ g.categoria | uppercase }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="metodoPago">
+          <th mat-header-cell *matHeaderCellDef>Método</th>
+          <td mat-cell *matCellDef="let g">
+            <span class="pago-tag efectivo">
+              {{ g.metodoPago === 'caja_efectivo' ? 'CAJA EFECTIVO' : (g.metodoPago | uppercase) }}
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="monto">
+          <th mat-header-cell *matHeaderCellDef>Importe</th>
+          <td mat-cell *matCellDef="let g">
+            <strong class="text-danger">-{{ g.monto | currency: 'BOB' : 'symbol-narrow' }}</strong>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumnsGastos"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumnsGastos"></tr>
       </table>
     </div>
   }

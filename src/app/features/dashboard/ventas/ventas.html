@@ -13,14 +13,18 @@
         <mat-icon>lock</mat-icon>
         Cerrar caja
       </button>
-      <button mat-flat-button class="primary-action" type="button" routerLink="/dashboard/ventas/nueva">
+      <button mat-flat-button class="primary-action" type="button" (click)="iniciarNuevaVenta()">
         <mat-icon>point_of_sale</mat-icon>
         Nueva venta
       </button>
     } @else {
-      <button mat-flat-button class="primary-action" type="button" (click)="abrirDialogoApertura()">
+      <button mat-stroked-button type="button" (click)="abrirDialogoApertura()">
         <mat-icon>lock_open</mat-icon>
         Abrir caja
+      </button>
+      <button mat-flat-button class="primary-action" type="button" (click)="iniciarNuevaVenta()">
+        <mat-icon>point_of_sale</mat-icon>
+        Nueva venta
       </button>
     }
   }
