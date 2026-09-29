@@ -55,8 +55,13 @@
         <mat-form-field appearance="outline">
           <mat-label>Estado</mat-label>
           <mat-select formControlName="estado">
-            @for (estado of estados; track estado) {
-              <mat-option [value]="estado">{{ estado | titlecase }}</mat-option>
+            @for (opt of estadosManuales; track opt.value) {
+              <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+            }
+            @if (form.controls.estado.value === 'reservado' || form.controls.estado.value === 'vendido') {
+              <mat-option [value]="form.controls.estado.value" [disabled]="true">
+                {{ form.controls.estado.value | titlecase }} (Automático)
+              </mat-option>
             }
           </mat-select>
         </mat-form-field>

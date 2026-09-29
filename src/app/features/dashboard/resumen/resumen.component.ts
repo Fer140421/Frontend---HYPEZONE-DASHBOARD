@@ -31,6 +31,7 @@ export interface ResumenMetricCard {
     | 'top_marca'
     | 'productos'
     | 'disponibles'
+    | 'por_recoger'
     | 'vendidos'
     | 'lotes';
   subtext: string;
@@ -87,7 +88,9 @@ export class ResumenComponent {
     map(([productos, ventas, lotes, marcas, gastos]) => {
       const activos = productos.filter((p) => p.activo !== false);
       const disponibles = activos.filter((p) => p.estado === 'disponible');
+      const porRecoger = activos.filter((p) => p.estado === 'por_recoger');
       const vendidos = activos.filter((p) => p.estado === 'vendido');
+      const capitalPorRecoger = porRecoger.reduce((total, p) => total + precioCompraProducto(p), 0);
       const ventasActivas = ventas.filter((venta) => venta.activo !== false);
       const gastosActivos = gastos.filter((g) => g.activo !== false);
 
@@ -208,6 +211,15 @@ export class ResumenComponent {
           icon: 'sell',
           type: 'disponibles',
           subtext: 'Listos para la venta',
+        },
+        {
+          label: 'Por Recoger',
+          value: porRecoger.length,
+          icon: 'local_shipping',
+          type: 'por_recoger',
+          subtext: capitalPorRecoger > 0
+            ? `Capital: ${capitalPorRecoger.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.`
+            : 'Sin prendas pendientes',
         },
         {
           label: 'Vendidos',

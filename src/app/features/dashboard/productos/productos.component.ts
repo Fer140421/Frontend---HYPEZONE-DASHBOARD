@@ -19,6 +19,9 @@ import { Observable, BehaviorSubject, combineLatest, map, of, shareReplay, start
 import { Lote } from '../../../core/models/lote.model';
 import {
   CategoriaProducto,
+  EstadoProducto,
+  estadosFiltroProducto,
+  estadosManualesProducto,
   estadosProducto,
   generosProducto,
   GeneroProducto,
@@ -120,6 +123,8 @@ export class ProductosComponent implements OnInit {
     shareReplay({ bufferSize: 1, refCount: true }),
   );
   readonly estados = estadosProducto;
+  readonly estadosManuales = estadosManualesProducto;
+  readonly estadosFiltro = estadosFiltroProducto;
   readonly generos = generosProducto;
   readonly metodos = metodosPago;
   readonly countries = SOUTH_AMERICAN_COUNTRIES;
@@ -352,7 +357,7 @@ export class ProductosComponent implements OnInit {
   }
 
   openView(producto: Producto): void {
-    this.dialog.open(ProductViewDialogComponent, {
+    const dialogRef = this.dialog.open(ProductViewDialogComponent, {
       width: 'min(920px, 95vw)',
       maxWidth: '920px',
       maxHeight: '92vh',
@@ -360,6 +365,22 @@ export class ProductosComponent implements OnInit {
         producto,
       },
     });
+
+    dialogRef.afterClosed().subscribe(async (result) => {
+      if (result?.action === 'pasarAStock') {
+        await this.pasarAStock(producto);
+      }
+    });
+  }
+
+  async pasarAStock(producto: Producto): Promise<void> {
+    if (!this.auth.can('products.update') || !producto.id) return;
+    try {
+      await this.productoRepository.update(producto.id, { estado: 'disponible' });
+      this.snack(`"${producto.nombre}" ahora está Disponible en stock.`);
+    } catch {
+      this.snack('No se pudo actualizar el estado del producto.');
+    }
   }
 
   openEdit(producto: Producto): void {
@@ -395,7 +416,7 @@ export class ProductosComponent implements OnInit {
       loteId: raw.loteId || undefined,
       genero: (normalizeGenero(raw.genero) || undefined) as GeneroProducto | undefined,
       codigo: raw.codigo || generateProductCode(),
-      estado: this.currentId() ? raw.estado : 'disponible',
+      estado: (raw.estado as EstadoProducto) || 'disponible',
       imagenes: this.imagenes(),
       activo: true,
     } as Partial<Producto>;
@@ -448,6 +469,10 @@ export class ProductosComponent implements OnInit {
 
   async publicarEnWeb(producto: Producto): Promise<void> {
     if (!this.auth.can('products.update') || !producto.id || producto.estadoPublicacion === 'publicado') return;
+    if (producto.estado === 'por_recoger') {
+      this.snack('Debes pasar la prenda a Stock antes de publicarla en la web.');
+      return;
+    }
     try {
       await this.productoRepository.publicarEnWeb(producto.id);
       this.snack('Producto publicado en la web.');
@@ -594,6 +619,8 @@ interface ProductPriceDialogData {
   styleUrl: './product-view-dialog.css',
 })
 export class ProductViewDialogComponent {
+  readonly auth = inject(AuthService);
+  private readonly dialogRef = inject(MatDialogRef<ProductViewDialogComponent>);
   readonly data = inject<ProductViewDialogData>(MAT_DIALOG_DATA);
   readonly rawImages = imagenesProducto(this.data.producto);
   readonly selectedIndex = signal<number>(0);
@@ -612,6 +639,10 @@ export class ProductViewDialogComponent {
     this.precioCompra > 0 ? ((this.precioVenta - this.precioCompra) / this.precioCompra) * 100 : 0;
 
   readonly labelGenero = labelGenero;
+
+  pasarAStock(): void {
+    this.dialogRef.close({ action: 'pasarAStock' });
+  }
 
   selectImage(index: number): void {
     if (index >= 0 && index < this.rawImages.length) {
@@ -694,6 +725,7 @@ export class ProductEditDialogComponent {
   readonly marcas$ = this.marcaRepository.getAll().pipe(shareReplay({ bufferSize: 1, refCount: true }));
   readonly tallas$ = this.tallaRepository.getAll().pipe(shareReplay({ bufferSize: 1, refCount: true }));
   readonly estados = estadosProducto;
+  readonly estadosManuales = estadosManualesProducto;
   readonly generos = generosProducto;
   readonly imagenes = signal(imagenesProducto(this.data.producto));
   readonly opcionesLocales = { marcas: signal<string[]>([]), categorias: signal<string[]>([]), tallas: signal<string[]>([]) };

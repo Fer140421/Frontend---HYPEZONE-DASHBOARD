@@ -17,6 +17,12 @@
 
   <div class="header-actions-right">
     <app-status-chip [status]="data.producto.estado" />
+    @if (data.producto.estado === 'por_recoger' && auth.can('products.update')) {
+      <button mat-flat-button color="primary" type="button" class="btn-quick-stock" (click)="pasarAStock()">
+        <mat-icon>inventory_2</mat-icon>
+        Pasar a Stock
+      </button>
+    }
     <button mat-icon-button type="button" mat-dialog-close class="close-dialog-btn" aria-label="Cerrar modal">
       <mat-icon>close</mat-icon>
     </button>
@@ -170,8 +176,14 @@
 </mat-dialog-content>
 
 <mat-dialog-actions align="end" class="product-dialog-actions">
-  <button mat-flat-button class="primary-action" type="button" mat-dialog-close>
-    <mat-icon>check</mat-icon>
+  @if (data.producto.estado === 'por_recoger' && auth.can('products.update')) {
+    <button mat-flat-button color="primary" type="button" (click)="pasarAStock()">
+      <mat-icon>inventory_2</mat-icon>
+      Marcar como Recibido (Pasar a Stock)
+    </button>
+  }
+  <button mat-stroked-button type="button" mat-dialog-close>
+    <mat-icon>close</mat-icon>
     Cerrar
   </button>
 </mat-dialog-actions>

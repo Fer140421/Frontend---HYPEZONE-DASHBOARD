@@ -22,6 +22,8 @@
 }
 .product-title { margin: 0 !important; font: 800 1.45rem/1.25 inherit; color: var(--hz-black); }
 .header-actions-right { display: flex; align-items: center; gap: 12px; }
+.btn-quick-stock { display: inline-flex; align-items: center; gap: 6px; font-weight: 700 !important; font-size: 0.85rem !important; border-radius: 8px !important; }
+.btn-quick-stock mat-icon { font-size: 18px; width: 18px; height: 18px; }
 .close-dialog-btn { color: var(--hz-gray); }
 .close-dialog-btn:hover { color: var(--hz-black); background: var(--hz-background); }
 

@@ -12,7 +12,7 @@ export type CategoriaProducto =
   | 'otro';
 
 export type GeneroProducto = 'hombre' | 'mujer' | 'unisex' | 'nino' | 'nina' | 'niño' | 'niña';
-export type EstadoProducto = 'disponible' | 'reservado' | 'vendido';
+export type EstadoProducto = 'disponible' | 'reservado' | 'vendido' | 'por_recoger';
 export type EstadoPublicacionProducto = 'pendiente' | 'publicado';
 
 export interface Producto extends AuditableEntity {
@@ -83,7 +83,28 @@ export const categoriasProducto: CategoriaProducto[] = [
   'otro',
 ];
 
-export const estadosProducto: EstadoProducto[] = ['disponible', 'reservado', 'vendido'];
+export const estadosProducto: EstadoProducto[] = ['disponible', 'por_recoger', 'reservado', 'vendido'];
+
+export interface OpcionEstado {
+  value: EstadoProducto;
+  label: string;
+}
+
+/**
+ * Estados permitidos para asignación manual al crear o editar prendas.
+ * Los estados 'reservado' y 'vendido' son automáticos del sistema.
+ */
+export const estadosManualesProducto: OpcionEstado[] = [
+  { value: 'disponible', label: 'Disponible (En Stock)' },
+  { value: 'por_recoger', label: 'Por Recoger (En tránsito)' },
+];
+
+export const estadosFiltroProducto: { value: string; label: string }[] = [
+  { value: 'disponible', label: 'Disponible' },
+  { value: 'por_recoger', label: 'Por Recoger' },
+  { value: 'reservado', label: 'Reservado' },
+  { value: 'vendido', label: 'Vendido' },
+];
 
 export interface OpcionGenero {
   value: GeneroProducto;

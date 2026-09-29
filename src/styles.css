@@ -524,6 +524,16 @@ mat-paginator {
   font-weight: 700;
 }
 
+.status-por_recoger,
+.status-por-recoger,
+.status-azul {
+  --mdc-chip-elevated-container-color: #e0f2fe !important;
+  --mdc-chip-label-text-color: #0369a1 !important;
+  background-color: #e0f2fe !important;
+  color: #0369a1 !important;
+  font-weight: 700;
+}
+
 .status-reservado,
 .status-amarillo {
   --mdc-chip-elevated-container-color: var(--hz-warning-soft) !important;
