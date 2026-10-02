@@ -31,7 +31,7 @@
 
   <div class="financial-summary-grid">
     <div class="fin-card">
-      <span class="fin-label">Monto inicial</span>
+      <span class="fin-label">Monto inicial (Base)</span>
       <strong class="fin-val">{{ data.caja.montoInicial | currency: 'BOB' : 'symbol-narrow' }}</strong>
     </div>
     <div class="fin-card">
@@ -40,37 +40,38 @@
       <small class="cell-subtitle">{{ data.caja.totalPrendas }} {{ data.caja.totalPrendas === 1 ? 'prenda' : 'prendas' }}</small>
     </div>
     <div class="fin-card">
+      <span class="fin-label">Cobrado con QR</span>
+      <strong class="fin-val text-info">{{ data.caja.totalQR | currency: 'BOB' : 'symbol-narrow' }}</strong>
+    </div>
+    <div class="fin-card">
       <span class="fin-label">Cobrado en efectivo</span>
       <strong class="fin-val text-success">{{ data.caja.totalEfectivo | currency: 'BOB' : 'symbol-narrow' }}</strong>
     </div>
     <div class="fin-card">
-      <span class="fin-label">Cobrado con QR</span>
-      <strong class="fin-val text-info">{{ data.caja.totalQR | currency: 'BOB' : 'symbol-narrow' }}</strong>
+      <span class="fin-label">Inversión a reponer (Costo)</span>
+      <strong class="fin-val text-info">{{ data.caja.totalCostoPrendas | currency: 'BOB' : 'symbol-narrow' }}</strong>
+      <small class="cell-subtitle">Capital de mercadería</small>
     </div>
-    @if (data.caja.totalGastosEfectivo > 0) {
+    <div class="fin-card">
+      <span class="fin-label">Ganancia neta del turno</span>
+      <strong class="fin-val text-success">{{ data.caja.totalGanancia | currency: 'BOB' : 'symbol-narrow' }}</strong>
+      <small class="cell-subtitle">Utilidad libre</small>
+    </div>
+    @if (data.caja.totalGastos > 0) {
       <div class="fin-card">
-        <span class="fin-label">Gastos pagados de caja</span>
-        <strong class="fin-val text-danger">-{{ data.caja.totalGastosEfectivo | currency: 'BOB' : 'symbol-narrow' }}</strong>
+        <span class="fin-label">Gastos / Retiros</span>
+        <strong class="fin-val text-danger">-{{ data.caja.totalGastos | currency: 'BOB' : 'symbol-narrow' }}</strong>
       </div>
     }
     <div class="fin-card highlight">
-      <span class="fin-label">Total esperado en caja</span>
-      <strong class="fin-val">{{ data.caja.totalEsperado | currency: 'BOB' : 'symbol-narrow' }}</strong>
+      <span class="fin-label">Capital acumulado (Inicial + Inversión)</span>
+      <strong class="fin-val">{{ data.caja.capitalMasInversion | currency: 'BOB' : 'symbol-narrow' }}</strong>
+      <small class="cell-subtitle">Base + costo para reponer</small>
     </div>
     @if (data.caja.montoFinalReal !== undefined) {
       <div class="fin-card">
-        <span class="fin-label">Efectivo real contado</span>
+        <span class="fin-label">Capital registrado al cierre</span>
         <strong class="fin-val">{{ data.caja.montoFinalReal | currency: 'BOB' : 'symbol-narrow' }}</strong>
-      </div>
-      <div class="fin-card">
-        <span class="fin-label">Diferencia</span>
-        <strong
-          class="fin-val"
-          [class.text-success]="(data.caja.diferencia ?? 0) >= 0"
-          [class.text-danger]="(data.caja.diferencia ?? 0) < 0"
-        >
-          {{ ((data.caja.diferencia ?? 0) > 0 ? '+' : '') + ((data.caja.diferencia ?? 0) | currency: 'BOB' : 'symbol-narrow') }}
-        </strong>
       </div>
     }
   </div>
@@ -124,8 +125,22 @@
           </td>
         </ng-container>
 
+        <ng-container matColumnDef="costo">
+          <th mat-header-cell *matHeaderCellDef>Inversión (Costo)</th>
+          <td mat-cell *matCellDef="let v">
+            {{ (v.precioCompra || 0) | currency: 'BOB' : 'symbol-narrow' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="ganancia">
+          <th mat-header-cell *matHeaderCellDef>Ganancia</th>
+          <td mat-cell *matCellDef="let v">
+            <strong class="text-success">{{ (v.ganancia ?? ((v.precioVenta || 0) - (v.precioCompra || 0))) | currency: 'BOB' : 'symbol-narrow' }}</strong>
+          </td>
+        </ng-container>
+
         <ng-container matColumnDef="precioVenta">
-          <th mat-header-cell *matHeaderCellDef>Importe</th>
+          <th mat-header-cell *matHeaderCellDef>Importe (Venta)</th>
           <td mat-cell *matCellDef="let v">
             <strong>{{ v.precioVenta | currency: 'BOB' : 'symbol-narrow' }}</strong>
           </td>

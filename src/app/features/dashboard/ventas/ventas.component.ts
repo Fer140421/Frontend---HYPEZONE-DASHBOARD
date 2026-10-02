@@ -212,11 +212,26 @@ export class VentasComponent implements OnInit {
   );
 
   readonly summary$ = this.ventasFiltradas$.pipe(
-    map((ventas) => ({
-      totalVentas: ventas.length,
-      totalVendido: ventas.reduce((total, venta) => total + Number(venta.precioVenta), 0),
-      ganancia: ventas.reduce((total, venta) => total + Number(venta.ganancia), 0),
-    })),
+    map((ventas) => {
+      const totalVendido = ventas.reduce((total, venta) => total + Number(venta.precioVenta || 0), 0);
+      const costo = ventas.reduce((total, venta) => total + Number(venta.precioCompra || 0), 0);
+      const ganancia = ventas.reduce(
+        (total, venta) =>
+          total +
+          Number(
+            venta.ganancia !== undefined && venta.ganancia !== null
+              ? venta.ganancia
+              : Number(venta.precioVenta || 0) - Number(venta.precioCompra || 0),
+          ),
+        0,
+      );
+      return {
+        totalVentas: ventas.length,
+        totalVendido,
+        costo,
+        ganancia,
+      };
+    }),
   );
 
   readonly listViewModel$ = combineLatest({

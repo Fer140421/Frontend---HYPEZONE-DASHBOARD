@@ -43,11 +43,15 @@ export interface CajaItemVM {
   montoInicial: number;
   totalVendido: number;
   totalPrendas: number;
+  totalCostoPrendas: number;
+  totalGanancia: number;
   totalEfectivo: number;
   totalQR: number;
   totalGastos: number;
   totalGastosEfectivo: number;
   totalEsperado: number;
+  totalEsperadoGeneral: number;
+  capitalMasInversion: number;
   montoFinalReal?: number;
   diferencia?: number;
   notasApertura?: string;
@@ -105,9 +109,10 @@ export class CajasComponent implements OnInit {
     'montoInicial',
     'totalPrendas',
     'totalVendido',
-    'totalEsperado',
+    'totalCostoPrendas',
+    'totalGanancia',
+    'capitalMasInversion',
     'montoFinal',
-    'diferencia',
     'acciones',
   ];
 
@@ -151,12 +156,30 @@ export class CajasComponent implements OnInit {
           .filter((v) => v.metodoPago === 'qr')
           .reduce((sum, v) => sum + Number(v.precioVenta || 0), 0);
 
+        const totalCostoPrendas = caja.totalCostoPrendas ?? ventasDeCaja.reduce(
+          (sum, v) => sum + Number(v.precioCompra || 0),
+          0,
+        );
+        const totalGanancia = caja.totalGanancia ?? ventasDeCaja.reduce(
+          (sum, v) =>
+            sum +
+            Number(
+              v.ganancia !== undefined && v.ganancia !== null
+                ? v.ganancia
+                : Number(v.precioVenta || 0) - Number(v.precioCompra || 0),
+            ),
+          0,
+        );
+
         const totalGastos = gastosDeCaja.reduce((sum, g) => sum + Number(g.monto || 0), 0);
         const totalGastosEfectivo = gastosDeCaja
           .filter((g) => g.metodoPago === 'caja_efectivo')
           .reduce((sum, g) => sum + Number(g.monto || 0), 0);
 
-        const totalEsperado = Number(caja.montoInicial || 0) + totalEfectivo - totalGastosEfectivo;
+        const baseInicial = Number(caja.montoInicial || 0);
+        const totalEsperado = caja.totalEsperadoEfectivo ?? (baseInicial + totalEfectivo - totalGastosEfectivo);
+        const totalEsperadoGeneral = caja.totalEsperadoGeneral ?? (baseInicial + totalVendido - totalGastos);
+        const capitalMasInversion = caja.capitalMasInversion ?? (baseInicial + totalCostoPrendas);
 
         return {
           id: caja.id ?? '',
@@ -165,14 +188,18 @@ export class CajasComponent implements OnInit {
           usuarioEmail: caja.usuarioEmail,
           fechaApertura: caja.fechaApertura,
           fechaCierre: caja.fechaCierre,
-          montoInicial: Number(caja.montoInicial || 0),
+          montoInicial: baseInicial,
           totalVendido,
           totalPrendas,
+          totalCostoPrendas,
+          totalGanancia,
           totalEfectivo,
           totalQR,
           totalGastos,
           totalGastosEfectivo,
-          totalEsperado: caja.totalEsperadoEfectivo ?? totalEsperado,
+          totalEsperado,
+          totalEsperadoGeneral,
+          capitalMasInversion,
           montoFinalReal: caja.montoFinalReal,
           diferencia: caja.diferencia,
           notasApertura: caja.notasApertura,
@@ -190,14 +217,15 @@ export class CajasComponent implements OnInit {
       const abiertas = cajas.filter((c) => c.estado === 'abierta');
       const totalVendidoAbiertas = abiertas.reduce((sum, c) => sum + c.totalVendido, 0);
       const totalPrendasAbiertas = abiertas.reduce((sum, c) => sum + c.totalPrendas, 0);
-      const cerradas = cajas.filter((c) => c.estado === 'cerrada');
-      const diferenciaNeta = cerradas.reduce((sum, c) => sum + Number(c.diferencia || 0), 0);
+      const totalInversionAbiertas = abiertas.reduce((sum, c) => sum + c.totalCostoPrendas, 0);
+      const totalGananciaAbiertas = abiertas.reduce((sum, c) => sum + c.totalGanancia, 0);
 
       return {
         cajasAbiertasCount: abiertas.length,
         totalVendidoAbiertas,
         totalPrendasAbiertas,
-        diferenciaNeta,
+        totalInversionAbiertas,
+        totalGananciaAbiertas,
         totalCajas: cajas.length,
       };
     }),
@@ -299,7 +327,7 @@ export class CajaDetalleDialogComponent {
   private readonly ref = inject(MatDialogRef<CajaDetalleDialogComponent>);
   readonly data = inject<{ caja: CajaItemVM }>(MAT_DIALOG_DATA);
 
-  readonly displayedColumns = ['fechaVenta', 'nombreProducto', 'metodoPago', 'precioVenta'];
+  readonly displayedColumns = ['fechaVenta', 'nombreProducto', 'metodoPago', 'costo', 'ganancia', 'precioVenta'];
   readonly displayedColumnsGastos = ['fecha', 'concepto', 'categoria', 'metodoPago', 'monto'];
 
   cerrar(): void {

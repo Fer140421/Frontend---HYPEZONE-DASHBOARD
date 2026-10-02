@@ -90,7 +90,23 @@ export class CajaService {
 
     const totalVentas = totalVentasEfectivo + totalVentasQR;
 
-    // Consultar gastos pagados con efectivo desde esta caja
+    const totalCostoPrendas = ventas.reduce(
+      (sum, v) => sum + Number(v.precioCompra || 0),
+      0,
+    );
+
+    const totalGanancia = ventas.reduce(
+      (sum, v) =>
+        sum +
+        Number(
+          v.ganancia !== undefined && v.ganancia !== null
+            ? v.ganancia
+            : Number(v.precioVenta || 0) - Number(v.precioCompra || 0),
+        ),
+      0,
+    );
+
+    // Consultar gastos pagados desde esta caja
     const gastosRef = collection(this.firestore, 'gastos');
     const qGastos = query(gastosRef, where('cajaId', '==', cajaId));
     const snapGastos = await getDocs(qGastos);
@@ -103,15 +119,25 @@ export class CajaService {
       .filter((g) => g.metodoPago === 'caja_efectivo')
       .reduce((sum, g) => sum + Number(g.monto || 0), 0);
 
-    const totalEsperadoEfectivo = Number(montoInicial || 0) + totalVentasEfectivo - totalGastosEfectivo;
+    const totalGastos = gastos.reduce((sum, g) => sum + Number(g.monto || 0), 0);
+
+    const baseInicial = Number(montoInicial || 0);
+    const totalEsperadoEfectivo = baseInicial + totalVentasEfectivo - totalGastosEfectivo;
+    const totalEsperadoGeneral = baseInicial + totalVentas - totalGastos;
+    const capitalMasInversion = baseInicial + totalCostoPrendas;
 
     return {
-      montoInicial: Number(montoInicial || 0),
+      montoInicial: baseInicial,
       totalVentasEfectivo,
       totalVentasQR,
       totalVentas,
+      totalCostoPrendas,
+      totalGanancia,
       totalGastosEfectivo,
+      totalGastos,
       totalEsperadoEfectivo,
+      totalEsperadoGeneral,
+      capitalMasInversion,
       cantidadVentas: ventas.length,
       cantidadGastos: gastos.length,
     };
@@ -131,11 +157,15 @@ export class CajaService {
 
     const montoReal = Number(montoFinalReal);
     if (!Number.isFinite(montoReal) || montoReal < 0) {
-      throw new Error('El monto final en efectivo debe ser un número válido.');
+      throw new Error('El monto final debe ser un número válido.');
     }
 
     const resumen = await this.calcularResumenCaja(cajaId, cajaSnap.montoInicial);
-    const diferencia = montoReal - resumen.totalEsperadoEfectivo;
+    // Si hay ventas principalmente por QR, la comparación se hace contra el balance total o el capital
+    const referenciaEsperada = resumen.totalVentasEfectivo > 0
+      ? resumen.totalEsperadoEfectivo
+      : resumen.capitalMasInversion;
+    const diferencia = montoReal - referenciaEsperada;
 
     await this.cajaRepository.update(cajaId, {
       estado: 'cerrada',
@@ -144,8 +174,13 @@ export class CajaService {
       totalVentasEfectivo: resumen.totalVentasEfectivo,
       totalVentasQR: resumen.totalVentasQR,
       totalVentas: resumen.totalVentas,
+      totalCostoPrendas: resumen.totalCostoPrendas,
+      totalGanancia: resumen.totalGanancia,
       totalGastosEfectivo: resumen.totalGastosEfectivo,
+      totalGastos: resumen.totalGastos,
       totalEsperadoEfectivo: resumen.totalEsperadoEfectivo,
+      totalEsperadoGeneral: resumen.totalEsperadoGeneral,
+      capitalMasInversion: resumen.capitalMasInversion,
       diferencia,
       usuarioCierreId: user?.uid,
       usuarioCierreNombre: profile?.displayName || user?.displayName || user?.email || 'Usuario',

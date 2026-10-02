@@ -50,12 +50,22 @@ export class CajaCierreDialogComponent implements OnInit {
   readonly montoIngresado = signal<number | null>(null);
 
   readonly diferencia = computed(() => {
-    const esperado = this.resumen()?.totalEsperadoEfectivo ?? 0;
+    const r = this.resumen();
+    if (!r) return null;
     const ingresado = this.montoIngresado();
     if (ingresado === null || !Number.isFinite(ingresado)) {
       return null;
     }
-    return ingresado - esperado;
+    // Si la venta fue por QR principalmente, la referencia natural es el capital acumulado
+    const referencia = r.totalVentasEfectivo > 0 ? r.totalEsperadoEfectivo : r.capitalMasInversion;
+    return ingresado - referencia;
+  });
+
+  readonly gananciaRetirada = computed(() => {
+    const r = this.resumen();
+    const ingresado = this.montoIngresado();
+    if (!r || ingresado === null || !Number.isFinite(ingresado)) return null;
+    return r.totalEsperadoGeneral - ingresado;
   });
 
   ngOnInit(): void {
@@ -64,6 +74,10 @@ export class CajaCierreDialogComponent implements OnInit {
     });
 
     void this.cargarResumen();
+  }
+
+  establecerMonto(valor: number): void {
+    this.form.controls.montoFinalReal.setValue(Number(valor.toFixed(2)));
   }
 
   async cargarResumen(): Promise<void> {
@@ -75,6 +89,10 @@ export class CajaCierreDialogComponent implements OnInit {
         this.data.caja.montoInicial,
       );
       this.resumen.set(calculo);
+      if (this.form.controls.montoFinalReal.value === null) {
+        // Pre-cargar por defecto con Capital inicial + Costo de prendas vendidas (inversión recuperada)
+        this.establecerMonto(calculo.capitalMasInversion);
+      }
     } catch (error) {
       this.snackBar.open(
         error instanceof Error ? error.message : 'Error al calcular resumen de caja.',

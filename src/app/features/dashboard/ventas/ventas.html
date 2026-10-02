@@ -340,8 +340,8 @@
           </div>
           <div class="session-info-right">
             <button mat-stroked-button color="warn" type="button" (click)="abrirDialogoCierre()">
-              <mat-icon>lock</mat-icon>
-              Cerrar caja y arquear
+              <mat-icon>point_of_sale</mat-icon>
+              Cerrar turno / balance de caja
             </button>
           </div>
         </mat-card-content>
@@ -350,9 +350,10 @@
 
     @if (listViewModel$ | async; as vm) {
     <section class="summary-cards">
-      <mat-card><span>Detalles vendidos</span><strong>{{ vm.summary.totalVentas }}</strong></mat-card>
+      <mat-card><span>Prendas vendidas</span><strong>{{ vm.summary.totalVentas }}</strong></mat-card>
       <mat-card><span>Total vendido</span><strong>{{ vm.summary.totalVendido | currency: 'BOB' : 'symbol-narrow' }}</strong></mat-card>
-      <mat-card><span>Ganancia</span><strong>{{ vm.summary.ganancia | currency: 'BOB' : 'symbol-narrow' }}</strong></mat-card>
+      <mat-card><span>Inversión a reponer</span><strong>{{ vm.summary.costo | currency: 'BOB' : 'symbol-narrow' }}</strong></mat-card>
+      <mat-card><span>Ganancia neta</span><strong style="color: #10b981;">{{ vm.summary.ganancia | currency: 'BOB' : 'symbol-narrow' }}</strong></mat-card>
     </section>
 
     <mat-card class="list-card">

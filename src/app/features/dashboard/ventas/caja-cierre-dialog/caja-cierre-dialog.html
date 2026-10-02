@@ -1,12 +1,12 @@
 <h2 mat-dialog-title>
-  <mat-icon class="dialog-title-icon warning-icon">lock</mat-icon>
-  Cierre de caja y arqueo
+  <mat-icon class="dialog-title-icon warning-icon">point_of_sale</mat-icon>
+  Cierre de turno y balance de caja
 </h2>
 
 @if (cargando()) {
   <mat-dialog-content class="loading-content">
     <mat-icon class="spin-icon">sync</mat-icon>
-    <p>Calculando ventas y balance de la sesión...</p>
+    <p>Calculando ventas, inversión y balance de la sesión...</p>
   </mat-dialog-content>
 } @else {
   <form [formGroup]="form" (ngSubmit)="cerrarCaja()">
@@ -19,34 +19,74 @@
       @if (resumen(); as r) {
         <div class="summary-cards-grid">
           <div class="summary-box">
-            <span class="box-label">Monto inicial</span>
+            <span class="box-label">Monto inicial (Base)</span>
             <strong class="box-val">{{ r.montoInicial | currency: 'BOB' : 'symbol-narrow' }}</strong>
           </div>
           <div class="summary-box">
-            <span class="box-label">Ventas en efectivo</span>
-            <strong class="box-val text-success">+{{ r.totalVentasEfectivo | currency: 'BOB' : 'symbol-narrow' }}</strong>
+            <span class="box-label">Total vendido en turno</span>
+            <strong class="box-val text-primary">+{{ r.totalVentas | currency: 'BOB' : 'symbol-narrow' }}</strong>
+            <small class="box-sub">QR: {{ r.totalVentasQR | currency: 'BOB' : 'symbol-narrow' }} · Ef: {{ r.totalVentasEfectivo | currency: 'BOB' : 'symbol-narrow' }}</small>
           </div>
-          @if (r.totalGastosEfectivo > 0) {
+          <div class="summary-box">
+            <span class="box-label">Inversión a reponer (Costo)</span>
+            <strong class="box-val text-info">{{ r.totalCostoPrendas | currency: 'BOB' : 'symbol-narrow' }}</strong>
+            <small class="box-sub">Vuelve al fondo de compras</small>
+          </div>
+          <div class="summary-box">
+            <span class="box-label">Ganancia neta del turno</span>
+            <strong class="box-val text-success">{{ r.totalGanancia | currency: 'BOB' : 'symbol-narrow' }}</strong>
+            <small class="box-sub">Utilidad libre generada</small>
+          </div>
+          @if (r.totalGastos > 0) {
             <div class="summary-box">
-              <span class="box-label">Egresos / Gastos caja</span>
-              <strong class="box-val text-danger">-{{ r.totalGastosEfectivo | currency: 'BOB' : 'symbol-narrow' }}</strong>
+              <span class="box-label">Gastos / Retiros</span>
+              <strong class="box-val text-danger">-{{ r.totalGastos | currency: 'BOB' : 'symbol-narrow' }}</strong>
             </div>
           }
-          <div class="summary-box">
-            <span class="box-label">Ventas QR</span>
-            <strong class="box-val text-info">{{ r.totalVentasQR | currency: 'BOB' : 'symbol-narrow' }}</strong>
-          </div>
           <div class="summary-box highlight-box">
-            <span class="box-label">Efectivo esperado en caja</span>
-            <strong class="box-val text-primary">{{ r.totalEsperadoEfectivo | currency: 'BOB' : 'symbol-narrow' }}</strong>
-            <small class="box-sub">Inicial + Efectivo{{ r.totalGastosEfectivo > 0 ? ' - Gastos' : '' }}</small>
+            <span class="box-label">Capital sugerido (Inicial + Inversión)</span>
+            <strong class="box-val text-primary">{{ r.capitalMasInversion | currency: 'BOB' : 'symbol-narrow' }}</strong>
+            <small class="box-sub">Base con la que abriste + costo de prendas para reinvertir</small>
+          </div>
+        </div>
+
+        <div class="quick-options-section">
+          <span class="quick-options-label">Atajos rápidos para el capital final:</span>
+          <div class="quick-buttons-row">
+            <button
+              mat-stroked-button
+              type="button"
+              class="quick-btn"
+              (click)="establecerMonto(r.capitalMasInversion)"
+            >
+              <mat-icon>autorenew</mat-icon>
+              Capital + Inversión ({{ r.capitalMasInversion | currency: 'BOB' : 'symbol-narrow' }})
+            </button>
+            <button
+              mat-stroked-button
+              type="button"
+              class="quick-btn"
+              (click)="establecerMonto(r.totalEsperadoGeneral)"
+            >
+              <mat-icon>account_balance</mat-icon>
+              Dejar Todo ({{ r.totalEsperadoGeneral | currency: 'BOB' : 'symbol-narrow' }})
+            </button>
+            <button
+              mat-stroked-button
+              type="button"
+              class="quick-btn"
+              (click)="establecerMonto(r.montoInicial)"
+            >
+              <mat-icon>restart_alt</mat-icon>
+              Solo Base Inicial ({{ r.montoInicial | currency: 'BOB' : 'symbol-narrow' }})
+            </button>
           </div>
         </div>
       }
 
       <div class="form-fields">
         <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Efectivo contado físicamente (Bs)</mat-label>
+          <mat-label>Monto que queda como capital para el siguiente turno (Bs)</mat-label>
           <span matPrefix>Bs&nbsp;</span>
           <input
             matInput
@@ -57,33 +97,32 @@
             min="0"
             required
             autocomplete="off"
-            autofocus
           />
           <mat-icon matSuffix>account_balance_wallet</mat-icon>
           @if (form.controls.montoFinalReal.hasError('required') && form.controls.montoFinalReal.touched) {
-            <mat-error>El monto contado en caja es obligatorio.</mat-error>
+            <mat-error>El monto de capital de cierre es obligatorio.</mat-error>
           }
           @if (form.controls.montoFinalReal.hasError('min')) {
             <mat-error>El monto no puede ser negativo.</mat-error>
           }
         </mat-form-field>
 
-        @if (diferencia() !== null) {
+        @if (gananciaRetirada() !== null) {
           <div
             class="diff-indicator"
-            [class.diff-balanced]="diferencia() === 0"
-            [class.diff-surplus]="(diferencia() ?? 0) > 0"
-            [class.diff-deficit]="(diferencia() ?? 0) < 0"
+            [class.diff-balanced]="gananciaRetirada() === 0"
+            [class.diff-surplus]="(gananciaRetirada() ?? 0) > 0"
+            [class.diff-deficit]="(gananciaRetirada() ?? 0) < 0"
           >
-            @if (diferencia() === 0) {
+            @if (gananciaRetirada() === 0) {
               <mat-icon>check_circle</mat-icon>
-              <span>¡Caja cuadrada perfectamente! (Diferencia: Bs 0.00)</span>
-            } @else if ((diferencia() ?? 0) > 0) {
-              <mat-icon>add_circle</mat-icon>
-              <span>Sobrante de dinero: +{{ diferencia() | currency: 'BOB' : 'symbol-narrow' }}</span>
+              <span>Se deja el 100% de las ventas en el fondo (Bs 0.00 retirado).</span>
+            } @else if ((gananciaRetirada() ?? 0) > 0) {
+              <mat-icon>savings</mat-icon>
+              <span>Separando ganancia/retiro: {{ gananciaRetirada() | currency: 'BOB' : 'symbol-narrow' }} (Quedan {{ montoIngresado() | currency: 'BOB' : 'symbol-narrow' }} en el fondo)</span>
             } @else {
-              <mat-icon>error</mat-icon>
-              <span>Faltante de dinero: {{ diferencia() | currency: 'BOB' : 'symbol-narrow' }}</span>
+              <mat-icon>add_circle</mat-icon>
+              <span>Inyección adicional de capital: +{{ (-(gananciaRetirada() ?? 0)) | currency: 'BOB' : 'symbol-narrow' }}</span>
             }
           </div>
         }
@@ -94,7 +133,7 @@
             matInput
             formControlName="notas"
             rows="2"
-            placeholder="Ej: Retiro entregado al administrador..."
+            placeholder="Ej: Se separaron 82 Bs de ganancia y se dejaron 58 Bs de reposición de mercadería..."
           ></textarea>
         </mat-form-field>
       </div>
@@ -111,7 +150,7 @@
         [disabled]="form.invalid || guardando()"
       >
         <mat-icon>lock</mat-icon>
-        {{ guardando() ? 'Cerrando caja...' : 'Confirmar cierre de caja' }}
+        {{ guardando() ? 'Cerrando turno...' : 'Confirmar cierre de turno' }}
       </button>
     </mat-dialog-actions>
   </form>
