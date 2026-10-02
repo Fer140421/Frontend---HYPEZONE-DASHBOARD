@@ -211,13 +211,6 @@ export class ResumenComponent {
           featured: true,
         },
         {
-          label: 'Productos',
-          value: activos.length,
-          icon: 'inventory_2',
-          type: 'productos',
-          subtext: 'Registrados en catálogo',
-        },
-        {
           label: 'Disponibles',
           value: disponibles.length,
           icon: 'sell',
