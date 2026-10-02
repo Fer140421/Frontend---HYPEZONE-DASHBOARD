@@ -265,6 +265,108 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
     }
   }
 
+  /**
+   * Marca un producto como vendido en la colección pública (para la sección de archivo histórico de la tienda web)
+   * y actualiza su estado en el inventario interno, SIN crear registros de venta ni afectar finanzas ni caja.
+   */
+  async archivarComoVendidoWeb(id: string): Promise<void> {
+    const productRef = doc(this.firestore, `productos/${id}`);
+    const snapshot = await getDoc(productRef);
+    if (!snapshot.exists()) throw new Error('El producto no existe.');
+
+    const producto = normalizeProducto({ id: snapshot.id, ...(snapshot.data() as Producto) });
+    const timestamp = serverTimestamp();
+
+    const publicRef = doc(this.firestore, `productosPublicos/${id}`);
+    const publicSnapshot = await getDoc(publicRef);
+    const yaExistePublico = publicSnapshot.exists();
+
+    const batch = writeBatch(this.firestore);
+
+    const publicPayload: Record<string, unknown> = {
+      ...sanitizePublicProduct(producto),
+      productoId: id,
+      estado: 'vendido',
+      activo: true,
+      updatedAt: timestamp,
+    };
+    if (!yaExistePublico) {
+      publicPayload['createdAt'] = timestamp;
+    }
+
+    batch.set(publicRef, removeUndefinedDeep(publicPayload), { merge: true });
+
+    batch.update(productRef, {
+      estado: 'vendido',
+      estadoPublicacion: 'publicado',
+      updatedAt: timestamp,
+    });
+
+    await batch.commit();
+  }
+
+  /**
+   * Marca múltiples productos como vendidos únicamente en la colección pública para el archivo web,
+   * sin generar registros contables ni ventas.
+   */
+  async archivarProductosComoVendidosWeb(ids: string[]): Promise<number> {
+    const uniqueIds = [...new Set(ids.filter(Boolean))];
+    if (!uniqueIds.length) return 0;
+
+    const snapshots = await Promise.all(
+      uniqueIds.map((id) => getDoc(doc(this.firestore, `productos/${id}`))),
+    );
+
+    const productosValidos = snapshots
+      .filter((s) => s.exists())
+      .map((s) => normalizeProducto({ id: s.id, ...(s.data() as Producto) }));
+
+    if (!productosValidos.length) return 0;
+
+    for (let index = 0; index < productosValidos.length; index += 200) {
+      const batch = writeBatch(this.firestore);
+      const timestamp = serverTimestamp();
+      const chunk = productosValidos.slice(index, index + 200);
+
+      const publicSnapshots = await Promise.all(
+        chunk.map((prod) => getDoc(doc(this.firestore, `productosPublicos/${prod.id}`))),
+      );
+
+      for (let i = 0; i < chunk.length; i++) {
+        const prod = chunk[i];
+        const id = prod.id!;
+        const publicExists = publicSnapshots[i].exists();
+
+        const publicPayload: Record<string, unknown> = {
+          ...sanitizePublicProduct(prod),
+          productoId: id,
+          estado: 'vendido',
+          activo: true,
+          updatedAt: timestamp,
+        };
+        if (!publicExists) {
+          publicPayload['createdAt'] = timestamp;
+        }
+
+        batch.set(
+          doc(this.firestore, `productosPublicos/${id}`),
+          removeUndefinedDeep(publicPayload),
+          { merge: true },
+        );
+
+        batch.update(doc(this.firestore, `productos/${id}`), {
+          estado: 'vendido',
+          estadoPublicacion: 'publicado',
+          updatedAt: timestamp,
+        });
+      }
+
+      await batch.commit();
+    }
+
+    return productosValidos.length;
+  }
+
   private normalizeOfferForCreate(item: Partial<Producto>): Partial<Producto> {
     if (!Object.hasOwn(item, 'precioOferta')) return item;
     const validOffer = this.validOffer(item.precioOferta);

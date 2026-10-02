@@ -1,6 +1,12 @@
 
     @if (mode() === 'list') {
       <app-page-header title="Productos" description="Inventario completo con filtros.">
+        @if (auth.can('products.update')) {
+          <button mat-stroked-button type="button" (click)="openQuickArchiveDialog()">
+            <mat-icon>archive</mat-icon>
+            Archivar vendidos en Web
+          </button>
+        }
         @if (auth.can('products.create')) {
           <button mat-flat-button class="primary-action" routerLink="/dashboard/productos/nuevo">
             <mat-icon>add</mat-icon>
@@ -177,6 +183,9 @@
                       @if (producto.estadoPublicacion !== 'publicado' && producto.estado !== 'por_recoger') {
                         <button mat-icon-button color="primary" (click)="publicarEnWeb(producto)" matTooltip="Publicar en web" aria-label="Publicar en web"><mat-icon>publish</mat-icon></button>
                       }
+                      @if (producto.estado !== 'vendido' || producto.estadoPublicacion !== 'publicado') {
+                        <button mat-icon-button (click)="archivarComoVendido(producto)" matTooltip="Archivar como vendido en Web (sin registrar dinero)" aria-label="Archivar como vendido en Web"><mat-icon>archive</mat-icon></button>
+                      }
                     }
                     @if (producto.activo !== false) {
                       @if (producto.estado === 'disponible' || producto.estado === 'por_recoger') {
@@ -237,6 +246,11 @@
                     @if (producto.estadoPublicacion !== 'publicado' && producto.estado !== 'por_recoger') {
                       <button mat-icon-button type="button" color="primary" (click)="$event.stopPropagation(); publicarEnWeb(producto)" (keydown)="$event.stopPropagation()" matTooltip="Publicar en web" aria-label="Publicar en web">
                         <mat-icon>publish</mat-icon>
+                      </button>
+                    }
+                    @if (producto.estado !== 'vendido' || producto.estadoPublicacion !== 'publicado') {
+                      <button mat-icon-button type="button" (click)="$event.stopPropagation(); archivarComoVendido(producto)" (keydown)="$event.stopPropagation()" matTooltip="Archivar como vendido en Web (sin registrar dinero)" aria-label="Archivar como vendido en Web">
+                        <mat-icon>archive</mat-icon>
                       </button>
                     }
                   }

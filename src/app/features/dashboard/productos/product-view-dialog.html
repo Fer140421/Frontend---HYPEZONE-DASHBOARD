@@ -182,6 +182,12 @@
       Marcar como Recibido (Pasar a Stock)
     </button>
   }
+  @if ((data.producto.estado !== 'vendido' || data.producto.estadoPublicacion !== 'publicado') && auth.can('products.update')) {
+    <button mat-stroked-button type="button" (click)="archivarComoVendido()">
+      <mat-icon>archive</mat-icon>
+      Archivar como Vendido (Web)
+    </button>
+  }
   <button mat-stroked-button type="button" mat-dialog-close>
     <mat-icon>close</mat-icon>
     Cerrar

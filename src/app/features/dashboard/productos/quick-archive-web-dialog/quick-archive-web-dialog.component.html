@@ -1,0 +1,125 @@
+<div class="archive-dialog-header">
+  <div class="header-titles">
+    <h2 mat-dialog-title>Archivar como vendidos en Web</h2>
+    <p class="header-subtitle">Envía productos directamente al historial público de vendidos sin registrar ventas ni tocar dinero.</p>
+  </div>
+  <button mat-icon-button type="button" mat-dialog-close class="close-btn" aria-label="Cerrar modal">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+
+<mat-dialog-content class="archive-dialog-content">
+  <div class="info-notice">
+    <mat-icon class="notice-icon">info</mat-icon>
+    <div class="notice-text">
+      <strong>Sin impacto financiero:</strong> Las prendas seleccionadas se guardarán en la colección
+      <code>productosPublicos</code> con estado <em>vendido</em> para el Archivo de la Web.
+      <strong>No</strong> se registrarán ventas en caja ni se sumará dinero a los reportes.
+    </div>
+  </div>
+
+  <div class="filter-controls">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Buscar prendas</mat-label>
+      <input
+        matInput
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        placeholder="Nombre, marca, SKU o talla..."
+      />
+      <mat-icon matPrefix>search</mat-icon>
+      @if (search()) {
+        <button mat-icon-button matSuffix (click)="search.set('')" aria-label="Limpiar búsqueda">
+          <mat-icon>clear</mat-icon>
+        </button>
+      }
+    </mat-form-field>
+
+    <div class="options-row">
+      <mat-checkbox
+        [checked]="soloDisponibles()"
+        (change)="soloDisponibles.set($event.checked)"
+        color="primary"
+      >
+        Ocultar ya vendidos
+      </mat-checkbox>
+    </div>
+  </div>
+
+  <div class="selection-summary-bar">
+    <mat-checkbox
+      [checked]="allSelected()"
+      [indeterminate]="!allSelected() && selected().size > 0"
+      (change)="toggleAll($event.checked)"
+      color="primary"
+    >
+      Seleccionar todos ({{ filtered().length }})
+    </mat-checkbox>
+
+    <span class="selection-badge" [class.has-selection]="selected().size > 0">
+      {{ selected().size }} {{ selected().size === 1 ? 'prenda seleccionada' : 'prendas seleccionadas' }}
+    </span>
+  </div>
+
+  <div class="products-scroll-list">
+    @for (producto of filtered(); track producto.id) {
+      <label class="product-item-row" [class.selected]="selected().has(producto.id!)">
+        <mat-checkbox
+          [checked]="selected().has(producto.id!)"
+          (change)="toggle(producto, $event.checked)"
+          color="primary"
+          (click)="$event.stopPropagation()"
+        />
+
+        <div class="product-thumb-container">
+          @if (thumb(producto); as src) {
+            <img [src]="src" [alt]="producto.nombre" class="product-thumb" loading="lazy" decoding="async" />
+          } @else {
+            <div class="product-thumb placeholder">
+              <mat-icon>image</mat-icon>
+            </div>
+          }
+        </div>
+
+        <div class="product-details">
+          <div class="product-main-line">
+            <strong class="product-name">{{ producto.nombre }}</strong>
+            <app-status-chip [status]="producto.estado" />
+          </div>
+          <div class="product-meta-line">
+            <span>{{ producto.marca || 'Sin marca' }}</span>
+            <span class="sep">·</span>
+            <span>Talla {{ producto.talla }}</span>
+            @if (producto.codigo) {
+              <span class="sep">·</span>
+              <span class="sku">SKU: {{ producto.codigo }}</span>
+            }
+            <span class="sep">·</span>
+            <strong class="price">{{ precio(producto) | currency: 'BOB' : 'symbol-narrow' }}</strong>
+          </div>
+        </div>
+      </label>
+    } @empty {
+      <div class="empty-list">
+        <mat-icon>search_off</mat-icon>
+        <p>No se encontraron prendas que coincidan con la búsqueda o filtro.</p>
+      </div>
+    }
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="archive-dialog-actions">
+  <button mat-button type="button" (click)="cancel()">
+    Cancelar
+  </button>
+  <button
+    mat-flat-button
+    color="primary"
+    type="button"
+    [disabled]="selected().size === 0"
+    (click)="confirmar()"
+  >
+    <mat-icon>archive</mat-icon>
+    Archivar en Web ({{ selected().size }})
+  </button>
+</mat-dialog-actions>

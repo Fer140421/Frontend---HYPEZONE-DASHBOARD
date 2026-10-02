@@ -1,0 +1,230 @@
+:host {
+  display: block;
+}
+
+.archive-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 12px;
+}
+
+.header-titles h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--mat-sys-on-surface);
+}
+
+.header-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: var(--mat-sys-on-surface-variant);
+  line-height: 1.4;
+}
+
+.close-btn {
+  flex-shrink: 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.archive-dialog-content {
+  padding: 0 24px 16px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.info-notice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: rgba(33, 150, 243, 0.08);
+  border: 1px solid rgba(33, 150, 243, 0.25);
+  color: var(--mat-sys-on-surface);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.notice-icon {
+  color: #2196f3;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.notice-text code {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  font-family: monospace;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-field {
+  flex: 1 1 280px;
+  margin-bottom: -1.25em;
+}
+
+.options-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.selection-summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--mat-sys-surface-container-low, rgba(255, 255, 255, 0.03));
+  border-radius: 6px;
+  font-size: 0.88rem;
+}
+
+.selection-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface-variant);
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container, rgba(255, 255, 255, 0.06));
+}
+
+.selection-badge.has-selection {
+  background: rgba(33, 150, 243, 0.15);
+  color: #64b5f6;
+}
+
+.products-scroll-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 380px;
+  overflow-y: auto;
+  border: 1px solid var(--mat-sys-outline-variant, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  padding: 6px;
+}
+
+.product-item-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  user-select: none;
+}
+
+.product-item-row:hover {
+  background: var(--mat-sys-surface-container, rgba(255, 255, 255, 0.05));
+}
+
+.product-item-row.selected {
+  background: rgba(33, 150, 243, 0.08);
+}
+
+.product-thumb-container {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+.product-thumb {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--mat-sys-surface-container-high, #222);
+}
+
+.product-thumb.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.product-details {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.product-main-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.product-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.product-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--mat-sys-on-surface-variant);
+  flex-wrap: wrap;
+}
+
+.product-meta-line .sep {
+  opacity: 0.6;
+}
+
+.product-meta-line .sku {
+  font-family: monospace;
+  font-size: 0.78rem;
+}
+
+.product-meta-line .price {
+  color: var(--mat-sys-on-surface);
+  font-weight: 700;
+}
+
+.empty-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+  gap: 8px;
+}
+
+.empty-list mat-icon {
+  font-size: 36px;
+  width: 36px;
+  height: 36px;
+  opacity: 0.5;
+}
+
+.archive-dialog-actions {
+  padding: 12px 24px 20px;
+  gap: 8px;
+}

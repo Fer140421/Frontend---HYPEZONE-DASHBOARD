@@ -15,7 +15,7 @@ import { MatSortModule } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Observable, BehaviorSubject, combineLatest, map, of, shareReplay, startWith, switchMap } from 'rxjs';
+import { Observable, BehaviorSubject, combineLatest, firstValueFrom, map, of, shareReplay, startWith, switchMap } from 'rxjs';
 import { Lote } from '../../../core/models/lote.model';
 import {
   CategoriaProducto,
@@ -52,6 +52,7 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { StatusChipComponent } from '../../../shared/components/status-chip/status-chip.component';
 import { QuickCatalogValueDialogComponent } from '../../../shared/components/quick-catalog-value-dialog/quick-catalog-value-dialog.component';
+import { QuickArchiveWebDialogComponent } from './quick-archive-web-dialog/quick-archive-web-dialog.component';
 import {
   DEFAULT_PAGE_SIZE,
   DEFAULT_PAGE_SIZE_OPTIONS,
@@ -369,6 +370,8 @@ export class ProductosComponent implements OnInit {
     dialogRef.afterClosed().subscribe(async (result) => {
       if (result?.action === 'pasarAStock') {
         await this.pasarAStock(producto);
+      } else if (result?.action === 'archivarComoVendido') {
+        this.archivarComoVendido(producto);
       }
     });
   }
@@ -380,6 +383,62 @@ export class ProductosComponent implements OnInit {
       this.snack(`"${producto.nombre}" ahora está Disponible en stock.`);
     } catch {
       this.snack('No se pudo actualizar el estado del producto.');
+    }
+  }
+
+  archivarComoVendido(producto: Producto): void {
+    if (!this.auth.can('products.update') || !producto.id) return;
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Archivar como vendido en Web',
+        message: `Se marcará "${producto.nombre}" como vendido en la colección pública (productosPublicos) para el archivo histórico de la tienda web. NO se registrará ninguna venta en caja ni afectará las cuentas o dinero.`,
+        confirmText: 'Archivar en Web',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe(async (confirmed) => {
+      if (confirmed && producto.id) {
+        try {
+          await this.productoRepository.archivarComoVendidoWeb(producto.id);
+          this.snack(`"${producto.nombre}" archivado como vendido en la web.`);
+        } catch (error) {
+          this.snack(error instanceof Error ? error.message : 'No se pudo archivar el producto.');
+        }
+      }
+    });
+  }
+
+  async openQuickArchiveDialog(): Promise<void> {
+    if (!this.auth.can('products.update')) return;
+
+    try {
+      const productos = await firstValueFrom(this.productosSource$);
+      const dialogRef = this.dialog.open(QuickArchiveWebDialogComponent, {
+        width: 'min(720px, 96vw)',
+        maxHeight: '90vh',
+        data: {
+          productos,
+        },
+      });
+
+      dialogRef.afterClosed().subscribe(async (ids?: string[]) => {
+        if (!ids || !ids.length) return;
+        try {
+          const count = await this.productoRepository.archivarProductosComoVendidosWeb(ids);
+          this.snack(
+            count === 1
+              ? '1 prenda archivada como vendida en la web.'
+              : `${count} prendas archivadas como vendidas en la web.`,
+          );
+        } catch (error) {
+          this.snack(
+            error instanceof Error ? error.message : 'Error al archivar prendas en la web.',
+          );
+        }
+      });
+    } catch {
+      this.snack('No se pudieron cargar las prendas para archivar.');
     }
   }
 
@@ -642,6 +701,10 @@ export class ProductViewDialogComponent {
 
   pasarAStock(): void {
     this.dialogRef.close({ action: 'pasarAStock' });
+  }
+
+  archivarComoVendido(): void {
+    this.dialogRef.close({ action: 'archivarComoVendido' });
   }
 
   selectImage(index: number): void {
