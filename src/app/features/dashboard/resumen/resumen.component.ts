@@ -186,6 +186,18 @@ export class ResumenComponent {
         return productosLote.some((p) => p.estado === 'disponible');
       });
 
+      // Ventas del día de hoy
+      const ahora = new Date();
+      const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).getTime();
+      const finHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59, 999).getTime();
+
+      const ventasHoy = ventasActivas.filter((v) => {
+        const fecha = new Date(v.fechaVenta).getTime();
+        return fecha >= inicioHoy && fecha <= finHoy;
+      });
+
+      const totalVendidoHoy = ventasHoy.reduce((sum, v) => sum + Number(v.precioVenta || 0), 0);
+
       const operationalCards: ResumenMetricCard[] = [
         {
           label: 'Marca más vendida',
@@ -222,11 +234,13 @@ export class ResumenComponent {
             : 'Sin prendas pendientes',
         },
         {
-          label: 'Vendidos',
-          value: vendidos.length,
-          icon: 'check_circle',
+          label: 'Ventas del día',
+          value: ventasHoy.length,
+          icon: 'point_of_sale',
           type: 'vendidos',
-          subtext: 'Entregados con éxito',
+          subtext: ventasHoy.length > 0
+            ? `${totalVendidoHoy.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs. cobrados hoy`
+            : 'Sin ventas hoy',
         },
         {
           label: 'Lotes activos',
