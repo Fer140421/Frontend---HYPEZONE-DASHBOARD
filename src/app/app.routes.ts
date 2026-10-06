@@ -123,6 +123,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dashboard/reservas/reservas.component').then((m) => m.ReservasComponent),
       },
       {
+        path: 'reservas/:id/editar',
+        canActivate: [permissionGuard], data: { permission: 'sales.update' },
+        loadComponent: () => import('./features/dashboard/reservas/reservas.component').then((m) => m.ReservasComponent),
+      },
+      {
         path: 'proveedores',
         canActivate: [permissionGuard], data: { permission: 'providers.view' },
         loadComponent: () =>

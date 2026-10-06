@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import {
   Firestore,
   collection,
+  deleteField,
   doc,
   getDoc,
   runTransaction,
@@ -23,6 +24,20 @@ export interface ReservaInput {
   fechaReserva: string;
   fechaVencimiento?: string;
   notas?: string;
+}
+
+export interface ReservaEditInput {
+  cliente: Cliente;
+  clienteNuevo?: Pick<Cliente, 'nombreCompleto' | 'celular' | 'ci'>;
+  detalles: Array<{ producto: Producto; precioAcordado: number }>;
+  fechaVencimiento?: string;
+  notas?: string;
+}
+
+export interface ConvertirReservaCajaContext {
+  cajaId?: string;
+  usuarioVentaId?: string;
+  usuarioVentaNombre?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -123,6 +138,126 @@ export class ReservaService {
     return reservaRef.id;
   }
 
+  async editar(reservaId: string, input: ReservaEditInput): Promise<void> {
+    if (!input.cliente.id && !input.clienteNuevo)
+      throw new Error('Selecciona o registra un cliente para la reserva.');
+    if (!input.detalles.length) throw new Error('Agrega al menos un producto.');
+    if (!input.fechaVencimiento || Number.isNaN(new Date(input.fechaVencimiento).getTime())) {
+      throw new Error('La fecha límite de la reserva es obligatoria.');
+    }
+    const newIds = input.detalles.map(({ producto }) => producto.id);
+    if (newIds.some((id) => !id) || new Set(newIds).size !== newIds.length)
+      throw new Error('La selección de productos no es válida.');
+
+    const details = input.detalles.map(({ producto, precioAcordado }): ReservaDetalle => ({
+      productoId: producto.id!,
+      nombreProducto: producto.nombre,
+      precioAcordado: Number(precioAcordado),
+    }));
+    if (details.some((item) => !Number.isFinite(item.precioAcordado) || item.precioAcordado < 0)) {
+      throw new Error('El precio acordado no es válido.');
+    }
+    const total = details.reduce((sum, item) => sum + item.precioAcordado, 0);
+
+    const reservaRef = doc(this.firestore, `reservas/${reservaId}`);
+    const clienteRef = input.cliente.id
+      ? doc(this.firestore, `clientes/${input.cliente.id}`)
+      : doc(collection(this.firestore, 'clientes'));
+
+    await runTransaction(this.firestore, async (tx) => {
+      const snapshot = await tx.get(reservaRef);
+      if (!snapshot.exists()) throw new Error('Reserva no encontrada.');
+      const reserva = snapshot.data() as Reserva;
+      if (reserva.estado !== 'activa') throw new Error('Solo se pueden editar reservas activas.');
+
+      const anticiposPagados = totalAnticipos(reserva);
+      if (total < anticiposPagados) {
+        throw new Error(
+          `El nuevo total (Bs ${total}) no puede ser menor al total de anticipos ya registrados (Bs ${anticiposPagados}).`,
+        );
+      }
+      const saldoPendiente = total - anticiposPagados;
+
+      const oldIds = reserva.detalles.map((d) => d.productoId);
+      const removedIds = oldIds.filter((id) => !newIds.includes(id));
+      const addedIds = newIds.filter((id): id is string => !!id && !oldIds.includes(id));
+
+      const addedRefs = addedIds.map((id) => doc(this.firestore, `productos/${id}`));
+      const addedSnapshots = await Promise.all(addedRefs.map((ref) => tx.get(ref)));
+      addedSnapshots.forEach((productSnap) => {
+        if (!productSnap.exists()) throw new Error('Uno de los productos agregados ya no existe.');
+        const prod = productSnap.data() as Producto;
+        if (prod.activo === false || prod.estado !== 'disponible') {
+          throw new Error(`El producto "${prod.nombre}" ya no está disponible.`);
+        }
+      });
+
+      const removedRefs = removedIds.map((id) => doc(this.firestore, `productos/${id}`));
+      const removedSnapshots = await Promise.all(removedRefs.map((ref) => tx.get(ref)));
+
+      const timestamp = serverTimestamp();
+
+      if (input.clienteNuevo) {
+        tx.set(
+          clienteRef,
+          removeUndefinedDeep({
+            ...input.clienteNuevo,
+            puntosDisponibles: 0,
+            puntosAcumulados: 0,
+            recompensasDisponibles: 0,
+            activo: true,
+            schemaVersion: 1,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          }),
+        );
+      }
+
+      // Liberar productos removidos
+      removedRefs.forEach((ref, index) => {
+        const prod = removedSnapshots[index].data() as Producto | undefined;
+        tx.update(ref, { estado: 'disponible', updatedAt: timestamp });
+        if (prod?.estadoPublicacion === 'publicado') {
+          tx.set(
+            doc(this.firestore, `productosPublicos/${ref.id}`),
+            { estado: 'disponible', updatedAt: timestamp },
+            { merge: true },
+          );
+        }
+      });
+
+      // Reservar productos nuevos
+      addedRefs.forEach((ref, index) => {
+        const prod = addedSnapshots[index].data() as Producto;
+        tx.update(ref, { estado: 'reservado', updatedAt: timestamp });
+        if (prod.estadoPublicacion === 'publicado') {
+          tx.set(
+            doc(this.firestore, `productosPublicos/${ref.id}`),
+            { estado: 'reservado', updatedAt: timestamp },
+            { merge: true },
+          );
+        }
+      });
+
+      // Actualizar reserva
+      tx.update(
+        reservaRef,
+        removeUndefinedDeep({
+          clienteId: clienteRef.id,
+          clienteNombre: input.cliente.nombreCompleto,
+          clienteTelefono: input.cliente.celular,
+          clienteCi: input.cliente.ci || deleteField(),
+          detalles: details,
+          total,
+          saldoPendiente,
+          fechaVencimiento: input.fechaVencimiento,
+          notas: input.notas || deleteField(),
+          updatedAt: timestamp,
+        }),
+      );
+    });
+  }
+
   async registrarAbono(reservaId: string, pago: ReservaPago): Promise<void> {
     const ref = doc(this.firestore, `reservas/${reservaId}`);
     await runTransaction(this.firestore, async (tx) => {
@@ -178,6 +313,7 @@ export class ReservaService {
     reservaId: string,
     metodoPago: MetodoPago,
     fechaVenta: string,
+    cajaContext?: ConvertirReservaCajaContext,
   ): Promise<string[]> {
     const reservaRef = doc(this.firestore, `reservas/${reservaId}`);
     const operacionRef = doc(collection(this.firestore, 'operacionesVenta'));
@@ -232,6 +368,9 @@ export class ReservaService {
           anticipoAplicado: totalAnticipos(reserva),
           fechaVenta,
           notas: reserva.notas || undefined,
+          cajaId: cajaContext?.cajaId || undefined,
+          usuarioVentaId: cajaContext?.usuarioVentaId || undefined,
+          usuarioVentaNombre: cajaContext?.usuarioVentaNombre || undefined,
           activo: true,
           schemaVersion: 2,
           createdAt: timestamp,
@@ -263,6 +402,9 @@ export class ReservaService {
             metodoPago,
             fechaVenta,
             notas: reserva.notas || undefined,
+            cajaId: cajaContext?.cajaId || undefined,
+            usuarioVentaId: cajaContext?.usuarioVentaId || undefined,
+            usuarioVentaNombre: cajaContext?.usuarioVentaNombre || undefined,
             activo: true,
             schemaVersion: 4,
             createdAt: timestamp,

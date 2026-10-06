@@ -318,6 +318,33 @@ td small {
   font-size: 1.7rem;
   color: var(--mat-sys-primary);
 }
+.edit-anticipos-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--mat-sys-surface-container-low);
+  border: 1px solid var(--mat-sys-outline-variant);
+  margin-bottom: 12px;
+}
+.edit-anticipos-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.edit-anticipos-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.edit-anticipos-sub {
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+.edit-anticipos-card strong {
+  font-size: 1.15rem;
+  color: #096b59;
+}
 .confirm-button {
   width: 100%;
   height: 48px;
