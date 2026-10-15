@@ -5,8 +5,27 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)); }
     function activeUser() { return signedIn() && profile().data.active == true; }
+    function defaultExpensePermission(roleId, permission) {
+      return roleId in ['owner', 'admin'] ||
+        (roleId == 'seller' && permission in ['expenses.view', 'expenses.create', 'expenses.update']);
+    }
+    function fallbackExpensePermission(userProfile, permission) {
+      let roleId = userProfile.get('roleId', userProfile.get('role', ''));
+      let roleSnapshot = get(/databases/$(database)/documents/roles/$(roleId));
+      let rolePermissions = roleSnapshot.data.get('permissions', {});
+      let roleDefault = rolePermissions.get(permission, defaultExpensePermission(roleId, permission));
+      let userOverrides = userProfile.get('permissionOverrides', {});
+      return roleSnapshot.data.get('active', false) == true &&
+        userOverrides.get(permission, roleDefault) == true;
+    }
     function hasPermission(permission) {
-      return activeUser() && profile().data.effectivePermissions[permission] == true;
+      let userProfile = profile().data;
+      let effective = userProfile.get('effectivePermissions', {});
+      let storedPermission = effective.get(permission, null);
+      return activeUser() && (storedPermission == true ||
+        (storedPermission == null && permission in [
+          'expenses.view', 'expenses.create', 'expenses.update', 'expenses.delete'
+        ] && fallbackExpensePermission(userProfile, permission)));
     }
 
     // A user may read their own profile. The administrative list requires the
