@@ -512,6 +512,22 @@ export class VentasComponent implements OnInit {
     void this.router.navigate(['/dashboard/ventas', venta.operacionId ?? venta.id, 'editar']);
   }
 
+  async deleteSale(venta: Venta): Promise<void> {
+    if (!this.auth.can('sales.update') || this.procesandoVenta()) return;
+    const detalles = this.operationDetails(venta);
+    const nombre = detalles.length > 1 ? `${detalles.length} prendas` : venta.nombreProducto;
+    if (!window.confirm(`¿Eliminar la venta de ${nombre}? Se borrará la venta y las prendas volverán al inventario disponible.`)) return;
+    this.procesandoVenta.set(true);
+    try {
+      await this.ventaService.eliminarVenta(detalles);
+      this.snackBar.open('Venta eliminada. Las prendas están disponibles nuevamente.', 'OK', { duration: 3500 });
+    } catch (error) {
+      this.snackBar.open(error instanceof Error ? error.message : 'No se pudo eliminar la venta.', 'OK', { duration: 4000 });
+    } finally {
+      this.procesandoVenta.set(false);
+    }
+  }
+
   iniciarNuevaVenta(): void {
     if (!this.cajaActiva()) {
       this.abrirDialogoApertura(true, false);

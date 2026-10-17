@@ -379,6 +379,75 @@ export class VentaService {
     });
   }
 
+  /** Elimina una operación y revierte en una sola transacción sus efectos sobre prendas y fidelidad. */
+  async eliminarVenta(detalles: Venta[]): Promise<void> {
+    if (!detalles.length || detalles.some((detalle) => !detalle.id)) {
+      throw new Error('La venta no tiene detalles válidos.');
+    }
+
+    const operacionId = detalles[0].operacionId;
+    if (detalles.some((detalle) => detalle.operacionId !== operacionId)) {
+      throw new Error('Los detalles no pertenecen a la misma venta.');
+    }
+    const refs = detalles.map((detalle) => doc(this.firestore, `ventas/${detalle.id}`));
+    const productoRefs = detalles.map((detalle) => doc(this.firestore, `productos/${detalle.productoId}`));
+    const clienteIds = [...new Set(detalles.map((detalle) => detalle.clienteId).filter((id): id is string => !!id))];
+    const fidelidad = await this.getConfiguracionFidelidad();
+
+    await runTransaction(this.firestore, async (transaction) => {
+      const ventaSnapshots = await Promise.all(refs.map((ref) => transaction.get(ref)));
+      if (ventaSnapshots.some((snapshot) => !snapshot.exists())) {
+        throw new Error('La venta ya fue eliminada o modificada. Actualiza la lista.');
+      }
+      const currentDetails = ventaSnapshots.map((snapshot) => ({ id: snapshot.id, ...(snapshot.data() as Venta) }));
+      if (currentDetails.some((venta, index) => venta.productoId !== detalles[index].productoId)) {
+        throw new Error('La venta cambió mientras se procesaba. Actualiza la lista.');
+      }
+      const productoSnapshots = await Promise.all(productoRefs.map((ref) => transaction.get(ref)));
+      if (productoSnapshots.some((snapshot) => !snapshot.exists())) {
+        throw new Error('No se encontró una de las prendas; no se eliminó la venta.');
+      }
+      const clientes = await Promise.all(clienteIds.map(async (id) => {
+        const ref = doc(this.firestore, `clientes/${id}`);
+        return { id, ref, snapshot: await transaction.get(ref) };
+      }));
+      if (clientes.some((cliente) => !cliente.snapshot.exists())) {
+        throw new Error('No se encontró el cliente para revertir sus puntos.');
+      }
+      const operacionRef = operacionId ? doc(this.firestore, `operacionesVenta/${operacionId}`) : undefined;
+      const operacionSnapshot = operacionRef ? await transaction.get(operacionRef) : undefined;
+      const timestamp = serverTimestamp();
+
+      const puntosPorCliente = new Map<string, number>();
+      currentDetails.forEach((venta) => {
+        if (!venta.clienteId) return;
+        const puntos = Number(venta.puntosGanados ?? 0);
+        puntosPorCliente.set(venta.clienteId, (puntosPorCliente.get(venta.clienteId) ?? 0) - puntos);
+      });
+      clientes.forEach(({ id, ref, snapshot }) => {
+        const data = snapshot.data() as { puntosDisponibles?: number; puntosAcumulados?: number; recompensasDisponibles?: number };
+        const recompensasCanjeadas = currentDetails.filter((venta) => venta.clienteId === id && venta.recompensaCanjeada).length;
+        transaction.update(ref, {
+          ...this.ajustarPuntosFidelidad(data, puntosPorCliente.get(id) ?? 0, fidelidad),
+          recompensasDisponibles: Number(data.recompensasDisponibles ?? 0) + recompensasCanjeadas,
+          updatedAt: timestamp,
+        });
+      });
+
+      currentDetails.forEach((venta, index) => {
+        transaction.delete(refs[index]);
+        transaction.update(productoRefs[index], { estado: 'disponible', updatedAt: timestamp });
+        const producto = productoSnapshots[index].data() as Producto;
+        if (producto.estadoPublicacion === 'publicado') {
+          transaction.set(doc(this.firestore, `productosPublicos/${venta.productoId}`), {
+            estado: 'disponible', updatedAt: timestamp,
+          }, { merge: true });
+        }
+      });
+      if (operacionRef && operacionSnapshot?.exists()) transaction.delete(operacionRef);
+    });
+  }
+
   private validateAvailableProduct(producto: Producto): void {
     if (producto.activo === false) {
       throw new Error('Producto inactivo.');

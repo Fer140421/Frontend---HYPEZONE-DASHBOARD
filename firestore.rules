@@ -53,6 +53,10 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'estado', 'precioVenta', 'updatedAt'
         ])
+      ) || (
+        hasPermission('sales.update') && resource.data.estado == 'vendido' &&
+        request.resource.data.estado == 'disponible' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'updatedAt'])
       );
       allow delete: if hasPermission('products.delete');
     }
@@ -67,6 +71,9 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'estado', 'precioVenta', 'updatedAt'
         ])
+      ) || (
+        hasPermission('sales.update') && request.resource.data.estado == 'disponible' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'updatedAt'])
       );
       allow delete: if hasPermission('products.delete');
     }
@@ -81,7 +88,7 @@ service cloud.firestore {
       allow read: if hasPermission('clients.view');
       allow create: if hasPermission('clients.create');
       allow update: if hasPermission('clients.update') || (
-        hasPermission('sales.create') &&
+        (hasPermission('sales.create') || hasPermission('sales.update')) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'puntosDisponibles', 'puntosAcumulados', 'recompensasDisponibles', 'updatedAt'
         ])
@@ -99,14 +106,14 @@ service cloud.firestore {
       allow read: if hasPermission('sales.view');
       allow create: if hasPermission('sales.create');
       allow update: if hasPermission('sales.update');
-      allow delete: if false;
+      allow delete: if hasPermission('sales.update');
     }
 
     match /operacionesVenta/{id} {
       allow read: if hasPermission('sales.view');
       allow create: if hasPermission('sales.create');
       allow update: if hasPermission('sales.update');
-      allow delete: if false;
+      allow delete: if hasPermission('sales.update');
     }
 
     match /cajas/{id} {

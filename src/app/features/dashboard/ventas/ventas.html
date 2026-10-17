@@ -472,6 +472,9 @@
                   <button mat-icon-button type="button" (click)="editSale(venta)" matTooltip="Editar venta" aria-label="Editar venta">
                     <mat-icon>edit</mat-icon>
                   </button>
+                  <button mat-icon-button type="button" (click)="deleteSale(venta)" matTooltip="Eliminar venta" aria-label="Eliminar venta" [disabled]="procesandoVenta()">
+                    <mat-icon>delete</mat-icon>
+                  </button>
                 }
               </td>
             </ng-container>
@@ -509,6 +512,9 @@
                 @if (auth.can('sales.update')) {
                   <button mat-icon-button type="button" (click)="$event.stopPropagation(); editSale(venta)" (keydown)="$event.stopPropagation()" matTooltip="Editar venta" aria-label="Editar venta">
                     <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button type="button" (click)="$event.stopPropagation(); deleteSale(venta)" (keydown)="$event.stopPropagation()" matTooltip="Eliminar venta" aria-label="Eliminar venta" [disabled]="procesandoVenta()">
+                    <mat-icon>delete</mat-icon>
                   </button>
                 }
               </div>

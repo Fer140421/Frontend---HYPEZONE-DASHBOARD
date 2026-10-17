@@ -149,7 +149,7 @@ erDiagram
 | `metodoPago` | `string` | No | Forma de pago (`efectivo`, `qr`, `transferencia`, `otro`). |
 | `fechaVenta` | `string` | Sí | Fecha y hora en que se registró la transacción. |
 | `notas` | `string` | No | Observaciones de la transacción. |
-| `activo` | `boolean` | Sí | Estado de la venta (las ventas no se borran físicamente). |
+| `activo` | `boolean` | Sí | Estado de la venta; al eliminarla desde Ventas se borran físicamente sus detalles y operación. |
 | `createdAt` | `timestamp` | Sí | Fecha de creación. |
 | `updatedAt` | `timestamp` | Sí | Fecha de actualización. |
 
@@ -193,8 +193,8 @@ erDiagram
 | `/roles/{roleId}` | `write` | **Denegado (`false`)** |
 | `/productos/{id}` | `read` / `create` / `update` / `delete` | `products.view`, `products.create`, `products.update`, `products.delete` |
 | `/lotes/{id}` | `read` / `create` / `update` / `delete` | `lots.view`, `lots.create`, `lots.update`, `lots.delete` |
-| `/ventas/{id}` | `read` / `create` / `update` | `sales.view`, `sales.create`, `sales.update` |
-| `/ventas/{id}` | `delete` | **Denegado (`false`)** — Prohibido borrado físico |
+| `/ventas/{id}` | `read` / `create` / `update` / `delete` | `sales.view`, `sales.create`, `sales.update` (incluye eliminación física) |
+| `/operacionesVenta/{id}` | `read` / `create` / `update` / `delete` | `sales.view`, `sales.create`, `sales.update` |
 | `/clientes/{id}` | `read` / `create` / `update` / `delete` | `clients.view`, `clients.create`, `clients.update`, `clients.delete` |
 | `/proveedores/{id}` | `read` / `create` / `update` / `delete` | `providers.view`, `providers.create`, `providers.update`, `providers.delete` |
 | `/categorias`, `/marcas`, `/tallas` | `read` / `create` / `update` / `delete` | `catalogs.view`, `catalogs.create`, `catalogs.update`, `catalogs.delete` |
