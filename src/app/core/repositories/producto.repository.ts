@@ -1,7 +1,8 @@
-import { Injectable } from '@angular/core';
-import { deleteDoc, deleteField, doc, getDoc, serverTimestamp, setDoc, writeBatch } from '@angular/fire/firestore';
+import { Injectable, inject } from '@angular/core';
+import { collection, deleteDoc, deleteField, doc, getDoc, runTransaction, serverTimestamp, setDoc, writeBatch } from '@angular/fire/firestore';
 import { Observable, map } from 'rxjs';
-import { Producto, normalizeProducto } from '../models/producto.model';
+import { Producto, normalizeProducto, precioCompraProducto } from '../models/producto.model';
+import { ESTADO_FINANCIERO_INICIAL } from '../models/finanzas.model';
 import { FirestoreRepository, removeUndefinedDeep } from './firestore.repository';
 
 export function sanitizePublicProduct(item: Partial<Producto>): Record<string, unknown> {
@@ -48,10 +49,33 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
   }
 
   override async create(item: Partial<Producto>): Promise<string> {
-    return super.create({
+    const payload = {
       ...this.normalizeOfferForCreate(item),
       estadoPublicacion: item.estadoPublicacion ?? 'pendiente',
+    };
+    const productoRef = doc(collection(this.firestore, this.collectionName));
+    const finanzasRef = doc(this.firestore, 'finanzas/estado');
+    await runTransaction(this.firestore, async (transaction) => {
+      const estadoSnapshot = await transaction.get(finanzasRef);
+      const estado = {
+        ...ESTADO_FINANCIERO_INICIAL,
+        ...(estadoSnapshot.exists() ? estadoSnapshot.data() : {}),
+      };
+      const now = serverTimestamp();
+      transaction.set(productoRef, removeUndefinedDeep({
+        ...payload,
+        finanzasRegistrado: true,
+        activo: payload.activo ?? true,
+        createdAt: now,
+        updatedAt: now,
+      }));
+      transaction.set(finanzasRef, {
+        ...estado,
+        inversionDisponible: Number(estado['inversionDisponible']) - precioCompraProducto(payload as Producto),
+        updatedAt: now,
+      });
     });
+    return productoRef.id;
   }
 
   override async update(id: string, item: Partial<Producto>): Promise<void> {
@@ -62,7 +86,32 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
       ? { ...otherFields, precioOferta: validOffer ?? deleteField() }
       : item;
 
-    await super.update(id, normalizedItem as Partial<Producto>);
+    if (typeof normalizedItem.precioCompra === 'number') {
+      const productRef = doc(this.firestore, `productos/${id}`);
+      const finanzasRef = doc(this.firestore, 'finanzas/estado');
+      await runTransaction(this.firestore, async (transaction) => {
+        const productSnapshot = await transaction.get(productRef);
+        if (!productSnapshot.exists()) throw new Error('El producto no existe.');
+        const current = productSnapshot.data() as Producto;
+        const estadoSnapshot = await transaction.get(finanzasRef);
+        const estado = {
+          ...ESTADO_FINANCIERO_INICIAL,
+          ...(estadoSnapshot.exists() ? estadoSnapshot.data() : {}),
+        };
+        const deltaCosto = current.finanzasRegistrado
+          ? Number(normalizedItem.precioCompra) - Number(current.precioCompra || 0)
+          : 0;
+        const now = serverTimestamp();
+        transaction.update(productRef, removeUndefinedDeep({ ...normalizedItem, updatedAt: now }));
+        transaction.set(finanzasRef, {
+          ...estado,
+          inversionDisponible: Number(estado['inversionDisponible']) - deltaCosto,
+          updatedAt: now,
+        });
+      });
+    } else {
+      await super.update(id, normalizedItem as Partial<Producto>);
+    }
     try {
       const publicPayload = removeUndefinedDeep({
         ...sanitizePublicProduct(otherFields),

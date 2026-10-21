@@ -14,6 +14,7 @@ import {
 } from '@angular/fire/firestore';
 import { Lote } from '../models/lote.model';
 import { Producto } from '../models/producto.model';
+import { ESTADO_FINANCIERO_INICIAL } from '../models/finanzas.model';
 
 export type LoteDeactivationMode = 'preserve' | 'unlink';
 export type LoteDomainErrorCode = 'CONFIRMAR_REASIGNACION_VENDIDO';
@@ -123,12 +124,36 @@ export class LoteManagementService {
       throw new Error('No hay prendas asociadas a este lote para prorratear.');
     }
     const precioUnitario = Math.round((costoTotal / productosActivos.length) * 100) / 100;
-    const batch = writeBatch(this.firestore);
-    const timestamp = serverTimestamp();
-    for (const docItem of productosActivos) {
-      batch.update(docItem.ref, { precioCompra: precioUnitario, updatedAt: timestamp });
+    if (productosActivos.length > 499) {
+      throw new Error('Este lote tiene demasiadas prendas para actualizar los costos y la inversión en una operación segura.');
     }
-    await batch.commit();
+    const finanzasRef = doc(this.firestore, 'finanzas/estado');
+    await runTransaction(this.firestore, async (transaction) => {
+      const [productSnapshots, estadoSnapshot] = await Promise.all([
+        Promise.all(productosActivos.map((item) => transaction.get(item.ref))),
+        transaction.get(finanzasRef),
+      ]);
+      if (productSnapshots.some((snapshot) => !snapshot.exists())) {
+        throw new Error('Una prenda cambió mientras se actualizaban los costos. Vuelve a intentarlo.');
+      }
+      const deltaInversion = productSnapshots.reduce((total, snapshot) => {
+        const actual = snapshot.data() as Producto;
+        return total + (actual.finanzasRegistrado ? precioUnitario - Number(actual.precioCompra || 0) : 0);
+      }, 0);
+      const estado = {
+        ...ESTADO_FINANCIERO_INICIAL,
+        ...(estadoSnapshot.exists() ? estadoSnapshot.data() : {}),
+      };
+      const timestamp = serverTimestamp();
+      productSnapshots.forEach((snapshot) => {
+        transaction.update(snapshot.ref, { precioCompra: precioUnitario, updatedAt: timestamp });
+      });
+      transaction.set(finanzasRef, {
+        ...estado,
+        inversionDisponible: Number(estado['inversionDisponible']) - deltaInversion,
+        updatedAt: timestamp,
+      });
+    });
     return { actualizados: productosActivos.length, precioUnitario };
   }
 }

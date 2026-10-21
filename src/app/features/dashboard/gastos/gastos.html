@@ -146,6 +146,19 @@
               </td>
             </ng-container>
 
+            <ng-container matColumnDef="descuento">
+              <th mat-header-cell *matHeaderCellDef>Descuento del fondo</th>
+              <td mat-cell *matCellDef="let g">
+                @if (g.descontado) {
+                  <span class="badge-pill" [class.caja-efectivo]="g.fuenteDescuento === 'inversion'" [class.cuenta-banco]="g.fuenteDescuento === 'ganancia'">
+                    {{ g.fuenteDescuento === 'inversion' ? 'INVERSIÓN' : 'GANANCIA' }}
+                  </span>
+                } @else {
+                  <span class="text-muted">Sin descontar</span>
+                }
+              </td>
+            </ng-container>
+
             <ng-container matColumnDef="usuarioNombre">
               <th mat-header-cell *matHeaderCellDef>Registrado por</th>
               <td mat-cell *matCellDef="let g">{{ g.usuarioNombre }}</td>

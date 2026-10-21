@@ -122,6 +122,27 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Financial balances are maintained by the client in Firestore transactions;
+    // no Cloud Function or privileged server is required.
+    match /finanzas/{id} {
+      allow read: if hasPermission('sales.view') || hasPermission('settings.view') ||
+        hasPermission('products.create') || hasPermission('products.update') ||
+        hasPermission('sales.create') || hasPermission('expenses.view') ||
+        hasPermission('expenses.create') || hasPermission('expenses.update') || hasPermission('expenses.delete') ||
+        hasPermission('lots.update');
+      allow create, update: if hasPermission('settings.view') || hasPermission('products.create') ||
+        hasPermission('products.update') || hasPermission('sales.create') ||
+        hasPermission('expenses.create') || hasPermission('expenses.update') || hasPermission('expenses.delete') ||
+        hasPermission('lots.update') || hasPermission('sales.view');
+      allow delete: if false;
+    }
+
+    match /perdidas/{id} {
+      allow read: if hasPermission('sales.view') || hasPermission('settings.view');
+      allow create: if hasPermission('sales.create') || hasPermission('settings.view');
+      allow update, delete: if false;
+    }
+
     match /gastos/{id} {
       allow read: if hasPermission('expenses.view') || hasPermission('sales.view');
       allow create: if hasPermission('expenses.create') || hasPermission('sales.create');

@@ -1,6 +1,7 @@
 import { AuditableEntity } from './base.model';
 
 export type EstadoCaja = 'abierta' | 'cerrada';
+export type FuenteCoberturaPerdida = 'sin_reposicion' | 'ganancia' | 'inversion';
 
 export interface Caja extends AuditableEntity {
   usuarioId: string;
@@ -18,7 +19,11 @@ export interface Caja extends AuditableEntity {
   totalVentasQR?: number;
   totalVentas?: number;
   totalCostoPrendas?: number;
+  totalCapitalRecuperado?: number;
   totalGanancia?: number;
+  totalGananciasPositivas?: number;
+  totalPerdidasVentas?: number;
+  fuenteCoberturaPerdida?: FuenteCoberturaPerdida;
   totalGastosEfectivo?: number;
   totalGastos?: number;
   totalEsperadoEfectivo?: number;
@@ -36,7 +41,10 @@ export interface CierreCajaCalculo {
   totalVentasQR: number;
   totalVentas: number;
   totalCostoPrendas: number;
+  totalCapitalRecuperado: number;
   totalGanancia: number;
+  totalGananciasPositivas: number;
+  totalPerdidasVentas: number;
   totalGastosEfectivo: number;
   totalGastos: number;
   totalEsperadoEfectivo: number;

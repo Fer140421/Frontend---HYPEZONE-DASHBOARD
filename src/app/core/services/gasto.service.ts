@@ -1,6 +1,9 @@
 import { Injectable, inject } from '@angular/core';
+import { Firestore, collection, doc, runTransaction, serverTimestamp } from '@angular/fire/firestore';
 import { Observable, map, shareReplay } from 'rxjs';
-import { CategoriaGasto, Gasto, MetodoPagoGasto } from '../models/gasto.model';
+import { CategoriaGasto, FuenteDescuentoGasto, Gasto, MetodoPagoGasto } from '../models/gasto.model';
+import { ESTADO_FINANCIERO_INICIAL } from '../models/finanzas.model';
+import { removeUndefinedDeep } from '../repositories/firestore.repository';
 import { GastoRepository } from '../repositories/gasto.repository';
 import { AuthService } from './auth.service';
 import { CajaService } from './caja.service';
@@ -13,6 +16,8 @@ export interface CrearGastoDto {
   fecha?: string;
   notas?: string;
   afectarCajaActiva?: boolean;
+  descontado?: boolean;
+  fuenteDescuento?: FuenteDescuentoGasto;
 }
 
 export interface ResumenGastos {
@@ -25,6 +30,7 @@ export interface ResumenGastos {
 @Injectable({ providedIn: 'root' })
 export class GastoService {
   private readonly gastoRepository = inject(GastoRepository);
+  private readonly firestore = inject(Firestore);
   private readonly auth = inject(AuthService);
   private readonly cajaService = inject(CajaService);
 
@@ -67,6 +73,8 @@ export class GastoService {
       monto,
       categoria: dto.categoria,
       metodoPago: dto.metodoPago,
+      descontado: dto.descontado === true,
+      fuenteDescuento: dto.descontado ? dto.fuenteDescuento : undefined,
       fecha: dto.fecha ? new Date(dto.fecha).toISOString() : new Date().toISOString(),
       cajaId,
       usuarioId: user.uid,
@@ -75,15 +83,73 @@ export class GastoService {
       activo: true,
     };
 
-    return this.gastoRepository.create(nuevoGasto);
+    const gastoRef = doc(collection(this.firestore, 'gastos'));
+    const finanzasRef = doc(this.firestore, 'finanzas/estado');
+    await runTransaction(this.firestore, async (transaction) => {
+      const estadoSnapshot = await transaction.get(finanzasRef);
+      const estado = { ...ESTADO_FINANCIERO_INICIAL, ...(estadoSnapshot.exists() ? estadoSnapshot.data() : {}) };
+      const now = serverTimestamp();
+      transaction.set(gastoRef, removeUndefinedDeep({ ...nuevoGasto, activo: true, createdAt: now, updatedAt: now }));
+      let inversionDisponible = Number(estado['inversionDisponible']);
+      let gananciaAcumulada = Number(estado['gananciaAcumulada']);
+      if (nuevoGasto.descontado) {
+        if (nuevoGasto.fuenteDescuento === 'inversion') inversionDisponible -= monto;
+        else gananciaAcumulada -= monto;
+      }
+      transaction.set(finanzasRef, { ...estado, inversionDisponible, gananciaAcumulada, updatedAt: now });
+    });
+    return gastoRef.id;
   }
 
   async actualizarGasto(id: string, cambios: Partial<Gasto>): Promise<void> {
-    return this.gastoRepository.update(id, cambios);
+    const gastoRef = doc(this.firestore, `gastos/${id}`);
+    const finanzasRef = doc(this.firestore, 'finanzas/estado');
+    await runTransaction(this.firestore, async (transaction) => {
+      const [gastoSnapshot, estadoSnapshot] = await Promise.all([transaction.get(gastoRef), transaction.get(finanzasRef)]);
+      if (!gastoSnapshot.exists()) throw new Error('El gasto ya no existe.');
+      const current = gastoSnapshot.data() as Gasto;
+      const estado = { ...ESTADO_FINANCIERO_INICIAL, ...(estadoSnapshot.exists() ? estadoSnapshot.data() : {}) };
+      const now = serverTimestamp();
+      const deltas: Record<string, number> = {};
+      if (current.descontado) {
+        const previousField = current.fuenteDescuento === 'inversion' ? 'inversionDisponible' : 'gananciaAcumulada';
+        deltas[previousField] = (deltas[previousField] ?? 0) + Number(current.monto || 0);
+      }
+      const next = { ...current, ...cambios };
+      if (next.descontado) {
+        if (!next.fuenteDescuento) throw new Error('Selecciona si el gasto se descontó de inversión o de ganancia.');
+        const nextField = next.fuenteDescuento === 'inversion' ? 'inversionDisponible' : 'gananciaAcumulada';
+        deltas[nextField] = (deltas[nextField] ?? 0) - Number(next.monto || 0);
+      }
+      transaction.update(gastoRef, removeUndefinedDeep({ ...cambios, updatedAt: now }));
+      transaction.set(finanzasRef, {
+        ...estado,
+        inversionDisponible: Number(estado['inversionDisponible']) + (deltas['inversionDisponible'] ?? 0),
+        gananciaAcumulada: Number(estado['gananciaAcumulada']) + (deltas['gananciaAcumulada'] ?? 0),
+        updatedAt: now,
+      });
+    });
   }
 
   async eliminarGasto(id: string): Promise<void> {
-    return this.gastoRepository.delete(id);
+    const gastoRef = doc(this.firestore, `gastos/${id}`);
+    const finanzasRef = doc(this.firestore, 'finanzas/estado');
+    await runTransaction(this.firestore, async (transaction) => {
+      const gastoSnapshot = await transaction.get(gastoRef);
+      if (!gastoSnapshot.exists()) return;
+      const gasto = gastoSnapshot.data() as Gasto;
+      if (gasto.descontado) {
+        const estadoSnapshot = await transaction.get(finanzasRef);
+        const estado = { ...ESTADO_FINANCIERO_INICIAL, ...(estadoSnapshot.exists() ? estadoSnapshot.data() : {}) };
+        const campo = gasto.fuenteDescuento === 'inversion' ? 'inversionDisponible' : 'gananciaAcumulada';
+        transaction.set(finanzasRef, {
+          ...estado,
+          [campo]: Number(estado[campo as keyof typeof estado] ?? 0) + Number(gasto.monto || 0),
+          updatedAt: serverTimestamp(),
+        });
+      }
+      transaction.update(gastoRef, { activo: false, updatedAt: serverTimestamp() });
+    });
   }
 
   calcularResumen(gastos: Gasto[]): ResumenGastos {

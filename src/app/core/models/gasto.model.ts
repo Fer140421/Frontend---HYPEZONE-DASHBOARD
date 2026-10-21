@@ -11,12 +11,15 @@ export type CategoriaGasto =
   | 'otro';
 
 export type MetodoPagoGasto = 'caja_efectivo' | 'cuenta_banco' | 'qr' | 'otro';
+export type FuenteDescuentoGasto = 'ganancia' | 'inversion';
 
 export interface Gasto extends AuditableEntity {
   concepto: string;
   monto: number;
   categoria: CategoriaGasto;
   metodoPago: MetodoPagoGasto;
+  descontado?: boolean;
+  fuenteDescuento?: FuenteDescuentoGasto;
   fecha: string;
   cajaId?: string;
   usuarioId: string;

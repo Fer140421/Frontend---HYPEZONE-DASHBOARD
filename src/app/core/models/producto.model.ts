@@ -17,6 +17,7 @@ export type EstadoPublicacionProducto = 'pendiente' | 'publicado';
 
 export interface Producto extends AuditableEntity {
   schemaVersion?: number;
+  finanzasRegistrado?: boolean;
   loteId?: string;
   nombre: string;
   marca?: string;

@@ -44,7 +44,11 @@ export interface CajaItemVM {
   totalVendido: number;
   totalPrendas: number;
   totalCostoPrendas: number;
+  totalCapitalRecuperado: number;
   totalGanancia: number;
+  totalGananciasPositivas: number;
+  totalPerdidasVentas: number;
+  fuenteCoberturaPerdida?: Caja['fuenteCoberturaPerdida'];
   totalEfectivo: number;
   totalQR: number;
   totalGastos: number;
@@ -160,6 +164,13 @@ export class CajasComponent implements OnInit {
           (sum, v) => sum + Number(v.precioCompra || 0),
           0,
         );
+        const totalCapitalRecuperado = caja.totalCapitalRecuperado ?? ventasDeCaja.reduce(
+          (sum, venta) => sum + Math.min(
+            Math.max(0, Number(venta.precioCompra || 0)),
+            Math.max(0, Number(venta.precioVenta || 0)),
+          ),
+          0,
+        );
         const totalGanancia = caja.totalGanancia ?? ventasDeCaja.reduce(
           (sum, v) =>
             sum +
@@ -170,6 +181,15 @@ export class CajasComponent implements OnInit {
             ),
           0,
         );
+        const gananciasVentas = ventasDeCaja.map((v) => Number(
+          v.ganancia !== undefined && v.ganancia !== null
+            ? v.ganancia
+            : Number(v.precioVenta || 0) - Number(v.precioCompra || 0),
+        ));
+        const totalGananciasPositivas = caja.totalGananciasPositivas
+          ?? gananciasVentas.reduce((sum, ganancia) => sum + Math.max(0, ganancia), 0);
+        const totalPerdidasVentas = caja.totalPerdidasVentas
+          ?? gananciasVentas.reduce((sum, ganancia) => sum + Math.max(0, -ganancia), 0);
 
         const totalGastos = gastosDeCaja.reduce((sum, g) => sum + Number(g.monto || 0), 0);
         const totalGastosEfectivo = gastosDeCaja
@@ -192,7 +212,11 @@ export class CajasComponent implements OnInit {
           totalVendido,
           totalPrendas,
           totalCostoPrendas,
+          totalCapitalRecuperado,
           totalGanancia,
+          totalGananciasPositivas,
+          totalPerdidasVentas,
+          fuenteCoberturaPerdida: caja.fuenteCoberturaPerdida,
           totalEfectivo,
           totalQR,
           totalGastos,

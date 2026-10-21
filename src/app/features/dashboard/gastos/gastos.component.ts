@@ -74,6 +74,7 @@ export class GastosComponent implements OnInit {
     'concepto',
     'categoria',
     'metodoPago',
+    'descuento',
     'caja',
     'usuarioNombre',
     'monto',

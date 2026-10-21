@@ -1,12 +1,14 @@
 import { Injectable, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Firestore, collection, getDocs, query, where } from '@angular/fire/firestore';
+import { Firestore, collection, doc, getDocs, query, runTransaction, serverTimestamp, where } from '@angular/fire/firestore';
 import { Observable, firstValueFrom, of, shareReplay, switchMap, take } from 'rxjs';
 import { Caja, CierreCajaCalculo } from '../models/caja.model';
 import { Gasto } from '../models/gasto.model';
 import { Venta } from '../models/venta.model';
 import { CajaRepository } from '../repositories/caja.repository';
 import { AuthService } from './auth.service';
+import { ESTADO_FINANCIERO_INICIAL } from '../models/finanzas.model';
+import { removeUndefinedDeep } from '../repositories/firestore.repository';
 
 @Injectable({ providedIn: 'root' })
 export class CajaService {
@@ -94,6 +96,11 @@ export class CajaService {
       (sum, v) => sum + Number(v.precioCompra || 0),
       0,
     );
+    const totalCapitalRecuperado = ventas.reduce((sum, venta) => {
+      const costo = Math.max(0, Number(venta.precioCompra || 0));
+      const ingreso = Math.max(0, Number(venta.precioVenta || 0));
+      return sum + Math.min(costo, ingreso);
+    }, 0);
 
     const totalGanancia = ventas.reduce(
       (sum, v) =>
@@ -105,6 +112,13 @@ export class CajaService {
         ),
       0,
     );
+    const gananciasVentas = ventas.map((v) => Number(
+      v.ganancia !== undefined && v.ganancia !== null
+        ? v.ganancia
+        : Number(v.precioVenta || 0) - Number(v.precioCompra || 0),
+    ));
+    const totalGananciasPositivas = gananciasVentas.reduce((sum, ganancia) => sum + Math.max(0, ganancia), 0);
+    const totalPerdidasVentas = gananciasVentas.reduce((sum, ganancia) => sum + Math.max(0, -ganancia), 0);
 
     // Consultar gastos pagados desde esta caja
     const gastosRef = collection(this.firestore, 'gastos');
@@ -132,7 +146,10 @@ export class CajaService {
       totalVentasQR,
       totalVentas,
       totalCostoPrendas,
+      totalCapitalRecuperado,
       totalGanancia,
+      totalGananciasPositivas,
+      totalPerdidasVentas,
       totalGastosEfectivo,
       totalGastos,
       totalEsperadoEfectivo,
@@ -143,7 +160,12 @@ export class CajaService {
     };
   }
 
-  async cerrarCaja(cajaId: string, montoFinalReal: number, notasCierre?: string): Promise<void> {
+  async cerrarCaja(
+    cajaId: string,
+    montoFinalReal: number,
+    notasCierre?: string,
+    fuenteCoberturaPerdida: 'sin_reposicion' | 'ganancia' | 'inversion' = 'sin_reposicion',
+  ): Promise<void> {
     const cajaSnap = await firstValueFrom(this.cajaRepository.getById(cajaId).pipe(take(1)));
     if (!cajaSnap) {
       throw new Error('Caja no encontrada.');
@@ -167,7 +189,22 @@ export class CajaService {
       : resumen.capitalMasInversion;
     const diferencia = montoReal - referenciaEsperada;
 
-    await this.cajaRepository.update(cajaId, {
+    const cajaRef = doc(this.firestore, `cajas/${cajaId}`);
+    const finanzasRef = doc(this.firestore, 'finanzas/estado');
+    await runTransaction(this.firestore, async (transaction) => {
+      const [cajaActual, finanzasSnapshot] = await Promise.all([
+        transaction.get(cajaRef),
+        transaction.get(finanzasRef),
+      ]);
+      if (!cajaActual.exists() || cajaActual.data()['estado'] !== 'abierta') {
+        throw new Error('La caja ya fue cerrada o modificada. Actualiza la pantalla.');
+      }
+      const estado = {
+        ...ESTADO_FINANCIERO_INICIAL,
+        ...(finanzasSnapshot.exists() ? finanzasSnapshot.data() : {}),
+      };
+      const timestamp = serverTimestamp();
+      transaction.update(cajaRef, removeUndefinedDeep({
       estado: 'cerrada',
       fechaCierre: new Date().toISOString(),
       montoFinalReal: montoReal,
@@ -175,7 +212,11 @@ export class CajaService {
       totalVentasQR: resumen.totalVentasQR,
       totalVentas: resumen.totalVentas,
       totalCostoPrendas: resumen.totalCostoPrendas,
+      totalCapitalRecuperado: resumen.totalCapitalRecuperado,
       totalGanancia: resumen.totalGanancia,
+      totalGananciasPositivas: resumen.totalGananciasPositivas,
+      totalPerdidasVentas: resumen.totalPerdidasVentas,
+      fuenteCoberturaPerdida: resumen.totalPerdidasVentas > 0 ? fuenteCoberturaPerdida : undefined,
       totalGastosEfectivo: resumen.totalGastosEfectivo,
       totalGastos: resumen.totalGastos,
       totalEsperadoEfectivo: resumen.totalEsperadoEfectivo,
@@ -185,6 +226,15 @@ export class CajaService {
       usuarioCierreId: user?.uid,
       usuarioCierreNombre: profile?.displayName || user?.displayName || user?.email || 'Usuario',
       notasCierre: notasCierre?.trim() || undefined,
+        updatedAt: timestamp,
+      }));
+      transaction.set(finanzasRef, {
+        ...estado,
+        inversionDisponible: Number(estado['inversionDisponible']) + resumen.totalCapitalRecuperado,
+        gananciaAcumulada: Number(estado['gananciaAcumulada']) + resumen.totalGananciasPositivas,
+        perdidasAcumuladas: Number(estado['perdidasAcumuladas']) + resumen.totalPerdidasVentas,
+        updatedAt: timestamp,
+      });
     });
   }
 

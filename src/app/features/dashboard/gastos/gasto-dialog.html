@@ -71,6 +71,26 @@
         </mat-select>
       </mat-form-field>
 
+      <div class="caja-toggle-card col-full">
+        <div class="caja-toggle-info">
+          <mat-icon class="text-primary">account_balance_wallet</mat-icon>
+          <div>
+            <strong>¿Ya descontaste este gasto de un fondo?</strong>
+            <p>Si todavía no lo descontaste, no reducirá tu inversión ni tu ganancia.</p>
+          </div>
+        </div>
+        <mat-slide-toggle formControlName="descontado" color="primary"></mat-slide-toggle>
+      </div>
+      @if (form.controls.descontado.value) {
+        <mat-form-field appearance="outline" class="col-full">
+          <mat-label>Descontar de</mat-label>
+          <mat-select formControlName="fuenteDescuento" required>
+            <mat-option value="ganancia">Ganancia acumulada</mat-option>
+            <mat-option value="inversion">Inversión disponible</mat-option>
+          </mat-select>
+        </mat-form-field>
+      }
+
       @if (cajaActiva()) {
         <div class="caja-toggle-card col-full">
           <div class="caja-toggle-info">

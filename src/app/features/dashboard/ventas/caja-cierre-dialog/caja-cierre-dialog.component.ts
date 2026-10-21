@@ -6,6 +6,7 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Caja, CierreCajaCalculo } from '../../../../core/models/caja.model';
 import { CajaService } from '../../../../core/services/caja.service';
@@ -25,6 +26,7 @@ export interface CajaCierreDialogData {
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     MatIconModule,
     MatSnackBarModule,
   ],
@@ -44,6 +46,7 @@ export class CajaCierreDialogComponent implements OnInit {
 
   readonly form = this.fb.nonNullable.group({
     montoFinalReal: [null as number | null, [Validators.required, Validators.min(0)]],
+    fuenteCoberturaPerdida: ['sin_reposicion' as 'sin_reposicion' | 'ganancia' | 'inversion'],
     notas: [''],
   });
 
@@ -121,6 +124,7 @@ export class CajaCierreDialogComponent implements OnInit {
         this.data.caja.id,
         raw.montoFinalReal!,
         raw.notas,
+        raw.fuenteCoberturaPerdida,
       );
       this.dialogRef.close(true);
     } catch (error) {

@@ -1,16 +1,23 @@
 import { AsyncPipe, CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { combineLatest, map, shareReplay } from 'rxjs';
 import { marcaImagen } from '../../../core/models/catalogo.model';
 import { precioCompraProducto, precioProducto } from '../../../core/models/producto.model';
 import { GastoRepository } from '../../../core/repositories/gasto.repository';
+import { CajaRepository } from '../../../core/repositories/caja.repository';
 import { LoteRepository } from '../../../core/repositories/lote.repository';
 import { MarcaRepository } from '../../../core/repositories/marca.repository';
 import { ProductoRepository } from '../../../core/repositories/producto.repository';
 import { VentaRepository } from '../../../core/repositories/venta.repository';
+import { FinanzasService } from '../../../core/services/finanzas.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { ReponerPerdidaDialogComponent } from './reponer-perdida-dialog.component';
+import { RegistrarPerdidaDialogComponent } from './registrar-perdida-dialog.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 
@@ -25,6 +32,8 @@ export interface ResumenMetricCard {
     | 'vendido'
     | 'invertido'
     | 'utilidad_neta'
+    | 'perdidas'
+    | 'caja'
     | 'gastos'
     | 'stock_costo'
     | 'stock_venta'
@@ -46,6 +55,8 @@ export interface ResumenMetricCard {
     CurrencyPipe,
     DatePipe,
     MatCardModule,
+    MatButtonModule,
+    MatDialogModule,
     MatIconModule,
     MatListModule,
     LoadingComponent,
@@ -55,11 +66,16 @@ export interface ResumenMetricCard {
   styleUrl: './resumen.css',
 })
 export class ResumenComponent {
+  private readonly imagenesPerdidaFallidas = new Set<string>();
   private readonly productoRepository = inject(ProductoRepository);
   private readonly ventaRepository = inject(VentaRepository);
   private readonly loteRepository = inject(LoteRepository);
   private readonly marcaRepository = inject(MarcaRepository);
   private readonly gastoRepository = inject(GastoRepository);
+  private readonly cajaRepository = inject(CajaRepository);
+  private readonly finanzasService = inject(FinanzasService);
+  private readonly dialog = inject(MatDialog);
+  readonly auth = inject(AuthService);
 
   // Fuentes compartidas durante la vida de la vista.
   private readonly productosSource$ = this.productoRepository.getAll(true).pipe(
@@ -77,6 +93,14 @@ export class ResumenComponent {
   private readonly gastosSource$ = this.gastoRepository.getAll().pipe(
     shareReplay({ bufferSize: 1, refCount: true }),
   );
+  private readonly cajasSource$ = this.cajaRepository.getAll(true).pipe(
+    shareReplay({ bufferSize: 1, refCount: true }),
+  );
+  private readonly perdidasManualesSource$ = this.finanzasService.perdidasManuales$;
+
+  constructor() {
+    void this.finanzasService.ensureInitialized().catch((error) => console.error('No se pudieron cargar las pérdidas históricas:', error));
+  }
 
   readonly vm$ = combineLatest([
     this.productosSource$,
@@ -84,8 +108,11 @@ export class ResumenComponent {
     this.lotesSource$,
     this.marcasSource$,
     this.gastosSource$,
+    this.cajasSource$,
+    this.finanzasService.estado$,
+    this.perdidasManualesSource$,
   ]).pipe(
-    map(([productos, ventas, lotes, marcas, gastos]) => {
+    map(([productos, ventas, lotes, marcas, gastos, cajas, estadoFinanciero, perdidasManuales]) => {
       const activos = productos.filter((p) => p.activo !== false);
       const disponibles = activos.filter((p) => p.estado === 'disponible');
       const porRecoger = activos.filter((p) => p.estado === 'por_recoger');
@@ -95,13 +122,20 @@ export class ResumenComponent {
       const gastosActivos = gastos.filter((g) => g.activo !== false);
 
       const totalVendido = ventasActivas.reduce((total, venta) => total + Number(venta.precioVenta), 0);
-      const margenBrutoVentas = ventasActivas.reduce((total, venta) => total + Number(venta.ganancia || 0), 0);
       const totalGastos = gastosActivos.reduce((total, g) => total + Number(g.monto || 0), 0);
-      const utilidadNetaReal = margenBrutoVentas - totalGastos;
+      const cajasAbiertas = cajas.filter((caja) => caja.estado === 'abierta' && caja.activo !== false);
+      const dineroEnCaja = cajasAbiertas.reduce((total, caja) => {
+        const ventasEfectivo = ventasActivas
+          .filter((venta) => venta.cajaId === caja.id && venta.metodoPago === 'efectivo')
+          .reduce((sum, venta) => sum + Number(venta.precioVenta || 0), 0);
+        const gastosEfectivo = gastosActivos
+          .filter((gasto) => gasto.cajaId === caja.id && gasto.metodoPago === 'caja_efectivo')
+          .reduce((sum, gasto) => sum + Number(gasto.monto || 0), 0);
+        return total + Number(caja.montoInicial || 0) + ventasEfectivo - gastosEfectivo;
+      }, 0);
 
       const valorStockCosto = disponibles.reduce((total, p) => total + precioCompraProducto(p), 0);
       const valorStockVenta = disponibles.reduce((total, p) => total + precioProducto(p), 0);
-
       // Cálculo de la marca más vendida
       const productoMap = new Map(productos.map((p) => [p.id, p]));
       const marcaStats = new Map<string, { cantidad: number; totalRecaudado: number }>();
@@ -146,21 +180,37 @@ export class ResumenComponent {
 
       const financialCards: ResumenMetricCard[] = [
         {
-          label: 'Utilidad Neta Real',
-          value: utilidadNetaReal,
-          icon: 'account_balance_wallet',
+          label: 'Inversión disponible',
+          value: estadoFinanciero.inversionDisponible,
+          icon: 'inventory_2',
           currency: true,
-          type: 'utilidad_neta',
-          subtext: 'Margen ventas menos gastos',
+          type: 'invertido',
+          subtext: 'Fondo actual para comprar ropa',
           featured: true,
         },
         {
-          label: 'Margen Bruto Ventas',
-          value: margenBrutoVentas,
+          label: 'Ganancia acumulada',
+          value: estadoFinanciero.gananciaAcumulada,
           icon: 'paid',
           currency: true,
           type: 'ganancia',
-          subtext: `${ventasActivas.length} venta(s) realizadas`,
+          subtext: 'No se reduce por pérdidas automáticamente',
+        },
+        {
+          label: 'Pérdidas acumuladas',
+          value: estadoFinanciero.perdidasAcumuladas,
+          icon: 'trending_down',
+          currency: true,
+          type: 'perdidas',
+          subtext: 'Pendientes de reposición',
+        },
+        {
+          label: 'Dinero en caja',
+          value: dineroEnCaja,
+          icon: 'point_of_sale',
+          currency: true,
+          type: 'caja',
+          subtext: `${cajasAbiertas.length} caja(s) abierta(s)`,
         },
         {
           label: 'Gastos Operativos',
@@ -168,7 +218,7 @@ export class ResumenComponent {
           icon: 'payments',
           currency: true,
           type: 'gastos',
-          subtext: 'Fletes, bolsas, pasajes y servicios',
+          subtext: 'Gastos registrados, con o sin descuento aplicado',
         },
         {
           label: 'Capital en Stock (A costo)',
@@ -244,13 +294,55 @@ export class ResumenComponent {
         },
       ];
 
+      const perdidasRegistro = [
+        ...perdidasManuales.map((perdida) => {
+          const conceptoNormalizado = perdida.concepto.trim().toLocaleLowerCase();
+          const producto = productos.find((item) => item.nombre.trim().toLocaleLowerCase() === conceptoNormalizado);
+          return { ...perdida, imagenProducto: producto?.imagenes?.[0] };
+        }),
+        ...ventasActivas.flatMap((venta) => {
+          const margen = Number(venta.ganancia ?? (Number(venta.precioVenta || 0) - Number(venta.precioCompra || 0)));
+          if (margen >= 0) return [];
+          const producto = productoMap.get(venta.productoId);
+          return [{
+            id: `venta-${venta.id}`,
+            concepto: venta.nombreProducto,
+            monto: -margen,
+            fecha: venta.fechaVenta,
+            notas: 'Pérdida registrada en una venta',
+            imagenProducto: producto?.imagenes?.[0],
+          }];
+        }),
+      ].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+
       return {
+        perdidasPendientes: estadoFinanciero.perdidasAcumuladas,
+        perdidasRegistro,
         financialCards,
         operationalCards,
         ultimasVentas,
       };
     }),
   );
+
+  registrarReposicion(perdidas: number): void {
+    this.dialog.open(ReponerPerdidaDialogComponent, {
+      width: 'min(480px, 94vw)',
+      data: { perdidas },
+    });
+  }
+
+  imagenPerdidaFallida(id: string | undefined): boolean {
+    return !!id && this.imagenesPerdidaFallidas.has(id);
+  }
+
+  marcarImagenPerdidaFallida(id: string | undefined): void {
+    if (id) this.imagenesPerdidaFallidas.add(id);
+  }
+
+  registrarPerdida(): void {
+    this.dialog.open(RegistrarPerdidaDialogComponent, { width: 'min(520px, 94vw)' });
+  }
 }
 
 

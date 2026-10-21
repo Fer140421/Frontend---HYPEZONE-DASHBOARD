@@ -8,7 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { CATEGORIAS_GASTO, CategoriaGasto, Gasto, MetodoPagoGasto } from '../../../core/models/gasto.model';
+import { CATEGORIAS_GASTO, CategoriaGasto, FuenteDescuentoGasto, Gasto, MetodoPagoGasto } from '../../../core/models/gasto.model';
 import { CajaService } from '../../../core/services/caja.service';
 import { GastoService } from '../../../core/services/gasto.service';
 
@@ -50,6 +50,8 @@ export class GastoDialogComponent implements OnInit {
     monto: [null as number | null, [Validators.required, Validators.min(0.01)]],
     categoria: ['otro' as CategoriaGasto, [Validators.required]],
     metodoPago: ['caja_efectivo' as MetodoPagoGasto, [Validators.required]],
+    descontado: [false],
+    fuenteDescuento: ['ganancia' as FuenteDescuentoGasto],
     fecha: [new Date().toISOString().substring(0, 10), [Validators.required]],
     pagarDeCajaActiva: [true],
     notas: [''],
@@ -63,6 +65,8 @@ export class GastoDialogComponent implements OnInit {
         monto: g.monto,
         categoria: g.categoria,
         metodoPago: g.metodoPago,
+        descontado: g.descontado === true,
+        fuenteDescuento: g.fuenteDescuento ?? 'ganancia',
         fecha: g.fecha ? g.fecha.substring(0, 10) : new Date().toISOString().substring(0, 10),
         pagarDeCajaActiva: g.metodoPago === 'caja_efectivo' && !!g.cajaId,
         notas: g.notas || '',
@@ -114,6 +118,8 @@ export class GastoDialogComponent implements OnInit {
           monto: Number(val.monto),
           categoria: val.categoria,
           metodoPago: val.metodoPago,
+          descontado: val.descontado,
+          fuenteDescuento: val.descontado ? val.fuenteDescuento : undefined,
           fecha: new Date(val.fecha).toISOString(),
           notas: val.notas.trim() || undefined,
         });
@@ -124,6 +130,8 @@ export class GastoDialogComponent implements OnInit {
           monto: Number(val.monto),
           categoria: val.categoria,
           metodoPago: val.metodoPago,
+          descontado: val.descontado,
+          fuenteDescuento: val.descontado ? val.fuenteDescuento : undefined,
           fecha: val.fecha,
           notas: val.notas,
           afectarCajaActiva: val.pagarDeCajaActiva,

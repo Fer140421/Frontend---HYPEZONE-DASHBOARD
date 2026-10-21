@@ -28,14 +28,28 @@
             <small class="box-sub">QR: {{ r.totalVentasQR | currency: 'BOB' : 'symbol-narrow' }} · Ef: {{ r.totalVentasEfectivo | currency: 'BOB' : 'symbol-narrow' }}</small>
           </div>
           <div class="summary-box">
-            <span class="box-label">Inversión a reponer (Costo)</span>
+            <span class="box-label">Costo de compra vendido</span>
             <strong class="box-val text-info">{{ r.totalCostoPrendas | currency: 'BOB' : 'symbol-narrow' }}</strong>
-            <small class="box-sub">Vuelve al fondo de compras</small>
+            <small class="box-sub">Costo total original de las prendas</small>
           </div>
           <div class="summary-box">
-            <span class="box-label">Ganancia neta del turno</span>
-            <strong class="box-val text-success">{{ r.totalGanancia | currency: 'BOB' : 'symbol-narrow' }}</strong>
-            <small class="box-sub">Utilidad libre generada</small>
+            <span class="box-label">Capital recuperado para inversión</span>
+            <strong class="box-val text-info">{{ r.totalCapitalRecuperado | currency: 'BOB' : 'symbol-narrow' }}</strong>
+            <small class="box-sub">Lo cobrado se repone hasta cubrir el costo</small>
+          </div>
+          <div class="summary-box">
+            <span class="box-label">Ganancias de ventas rentables</span>
+            <strong class="box-val text-success">{{ r.totalGananciasPositivas | currency: 'BOB' : 'symbol-narrow' }}</strong>
+            <small class="box-sub">Suma las ganancias positivas sin descontar pérdidas</small>
+          </div>
+          <div class="summary-box">
+            <span class="box-label">Pérdidas en ventas</span>
+            <strong class="box-val text-danger">-{{ r.totalPerdidasVentas | currency: 'BOB' : 'symbol-narrow' }}</strong>
+          </div>
+          <div class="summary-box">
+            <span class="box-label">Resultado neto del turno</span>
+            <strong class="box-val" [class.text-success]="r.totalGanancia >= 0" [class.text-danger]="r.totalGanancia < 0">{{ r.totalGanancia | currency: 'BOB' : 'symbol-narrow' }}</strong>
+            <small class="box-sub">Ganancias menos pérdidas</small>
           </div>
           @if (r.totalGastos > 0) {
             <div class="summary-box">
@@ -49,6 +63,18 @@
             <small class="box-sub">Base con la que abriste + costo de prendas para reinvertir</small>
           </div>
         </div>
+
+        @if (r.totalPerdidasVentas > 0) {
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>¿Cómo deseas cubrir las pérdidas de ventas?</mat-label>
+            <mat-select formControlName="fuenteCoberturaPerdida">
+              <mat-option value="sin_reposicion">No reponerlas; dejar reflejada la pérdida</mat-option>
+              <mat-option value="ganancia">Cubrirlas con ganancias de otras ventas</mat-option>
+              <mat-option value="inversion">Cubrirlas con capital / inversión</mat-option>
+            </mat-select>
+            <mat-hint>Esta selección deja constancia de la decisión y no modifica las ganancias ni el resultado neto.</mat-hint>
+          </mat-form-field>
+        }
 
         <div class="quick-options-section">
           <span class="quick-options-label">Atajos rápidos para el capital final:</span>

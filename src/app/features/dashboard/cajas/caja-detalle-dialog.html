@@ -48,14 +48,28 @@
       <strong class="fin-val text-success">{{ data.caja.totalEfectivo | currency: 'BOB' : 'symbol-narrow' }}</strong>
     </div>
     <div class="fin-card">
-      <span class="fin-label">Inversión a reponer (Costo)</span>
+      <span class="fin-label">Costo de compra vendido</span>
       <strong class="fin-val text-info">{{ data.caja.totalCostoPrendas | currency: 'BOB' : 'symbol-narrow' }}</strong>
-      <small class="cell-subtitle">Capital de mercadería</small>
+      <small class="cell-subtitle">Costo original de las prendas</small>
     </div>
     <div class="fin-card">
-      <span class="fin-label">Ganancia neta del turno</span>
-      <strong class="fin-val text-success">{{ data.caja.totalGanancia | currency: 'BOB' : 'symbol-narrow' }}</strong>
-      <small class="cell-subtitle">Utilidad libre</small>
+      <span class="fin-label">Capital recuperado para inversión</span>
+      <strong class="fin-val text-info">{{ data.caja.totalCapitalRecuperado | currency: 'BOB' : 'symbol-narrow' }}</strong>
+      <small class="cell-subtitle">Monto que vuelve al fondo</small>
+    </div>
+    <div class="fin-card">
+      <span class="fin-label">Ganancias de ventas rentables</span>
+      <strong class="fin-val text-success">{{ data.caja.totalGananciasPositivas | currency: 'BOB' : 'symbol-narrow' }}</strong>
+      <small class="cell-subtitle">Suma las ganancias positivas</small>
+    </div>
+    <div class="fin-card">
+      <span class="fin-label">Pérdidas en ventas</span>
+      <strong class="fin-val text-danger">-{{ data.caja.totalPerdidasVentas | currency: 'BOB' : 'symbol-narrow' }}</strong>
+    </div>
+    <div class="fin-card">
+      <span class="fin-label">Resultado neto del turno</span>
+      <strong class="fin-val" [class.text-success]="data.caja.totalGanancia >= 0" [class.text-danger]="data.caja.totalGanancia < 0">{{ data.caja.totalGanancia | currency: 'BOB' : 'symbol-narrow' }}</strong>
+      <small class="cell-subtitle">Ganancias menos pérdidas</small>
     </div>
     @if (data.caja.totalGastos > 0) {
       <div class="fin-card">
@@ -75,6 +89,18 @@
       </div>
     }
   </div>
+
+  @if (data.caja.fuenteCoberturaPerdida) {
+    <div class="notes-section">
+      <p><strong>Cobertura elegida para pérdidas:</strong>
+        @switch (data.caja.fuenteCoberturaPerdida) {
+          @case ('ganancia') { Ganancias de otras ventas }
+          @case ('inversion') { Capital / inversión }
+          @default { Sin reposición; pérdida reflejada en el resultado }
+        }
+      </p>
+    </div>
+  }
 
   @if (data.caja.notasApertura || data.caja.notasCierre) {
     <div class="notes-section">
