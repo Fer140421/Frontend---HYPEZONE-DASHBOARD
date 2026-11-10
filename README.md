@@ -48,6 +48,12 @@ Dashboard administrativo para tienda e-commerce de ropa streetwear. Desarrollado
 
 ## Scripts disponibles
 
+El build de producción controla el tamaño sin comprimir: avisa si el bundle inicial supera
+850 kB o un estilo de componente supera 10 kB, y falla a partir de 1 MB o 12 kB,
+respectivamente. Referencia medida el 9 de noviembre de 2026: 802,30 kB iniciales
+(215,71 kB de transferencia estimada). La carga inicial incluye Angular, Firebase Auth
+y Firestore para resolver la sesión y sus permisos; las pantallas se cargan por ruta.
+
 | Comando | Descripción |
 | --- | --- |
 | `npm start` | Inicia el servidor de desarrollo Angular. |
