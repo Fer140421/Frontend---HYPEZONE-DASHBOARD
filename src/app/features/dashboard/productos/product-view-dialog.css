@@ -139,7 +139,9 @@
 }
 
 @media (max-width: 520px) {
-  .product-dialog-header { padding: 16px; }
+  .product-dialog-header { flex-wrap: wrap; padding: 16px; }
+  .header-main-info { min-width: 0; flex: 1 1 100%; }
+  .header-actions-right { width: 100%; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
   .product-title { font-size: 1.25rem; }
   .product-dialog-content { padding: 16px !important; }
   .main-image-card { max-height: 260px; }

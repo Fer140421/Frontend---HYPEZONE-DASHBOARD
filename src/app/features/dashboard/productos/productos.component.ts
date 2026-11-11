@@ -144,7 +144,7 @@ export class ProductosComponent implements OnInit {
   readonly columns = ['imagen', 'nombre', 'talla', 'precioVenta', 'estado', 'publicacion', 'acciones'];
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
   readonly mode = signal<'list' | 'new' | 'detail'>('list');
-  readonly viewType = inject(ViewPreferenceService).getViewSignal('productos', 'table');
+  readonly viewType = inject(ViewPreferenceService).getViewSignal('productos', 'cards');
   readonly currentId = signal<string | null>(null);
   readonly currentProducto = signal<Producto | null>(null);
   readonly filtersOpen = signal(false);

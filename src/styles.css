@@ -340,6 +340,12 @@ button.primary-action:hover {
   margin-bottom: 22px;
 }
 
+@media (max-width: 640px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .metric-card {
   min-height: 128px;
   padding: 18px;
@@ -883,6 +889,12 @@ mat-paginator {
   margin-left: auto;
 }
 
+@media (max-width: 1024px) {
+  .view-toggle-group {
+    display: none !important;
+  }
+}
+
 .view-toggle-btn {
   display: grid;
   place-items: center;
@@ -924,6 +936,7 @@ mat-paginator {
 
 .listing-card-item {
   position: relative;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -1048,13 +1061,24 @@ mat-paginator {
 }
 
 .card-footer-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: center;
-  justify-content: flex-end;
+  justify-items: center;
   gap: 4px;
   padding: 8px 12px;
   border-top: 1px solid var(--hz-border);
   background: rgba(0, 0, 0, 0.015);
+}
+
+.card-footer-actions button.mat-mdc-icon-button {
+  width: 36px;
+  height: 36px;
+  padding: 6px;
+}
+
+.card-footer-actions button.mat-mdc-icon-button .mat-icon {
+  margin: 0;
 }
 
 @media (max-width: 640px) {
@@ -1082,12 +1106,6 @@ mat-paginator {
 
   .card-footer-actions {
     padding: 6px 8px;
-  }
-}
-
-@media (max-width: 360px) {
-  .listing-cards-grid {
-    grid-template-columns: 1fr;
   }
 }
 

@@ -1,4 +1,4 @@
-import { Injectable, signal, WritableSignal } from '@angular/core';
+import { computed, Injectable, signal, WritableSignal } from '@angular/core';
 
 export type ViewType = 'table' | 'cards';
 
@@ -7,13 +7,22 @@ export type ViewType = 'table' | 'cards';
 })
 export class ViewPreferenceService {
   private readonly PREFIX = 'hypezone_view_pref_';
+  private readonly compactViewport = signal(
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches,
+  );
+
+  constructor() {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(max-width: 1024px)');
+    media.addEventListener('change', (event) => this.compactViewport.set(event.matches));
+  }
 
   getViewSignal(moduleKey: string, defaultView: ViewType = 'table'): WritableSignal<ViewType> {
     const saved = this.load(moduleKey);
     const initial: ViewType = saved === 'table' || saved === 'cards' ? saved : defaultView;
     const s = signal<ViewType>(initial);
 
-    const wrappedSignal = (() => s()) as WritableSignal<ViewType>;
+    const wrappedSignal = (() => this.compactViewport() ? 'cards' : s()) as WritableSignal<ViewType>;
     wrappedSignal.set = (val: ViewType) => {
       this.save(moduleKey, val);
       s.set(val);
@@ -23,7 +32,7 @@ export class ViewPreferenceService {
       this.save(moduleKey, next);
       s.set(next);
     };
-    wrappedSignal.asReadonly = () => s.asReadonly();
+    wrappedSignal.asReadonly = () => computed(() => wrappedSignal());
 
     return wrappedSignal;
   }

@@ -54,15 +54,16 @@
 
 @media (max-width: 620px) {
   .tab-content { padding: 16px; }
+  .compact-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .report-filter { display: grid; }
   .report-filter mat-form-field { width: 100%; }
   .clear-dates { width: 100%; margin: 0; }
   .report-row { grid-template-columns: auto minmax(0, 1fr); gap: 7px 10px; }
   .report-row > span:last-of-type { grid-column: 2; text-align: left; }
   .report-row mat-icon { grid-column: 2; grid-row: 1; justify-self: end; }
-  .reservation-stats { grid-template-columns: 1fr; }
+  .reservation-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .brand-dialog-summary, .lote-dialog-summary { grid-template-columns: 1fr; }
-  .brand-products-grid { grid-template-columns: 1fr; }
+  .brand-products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .garment-report-row { grid-template-columns: minmax(0, 1fr) auto; gap: 7px 10px; }
   .garment-report-row > span { grid-column: 1; grid-row: 2; }
   .garment-report-values { grid-column: 2; grid-row: 1 / span 2; }
