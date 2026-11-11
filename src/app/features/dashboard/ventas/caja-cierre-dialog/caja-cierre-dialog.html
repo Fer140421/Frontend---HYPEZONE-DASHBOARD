@@ -32,6 +32,13 @@
             <strong class="box-val text-info">{{ r.totalCostoPrendas | currency: 'BOB' : 'symbol-narrow' }}</strong>
             <small class="box-sub">Costo total original de las prendas</small>
           </div>
+          @if (r.totalAdeudadoConsignadores > 0) {
+            <div class="summary-box">
+              <span class="box-label">Saldo pendiente a consignadores</span>
+              <strong class="box-val text-danger">{{ r.totalAdeudadoConsignadores | currency: 'BOB' : 'symbol-narrow' }}</strong>
+              <small class="box-sub">Separado de la inversión y la ganancia propia</small>
+            </div>
+          }
           <div class="summary-box">
             <span class="box-label">Capital recuperado para inversión</span>
             <strong class="box-val text-info">{{ r.totalCapitalRecuperado | currency: 'BOB' : 'symbol-narrow' }}</strong>

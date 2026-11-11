@@ -92,11 +92,16 @@ export class CajaService {
 
     const totalVentas = totalVentasEfectivo + totalVentasQR;
 
-    const totalCostoPrendas = ventas.reduce(
+    const ventasPropias = ventas.filter((venta) => !venta.consignado);
+    const ventasConsignadas = ventas.filter((venta) => venta.consignado === true);
+    const totalAdeudadoConsignadores = ventasConsignadas.reduce(
+      (sum, venta) => sum + Math.max(0, Number(venta.montoPendienteConsignador ?? venta.precioCompra ?? 0) - Number(venta.montoLiquidadoConsignador ?? 0)), 0,
+    );
+    const totalCostoPrendas = ventasPropias.reduce(
       (sum, v) => sum + Number(v.precioCompra || 0),
       0,
     );
-    const totalCapitalRecuperado = ventas.reduce((sum, venta) => {
+    const totalCapitalRecuperado = ventasPropias.reduce((sum, venta) => {
       const costo = Math.max(0, Number(venta.precioCompra || 0));
       const ingreso = Math.max(0, Number(venta.precioVenta || 0));
       return sum + Math.min(costo, ingreso);
@@ -117,8 +122,12 @@ export class CajaService {
         ? v.ganancia
         : Number(v.precioVenta || 0) - Number(v.precioCompra || 0),
     ));
-    const totalGananciasPositivas = gananciasVentas.reduce((sum, ganancia) => sum + Math.max(0, ganancia), 0);
-    const totalPerdidasVentas = gananciasVentas.reduce((sum, ganancia) => sum + Math.max(0, -ganancia), 0);
+    const totalGananciasPositivas = ventas.reduce((sum, venta) => sum + (venta.consignado
+      ? Math.max(0, Number(venta.precioVenta) - Number(venta.montoPendienteConsignador ?? venta.precioCompra ?? 0))
+      : Math.max(0, Number(venta.ganancia ?? (Number(venta.precioVenta) - Number(venta.precioCompra))))), 0);
+    const totalPerdidasVentas = ventasPropias.reduce((sum, venta) => sum + Math.max(0, -Number(
+      venta.ganancia ?? (Number(venta.precioVenta || 0) - Number(venta.precioCompra || 0)),
+    )), 0);
 
     // Consultar gastos pagados desde esta caja
     const gastosRef = collection(this.firestore, 'gastos');
@@ -146,6 +155,7 @@ export class CajaService {
       totalVentasQR,
       totalVentas,
       totalCostoPrendas,
+      totalAdeudadoConsignadores,
       totalCapitalRecuperado,
       totalGanancia,
       totalGananciasPositivas,
@@ -212,6 +222,7 @@ export class CajaService {
       totalVentasQR: resumen.totalVentasQR,
       totalVentas: resumen.totalVentas,
       totalCostoPrendas: resumen.totalCostoPrendas,
+      totalAdeudadoConsignadores: resumen.totalAdeudadoConsignadores,
       totalCapitalRecuperado: resumen.totalCapitalRecuperado,
       totalGanancia: resumen.totalGanancia,
       totalGananciasPositivas: resumen.totalGananciasPositivas,
@@ -233,6 +244,7 @@ export class CajaService {
         inversionDisponible: Number(estado['inversionDisponible']) + resumen.totalCapitalRecuperado,
         gananciaAcumulada: Number(estado['gananciaAcumulada']) + resumen.totalGananciasPositivas,
         perdidasAcumuladas: Number(estado['perdidasAcumuladas']) + resumen.totalPerdidasVentas,
+        deudaConsignacionPendiente: Number(estado['deudaConsignacionPendiente'] ?? 0) + resumen.totalAdeudadoConsignadores,
         updatedAt: timestamp,
       });
     });

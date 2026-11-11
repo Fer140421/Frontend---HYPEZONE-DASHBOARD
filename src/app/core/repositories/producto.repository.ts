@@ -48,12 +48,14 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
     return this.getAll().pipe(map((productos) => productos.filter((p) => p.estado === 'disponible')));
   }
 
-  override async create(item: Partial<Producto>): Promise<string> {
-    const payload = {
+  override async create(item: Partial<Producto>, consignadorNuevo?: { nombreCompleto: string; celular: string; ci?: string }): Promise<string> {
+    const payload: Partial<Producto> = {
       ...this.normalizeOfferForCreate(item),
       estadoPublicacion: item.estadoPublicacion ?? 'pendiente',
     };
     const productoRef = doc(collection(this.firestore, this.collectionName));
+    const consignadorRef = consignadorNuevo ? doc(collection(this.firestore, 'clientes')) : undefined;
+    if (consignadorRef) payload['consignadorId'] = consignadorRef.id;
     const finanzasRef = doc(this.firestore, 'finanzas/estado');
     await runTransaction(this.firestore, async (transaction) => {
       const estadoSnapshot = await transaction.get(finanzasRef);
@@ -69,9 +71,21 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
         createdAt: now,
         updatedAt: now,
       }));
+      if (consignadorRef && consignadorNuevo) {
+        transaction.set(consignadorRef, removeUndefinedDeep({
+          ...consignadorNuevo,
+          puntosDisponibles: 0,
+          puntosAcumulados: 0,
+          recompensasDisponibles: 0,
+          schemaVersion: 1,
+          activo: true,
+          createdAt: now,
+          updatedAt: now,
+        }));
+      }
       transaction.set(finanzasRef, {
         ...estado,
-        inversionDisponible: Number(estado['inversionDisponible']) - precioCompraProducto(payload as Producto),
+        inversionDisponible: Number(estado['inversionDisponible']) - (payload.consignado ? 0 : precioCompraProducto(payload as Producto)),
         updatedAt: now,
       });
     });
@@ -85,6 +99,9 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
     const normalizedItem = includesOffer
       ? { ...otherFields, precioOferta: validOffer ?? deleteField() }
       : item;
+    const updatePayload = normalizedItem.consignado === false
+      ? { ...normalizedItem, consignadorNombre: deleteField() }
+      : normalizedItem;
 
     if (typeof normalizedItem.precioCompra === 'number') {
       const productRef = doc(this.firestore, `productos/${id}`);
@@ -98,11 +115,15 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
           ...ESTADO_FINANCIERO_INICIAL,
           ...(estadoSnapshot.exists() ? estadoSnapshot.data() : {}),
         };
-        const deltaCosto = current.finanzasRegistrado && current.activo !== false
-          ? Number(normalizedItem.precioCompra) - Number(current.precioCompra || 0)
-          : 0;
+        const costoAnteriorFinanciero = current.finanzasRegistrado && current.activo !== false && !current.consignado
+          ? Number(current.precioCompra || 0) : 0;
+        const proximoConsignado = typeof updatePayload.consignado === 'boolean'
+          ? updatePayload.consignado : Boolean(current.consignado);
+        const costoNuevoFinanciero = current.finanzasRegistrado && current.activo !== false && !proximoConsignado
+          ? Number(normalizedItem.precioCompra) : costoAnteriorFinanciero;
+        const deltaCosto = costoNuevoFinanciero - costoAnteriorFinanciero;
         const now = serverTimestamp();
-        transaction.update(productRef, removeUndefinedDeep({ ...normalizedItem, updatedAt: now }));
+        transaction.update(productRef, removeUndefinedDeep({ ...updatePayload, updatedAt: now }));
         transaction.set(finanzasRef, {
           ...estado,
           inversionDisponible: Number(estado['inversionDisponible']) - deltaCosto,
@@ -110,7 +131,7 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
         });
       });
     } else {
-      await super.update(id, normalizedItem as Partial<Producto>);
+      await super.update(id, updatePayload as Partial<Producto>);
     }
     try {
       const publicPayload = removeUndefinedDeep({
@@ -146,7 +167,7 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
       }
       const costo = precioCompraProducto(producto);
       if (!Number.isFinite(costo) || costo < 0) throw new Error('El costo de compra no es válido.');
-      const devolucion = producto.finanzasRegistrado ? costo : 0;
+      const devolucion = producto.finanzasRegistrado && !producto.consignado ? costo : 0;
       const estado = {
         ...ESTADO_FINANCIERO_INICIAL,
         ...(finanzasSnapshot.exists() ? finanzasSnapshot.data() : {}),
@@ -182,7 +203,7 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
       const producto = snapshot.data() as Producto;
       if (producto.activo !== false) throw new Error('El producto ya está activo.');
       const destino = producto.destinoDevolucionEliminacion;
-      if (destino && producto.finanzasRegistrado) {
+      if (destino && producto.finanzasRegistrado && !producto.consignado) {
         const costo = precioCompraProducto(producto);
         if (!Number.isFinite(costo) || costo < 0) throw new Error('El costo de compra no es válido.');
         const campo = destino === 'inversion' ? 'inversionDisponible' : 'gananciaAcumulada';

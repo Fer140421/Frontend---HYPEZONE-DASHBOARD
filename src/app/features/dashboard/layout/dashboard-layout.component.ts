@@ -76,6 +76,7 @@ export class DashboardLayoutComponent {
     { label: 'Productos', icon: 'inventory_2', route: '/dashboard/productos', permission: 'products.view' },
     { label: 'Descuentos', icon: 'sell', route: '/dashboard/descuentos', permission: 'products.update' },
     { label: 'Ventas', icon: 'point_of_sale', route: '/dashboard/ventas', permission: 'sales.view' },
+    { label: 'Consignaciones', icon: 'handshake', route: '/dashboard/consignaciones', permission: 'sales.view' },
     { label: 'Cajas', icon: 'account_balance_wallet', route: '/dashboard/cajas', permission: 'sales.view' },
     { label: 'Gastos', icon: 'payments', route: '/dashboard/gastos', permission: 'expenses.view' },
     { label: 'Reservas', icon: 'event_available', route: '/dashboard/reservas', permission: 'sales.view' },

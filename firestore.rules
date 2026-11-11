@@ -114,8 +114,15 @@ service cloud.firestore {
     match /ventas/{id} {
       allow read: if hasPermission('sales.view');
       allow create: if hasPermission('sales.create');
-      allow update: if hasPermission('sales.update');
+      allow update: if hasPermission('sales.update') || (hasPermission('sales.create') &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['montoLiquidadoConsignador', 'updatedAt']));
       allow delete: if hasPermission('sales.update');
+    }
+
+    match /liquidacionesConsignacion/{id} {
+      allow read: if hasPermission('sales.view');
+      allow create: if hasPermission('sales.create');
+      allow update, delete: if false;
     }
 
     match /operacionesVenta/{id} {

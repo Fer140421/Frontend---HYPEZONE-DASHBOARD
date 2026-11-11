@@ -34,6 +34,14 @@ export interface Venta extends AuditableEntity {
   productoRecompensaId?: string;
   precioOriginal?: number;
   descuentoAplicado?: number;
+  consignado?: boolean;
+  consignadorNombre?: string;
+  montoPendienteConsignador?: number;
+  montoLiquidadoConsignador?: number;
+  /** Nombre de marca al momento de vender; conserva la clasificación histórica. */
+  marcaProducto?: string;
+  codigoProducto?: string;
+  categoriaProducto?: string;
 }
 
 export const metodosPago: MetodoPago[] = ['efectivo', 'qr'];

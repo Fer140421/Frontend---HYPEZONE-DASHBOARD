@@ -2,6 +2,7 @@ export interface EstadoFinanciero {
   inversionDisponible: number;
   gananciaAcumulada: number;
   perdidasAcumuladas: number;
+  deudaConsignacionPendiente?: number;
   fechaInicioControl?: string;
   historialPerdidasImportado?: boolean;
   updatedAt?: unknown;
@@ -23,6 +24,7 @@ export const ESTADO_FINANCIERO_INICIAL: EstadoFinanciero = {
   inversionDisponible: 867,
   gananciaAcumulada: 544,
   perdidasAcumuladas: 0,
+  deudaConsignacionPendiente: 0,
   fechaInicioControl: new Date().toISOString(),
   historialPerdidasImportado: false,
 };

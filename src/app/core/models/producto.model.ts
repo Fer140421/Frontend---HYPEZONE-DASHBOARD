@@ -18,6 +18,10 @@ export type DestinoDevolucionProducto = 'inversion' | 'ganancia';
 
 export interface Producto extends AuditableEntity {
   schemaVersion?: number;
+  /** Datos internos de consignación; nunca se copian a productosPublicos. */
+  consignado?: boolean;
+  consignadorId?: string;
+  consignadorNombre?: string;
   finanzasRegistrado?: boolean;
   destinoDevolucionEliminacion?: DestinoDevolucionProducto;
   montoDevolucionEliminacion?: number;

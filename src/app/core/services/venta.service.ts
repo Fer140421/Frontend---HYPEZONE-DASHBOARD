@@ -168,6 +168,9 @@ export class VentaService {
         const productoId = snapshots[index].id;
         const precioCompra = this.readPurchasePrice(current);
         const precioVenta = precios[index];
+        if (current.consignado && precioVenta < precioCompra) {
+          throw new Error(`El precio de venta de ${current.nombre} no puede ser menor a lo acordado con su dueño.`);
+        }
         transaction.set(ventaRefs[index], removeUndefinedDeep<Partial<Venta>>({
           operacionId: operacionRef.id, cantidadDetalles: detalles.length, totalOperacion,
           productoId, loteId: current.loteId || undefined,
@@ -175,9 +178,15 @@ export class VentaService {
           usuarioVentaId: input.usuarioVentaId || undefined,
           usuarioVentaNombre: input.usuarioVentaNombre || undefined,
           nombreProducto: current.nombre, precioCompra, precioVenta,
+          marcaProducto: current.marca || undefined,
+          codigoProducto: current.codigo || undefined,
+          categoriaProducto: current.categoria || undefined,
           precioOriginal: Number(current.precioVenta),
           descuentoAplicado: Math.max(0, Number(current.precioVenta) - precioVenta),
           ganancia: precioVenta - precioCompra,
+          consignado: current.consignado === true,
+          consignadorNombre: current.consignado ? current.consignadorNombre : undefined,
+          montoPendienteConsignador: current.consignado ? precioCompra : undefined,
           clienteId,
           clienteNombre: input.clienteNombre || undefined,
           clienteTelefono: input.clienteTelefono || undefined,
@@ -240,6 +249,9 @@ export class VentaService {
     this.validateMetodoPago(input.metodoPago);
     const precios = detalles.map((detalle) => Number(input.precios[detalle.id!]));
     if (precios.some((precio) => !Number.isFinite(precio) || precio < 0)) throw new Error('Precio de venta inválido.');
+    if (detalles.some((detalle, index) => detalle.consignado && precios[index] < Number(detalle.montoPendienteConsignador ?? detalle.precioCompra))) {
+      throw new Error('El precio de una prenda en consignación no puede quedar por debajo de lo acordado con su dueño.');
+    }
     const totalOperacion = precios.reduce((total, precio) => total + precio, 0);
     const refs = detalles.map((detalle) => doc(this.firestore, `ventas/${detalle.id}`));
     const operacionId = detalles[0].operacionId;
@@ -301,6 +313,12 @@ export class VentaService {
         return [snapshot.id, snapshot.data() as Producto];
       }));
       agregados.forEach(id => this.validateAvailableProduct(products.get(id)!));
+      nuevos.forEach((item, index) => {
+        const producto = products.get(item.producto.id!)!;
+        if (producto.consignado && precios[index] < Number(producto.precioCompra ?? 0)) {
+          throw new Error(`El precio de ${producto.nombre} no puede quedar por debajo de lo acordado con su dueño.`);
+        }
+      });
       const totalOperacion = precios.reduce((sum, price) => sum + price, 0);
       const timestamp = serverTimestamp();
       const clienteId = input.clienteId || clienteRef?.id;
@@ -376,8 +394,11 @@ export class VentaService {
         const product = products.get(item.producto.id!)!;
         const existing = originalesPorProducto.get(item.producto.id!);
         const ventaData = { ...common, productoId:item.producto.id!, loteId:product.loteId||deleteField(),
-          nombreProducto:product.nombre, precioCompra:this.readPurchasePrice(product), precioVenta:precios[index],
+          nombreProducto:product.nombre, marcaProducto:product.marca || deleteField(), codigoProducto:product.codigo || deleteField(), categoriaProducto:product.categoria || deleteField(), precioCompra:this.readPurchasePrice(product), precioVenta:precios[index],
           ganancia:precios[index]-this.readPurchasePrice(product), activo:true, schemaVersion:3,
+          consignado: product.consignado === true,
+          consignadorNombre: product.consignado ? product.consignadorNombre : undefined,
+          montoPendienteConsignador: product.consignado ? this.readPurchasePrice(product) : undefined,
           puntosGanados: clienteId ? fidelidad.puntosPorPrenda : 0 };
         if (existing?.id) transaction.update(doc(this.firestore, `ventas/${existing.id}`), ventaData);
         if (existing?.id) {

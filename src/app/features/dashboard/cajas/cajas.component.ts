@@ -45,6 +45,7 @@ export interface CajaItemVM {
   totalVendido: number;
   totalPrendas: number;
   totalCostoPrendas: number;
+  totalAdeudadoConsignadores: number;
   totalCapitalRecuperado: number;
   totalGanancia: number;
   totalGananciasPositivas: number;
@@ -162,11 +163,16 @@ export class CajasComponent implements OnInit {
           .filter((v) => v.metodoPago === 'qr')
           .reduce((sum, v) => sum + Number(v.precioVenta || 0), 0);
 
-        const totalCostoPrendas = caja.totalCostoPrendas ?? ventasDeCaja.reduce(
+        const ventasPropias = ventasDeCaja.filter((venta) => !venta.consignado);
+        const ventasConsignadas = ventasDeCaja.filter((venta) => venta.consignado === true);
+        const totalAdeudadoConsignadores = caja.totalAdeudadoConsignadores ?? ventasConsignadas.reduce(
+          (sum, venta) => sum + Math.max(0, Number(venta.montoPendienteConsignador ?? venta.precioCompra ?? 0) - Number(venta.montoLiquidadoConsignador ?? 0)), 0,
+        );
+        const totalCostoPrendas = caja.totalCostoPrendas ?? ventasPropias.reduce(
           (sum, v) => sum + Number(v.precioCompra || 0),
           0,
         );
-        const totalCapitalRecuperado = caja.totalCapitalRecuperado ?? ventasDeCaja.reduce(
+        const totalCapitalRecuperado = caja.totalCapitalRecuperado ?? ventasPropias.reduce(
           (sum, venta) => sum + Math.min(
             Math.max(0, Number(venta.precioCompra || 0)),
             Math.max(0, Number(venta.precioVenta || 0)),
@@ -188,10 +194,11 @@ export class CajasComponent implements OnInit {
             ? v.ganancia
             : Number(v.precioVenta || 0) - Number(v.precioCompra || 0),
         ));
-        const totalGananciasPositivas = caja.totalGananciasPositivas
-          ?? gananciasVentas.reduce((sum, ganancia) => sum + Math.max(0, ganancia), 0);
+        const totalGananciasPositivas = caja.totalGananciasPositivas ?? ventasDeCaja.reduce((sum, venta) => sum + (venta.consignado
+          ? Math.max(0, Number(venta.precioVenta) - Number(venta.montoPendienteConsignador ?? venta.precioCompra ?? 0))
+          : Math.max(0, Number(venta.ganancia ?? (Number(venta.precioVenta) - Number(venta.precioCompra))))), 0);
         const totalPerdidasVentas = caja.totalPerdidasVentas
-          ?? gananciasVentas.reduce((sum, ganancia) => sum + Math.max(0, -ganancia), 0);
+          ?? ventasPropias.reduce((sum, venta) => sum + Math.max(0, -Number(venta.ganancia ?? (Number(venta.precioVenta) - Number(venta.precioCompra)))), 0);
 
         const totalGastos = gastosDeCaja.reduce((sum, g) => sum + Number(g.monto || 0), 0);
         const totalGastosEfectivo = gastosDeCaja
@@ -214,6 +221,7 @@ export class CajasComponent implements OnInit {
           totalVendido,
           totalPrendas,
           totalCostoPrendas,
+          totalAdeudadoConsignadores,
           totalCapitalRecuperado,
           totalGanancia,
           totalGananciasPositivas,

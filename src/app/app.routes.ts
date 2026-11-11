@@ -113,6 +113,11 @@ export const routes: Routes = [
           import('./features/dashboard/ventas/ventas.component').then((m) => m.VentasComponent),
       },
       {
+        path: 'consignaciones',
+        canActivate: [permissionGuard], data: { permission: 'sales.view' },
+        loadComponent: () => import('./features/dashboard/consignaciones/consignaciones.component').then((m) => m.ConsignacionesComponent),
+      },
+      {
         path: 'reservas',
         canActivate: [permissionGuard], data: { permission: 'sales.view' },
         loadComponent: () => import('./features/dashboard/reservas/reservas.component').then((m) => m.ReservasComponent),

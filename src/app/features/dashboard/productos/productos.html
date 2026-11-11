@@ -138,6 +138,7 @@
                 <th mat-header-cell *matHeaderCellDef mat-sort-header>Producto</th>
                 <td mat-cell *matCellDef="let producto">
                   <strong>{{ producto.nombre }}</strong>
+                  @if (producto.consignado) { <small class="muted">· Consignación interna</small> }
                 </td>
               </ng-container>
 
@@ -359,9 +360,35 @@
                 </mat-select>
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Precio compra</mat-label>
+                <mat-label>{{ form.controls.consignado.value ? 'Monto acordado con el dueño' : 'Precio compra' }}</mat-label>
                 <input matInput type="number" formControlName="precioCompra" />
               </mat-form-field>
+              <mat-checkbox formControlName="consignado">Prenda recibida en consignación</mat-checkbox>
+              @if (form.controls.consignado.value) {
+                <div class="full consignment-owner-picker">
+                  <mat-form-field appearance="outline" class="full">
+                    <mat-label>Buscar dueño por nombre o celular</mat-label>
+                    <input matInput [formControl]="consignadorSearch" autocomplete="off" />
+                    <mat-hint>Solo visible en el dashboard. El monto acordado se registra como monto adeudado.</mat-hint>
+                  </mat-form-field>
+                  @if (consignadorSeleccionado(); as dueno) {
+                    <div class="selected-consignor"><mat-icon>person</mat-icon><span><strong>{{ dueno.nombreCompleto }}</strong> · {{ dueno.celular }}</span><button mat-button type="button" (click)="consignadorSeleccionado.set(null); form.patchValue({ consignadorId: '', consignadorNombre: '' })">Cambiar</button></div>
+                  } @else if (consignadorNuevo(); as dueno) {
+                    <div class="selected-consignor"><mat-icon>person_add</mat-icon><span><strong>{{ dueno.nombreCompleto }}</strong> · {{ dueno.celular }} <small>(se guardará junto con el producto)</small></span><button mat-button type="button" (click)="consignadorNuevo.set(null); form.patchValue({ consignadorNombre: '' })">Cambiar</button></div>
+                  } @else {
+                    @if (clientes$ | async; as clientes) {
+                      @for (cliente of clientes; track cliente.id) {
+                        @if (coincideConsignador(cliente, consignadorSearch.value)) {
+                          <button mat-stroked-button type="button" class="consignor-result" (click)="seleccionarConsignador(cliente)"><mat-icon>person</mat-icon>{{ cliente.nombreCompleto }} · {{ cliente.celular }}</button>
+                        }
+                      }
+                    }
+                    @if (auth.can('clients.create')) {
+                      <button mat-button type="button" (click)="crearConsignador()"><mat-icon>person_add</mat-icon>Registrar nuevo cliente dueño</button>
+                    }
+                  }
+                </div>
+              }
               <mat-form-field appearance="outline">
                 <mat-label>Precio venta</mat-label>
                 <input matInput type="number" formControlName="precioVenta" />

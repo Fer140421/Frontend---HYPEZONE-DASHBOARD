@@ -379,6 +379,9 @@ export class ReservaService {
       );
       reserva.detalles.forEach((detail, index) => {
         const product = products[index].data() as Producto;
+        if (product.consignado && detail.precioAcordado < Number(product.precioCompra ?? 0)) {
+          throw new Error(`El precio acordado para ${detail.nombreProducto} no puede ser menor al monto del consignador.`);
+        }
         const ventaRef = doc(collection(this.firestore, 'ventas'));
         ventaRefs.push(ventaRef);
         const precioCompra = Number(product.precioCompra ?? 0);
@@ -392,9 +395,15 @@ export class ReservaService {
             productoId: detail.productoId,
             loteId: product.loteId,
             nombreProducto: detail.nombreProducto,
+            marcaProducto: product.marca || undefined,
+            codigoProducto: product.codigo || undefined,
+            categoriaProducto: product.categoria || undefined,
             precioCompra,
             precioVenta: detail.precioAcordado,
             ganancia: detail.precioAcordado - precioCompra,
+            consignado: product.consignado === true,
+            consignadorNombre: product.consignado ? product.consignadorNombre : undefined,
+            montoPendienteConsignador: product.consignado ? precioCompra : undefined,
             clienteId: reserva.clienteId,
             clienteNombre: reserva.clienteNombre,
             clienteTelefono: reserva.clienteTelefono,

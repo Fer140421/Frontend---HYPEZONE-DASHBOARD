@@ -19,6 +19,7 @@ export interface Caja extends AuditableEntity {
   totalVentasQR?: number;
   totalVentas?: number;
   totalCostoPrendas?: number;
+  totalAdeudadoConsignadores?: number;
   totalCapitalRecuperado?: number;
   totalGanancia?: number;
   totalGananciasPositivas?: number;
@@ -41,6 +42,7 @@ export interface CierreCajaCalculo {
   totalVentasQR: number;
   totalVentas: number;
   totalCostoPrendas: number;
+  totalAdeudadoConsignadores: number;
   totalCapitalRecuperado: number;
   totalGanancia: number;
   totalGananciasPositivas: number;

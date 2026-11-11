@@ -7,6 +7,8 @@
 .report-filter .mat-mdc-form-field-subscript-wrapper { display: none; }
 .clear-dates { min-height: 48px; margin-bottom: 10px; }
 .metric-grid { margin: 20px 0; }
+.metric-card strong { max-width: 100%; font-size: clamp(1.05rem, 2vw, 1.5rem); overflow-wrap: anywhere; }
+.metric-card small { display: block; margin-top: 6px; color: var(--hz-gray); line-height: 1.35; }
 .compact-metrics { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .compact-metrics .metric-card { min-height: 108px; }
 .compact-metrics .metric-card strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -18,6 +20,11 @@
 .report-row small { display: block; margin-top: 3px; color: var(--hz-gray); }
 .report-row.clickable { cursor: pointer; }
 .report-row.clickable:hover { color: var(--hz-primary-hover); }
+.garment-report-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--hz-border); }
+.garment-report-row:last-child { border-bottom: 0; }
+.garment-report-row > div:first-child { display: grid; gap: 4px; min-width: 0; }
+.garment-report-row small { color: var(--hz-gray); overflow-wrap: anywhere; }
+.garment-report-values { display: grid; gap: 4px; text-align: right; }
 .rank { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--hz-primary-soft); color: var(--hz-primary-hover) !important; font-size: .8rem; font-weight: 800; }
 .reservation-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .reservation-stats span { display: grid; gap: 5px; padding: 14px; border-radius: 8px; color: var(--hz-gray); background: var(--hz-background); }
@@ -56,4 +63,7 @@
   .reservation-stats { grid-template-columns: 1fr; }
   .brand-dialog-summary, .lote-dialog-summary { grid-template-columns: 1fr; }
   .brand-products-grid { grid-template-columns: 1fr; }
+  .garment-report-row { grid-template-columns: minmax(0, 1fr) auto; gap: 7px 10px; }
+  .garment-report-row > span { grid-column: 1; grid-row: 2; }
+  .garment-report-values { grid-column: 2; grid-row: 1 / span 2; }
 }

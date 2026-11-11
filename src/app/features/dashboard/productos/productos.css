@@ -15,6 +15,42 @@
 :host .quick-option-button { align-self: flex-start; flex: 0 0 auto; width: 36px; height: 36px; margin-top: 10px; color: var(--hz-primary-hover); }
 :host .quick-option-button:hover { background: var(--hz-primary-soft); }
 
+:host .consignment-owner-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--hz-border);
+  border-radius: 10px;
+  background: var(--hz-background);
+}
+
+:host .consignment-owner-picker mat-form-field { width: 100%; min-width: 0; }
+:host .consignment-owner-picker mat-hint { white-space: normal; overflow-wrap: anywhere; }
+:host .consignment-owner-picker .selected-consignor {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--hz-border);
+  border-radius: 8px;
+  background: var(--hz-surface);
+}
+:host .selected-consignor > span { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+:host .selected-consignor small { display: block; color: var(--hz-gray); }
+:host .consignment-owner-picker .consignor-result { justify-content: flex-start; width: 100%; min-width: 0; min-height: 44px; white-space: normal; text-align: left; }
+
+@media (max-width: 640px) {
+  :host .consignment-owner-picker { padding: 10px; }
+  :host .product-form-actions { justify-content: stretch; }
+  :host .product-form-actions button { flex: 1 1 140px; }
+}
+
 :host .product-groups {
   display: flex;
   flex-wrap: wrap;

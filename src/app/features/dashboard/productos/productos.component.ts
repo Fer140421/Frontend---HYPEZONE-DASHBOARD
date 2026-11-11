@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,6 +19,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable, BehaviorSubject, combineLatest, firstValueFrom, map, of, shareReplay, startWith, switchMap } from 'rxjs';
 import { Lote } from '../../../core/models/lote.model';
+import { Cliente } from '../../../core/models/cliente.model';
 import {
   CategoriaProducto,
   EstadoProducto,
@@ -37,6 +39,7 @@ import {
 import { metodosPago } from '../../../core/models/venta.model';
 import { LoteRepository } from '../../../core/repositories/lote.repository';
 import { ProductoRepository } from '../../../core/repositories/producto.repository';
+import { ClienteRepository } from '../../../core/repositories/cliente.repository';
 import { CategoriaRepository } from '../../../core/repositories/categoria.repository';
 import { MarcaRepository } from '../../../core/repositories/marca.repository';
 import { TallaRepository } from '../../../core/repositories/talla.repository';
@@ -55,6 +58,7 @@ import { StatusChipComponent } from '../../../shared/components/status-chip/stat
 import { QuickCatalogValueDialogComponent } from '../../../shared/components/quick-catalog-value-dialog/quick-catalog-value-dialog.component';
 import { SearchableSelectComponent } from '../../../shared/components/searchable-select/searchable-select.component';
 import { QuickArchiveWebDialogComponent } from './quick-archive-web-dialog/quick-archive-web-dialog.component';
+import { ClienteFormDialogComponent } from '../clientes/clientes.component';
 import { ProductDeleteDialogComponent } from './product-delete-dialog.component';
 import {
   DEFAULT_PAGE_SIZE,
@@ -74,6 +78,7 @@ import {
     ReactiveFormsModule,
     MatButtonModule,
     MatCardModule,
+    MatCheckboxModule,
     MatDialogModule,
     MatFormFieldModule,
     MatIconModule,
@@ -103,6 +108,7 @@ export class ProductosComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   private readonly productoRepository = inject(ProductoRepository);
+  private readonly clienteRepository = inject(ClienteRepository);
   private readonly loteRepository = inject(LoteRepository);
   private readonly ventaService = inject(VentaService);
   private readonly categoriaRepository = inject(CategoriaRepository);
@@ -143,6 +149,10 @@ export class ProductosComponent implements OnInit {
   readonly currentProducto = signal<Producto | null>(null);
   readonly filtersOpen = signal(false);
   readonly imagenes = signal<string[]>([]);
+  readonly consignadorSeleccionado = signal<Cliente | null>(null);
+  readonly consignadorNuevo = signal<Cliente | null>(null);
+  readonly consignadorSearch = this.fb.nonNullable.control('');
+  readonly clientes$ = this.clienteRepository.getAll(true).pipe(shareReplay({ bufferSize: 1, refCount: true }));
   readonly procesandoVenta = signal(false);
   readonly opcionesLocales = {
     marcas: signal<string[]>([]),
@@ -249,6 +259,9 @@ export class ProductosComponent implements OnInit {
     talla: ['', Validators.required],
     genero: [''],
     precioCompra: [0, [Validators.required, Validators.min(0)]],
+    consignado: [false],
+    consignadorNombre: [''],
+    consignadorId: [''],
     precioVenta: [0, [Validators.required, Validators.min(0)]],
     estado: ['disponible', Validators.required],
     codigo: [''],
@@ -302,12 +315,16 @@ export class ProductosComponent implements OnInit {
               talla: '',
               genero: '',
               precioCompra: 0,
+              consignado: false,
+              consignadorNombre: '',
               precioVenta: 0,
               estado: 'disponible',
               codigo: generateProductCode(),
               notas: '',
             });
             this.imagenes.set([]);
+            this.consignadorSeleccionado.set(null);
+            this.consignadorNuevo.set(null);
           }
           return;
         }
@@ -321,12 +338,17 @@ export class ProductosComponent implements OnInit {
           talla: producto.talla,
           genero: normalizeGenero(producto.genero) ?? '',
           precioCompra: precioCompraProducto(producto),
+          consignado: producto.consignado ?? false,
+          consignadorNombre: producto.consignadorNombre ?? '',
+          consignadorId: producto.consignadorId ?? '',
           precioVenta: precioProducto(producto),
           estado: producto.estado,
           codigo: producto.codigo || generateProductCode(),
           notas: producto.notas ?? '',
         });
         this.imagenes.set(imagenesProducto(producto));
+        this.consignadorSeleccionado.set(null);
+        this.consignadorNuevo.set(null);
         const oferta = Number(producto.precioOferta);
         const precioBase = precioProducto(producto);
         this.ventaForm.patchValue({
@@ -494,8 +516,16 @@ export class ProductosComponent implements OnInit {
   async save(): Promise<void> {
     if (!this.auth.can('products.create') && !this.auth.can('products.update')) return;
     const raw = this.form.getRawValue();
+    const duenoNuevo = this.consignadorNuevo();
+    const duenoExistente = this.consignadorSeleccionado();
+    if (raw.consignado && !raw.consignadorNombre.trim() && !duenoNuevo && !duenoExistente) {
+      this.snack('Busca y selecciona al dueño de la prenda o regístralo.');
+      return;
+    }
     const payload: Partial<Producto> = {
       ...raw,
+      consignadorId: raw.consignado ? (duenoExistente?.id ?? (raw.consignadorId || undefined)) : undefined,
+      consignadorNombre: raw.consignado ? (duenoExistente?.nombreCompleto ?? duenoNuevo?.nombreCompleto ?? raw.consignadorNombre.trim()) : undefined,
       loteId: raw.loteId || undefined,
       genero: (normalizeGenero(raw.genero) || undefined) as GeneroProducto | undefined,
       codigo: raw.codigo || generateProductCode(),
@@ -512,10 +542,38 @@ export class ProductosComponent implements OnInit {
       return;
     }
 
-    await this.productoRepository.create(payload);
+    await this.productoRepository.create(payload, raw.consignado && duenoNuevo && !duenoNuevo.id ? {
+      nombreCompleto: duenoNuevo.nombreCompleto,
+      celular: duenoNuevo.celular,
+      ci: duenoNuevo.ci,
+    } : undefined);
     await this.persistirOpcionesPendientes(raw);
     this.snack('Producto creado.');
     await this.router.navigate(['/dashboard/productos']);
+  }
+
+  coincideConsignador(cliente: Cliente, termino: string): boolean {
+    const query = termino.trim().toLocaleLowerCase();
+    return !!query && (cliente.nombreCompleto.toLocaleLowerCase().includes(query) || cliente.celular.toLocaleLowerCase().includes(query));
+  }
+
+  seleccionarConsignador(cliente: Cliente): void {
+    this.consignadorSeleccionado.set(cliente);
+    this.consignadorNuevo.set(null);
+    this.form.patchValue({ consignadorId: cliente.id ?? '', consignadorNombre: cliente.nombreCompleto });
+    this.consignadorSearch.setValue('');
+  }
+
+  crearConsignador(): void {
+    if (!this.auth.can('clients.create')) return;
+    this.dialog.open(ClienteFormDialogComponent, {
+      width: 'min(560px, 96vw)', maxHeight: '90vh', data: { deferred: true },
+    }).afterClosed().subscribe((cliente?: Cliente) => {
+      if (!cliente) return;
+      this.consignadorNuevo.set(cliente);
+      this.consignadorSeleccionado.set(null);
+      this.form.patchValue({ consignadorId: '', consignadorNombre: cliente.nombreCompleto });
+    });
   }
 
   agregarOpcionRapida(tipo: 'marca' | 'categoria' | 'talla'): void {

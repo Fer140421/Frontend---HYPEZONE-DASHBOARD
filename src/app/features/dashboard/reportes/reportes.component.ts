@@ -27,6 +27,7 @@ import { cloudinaryCardUrl } from '../../../core/utils/cloudinary-image.util';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 
 interface VentaDetalleReporte { venta: Venta; producto?: Producto; }
+interface PrendaVendidaReporte { id: string; nombre: string; codigo: string; marca: string; categoria: string; fecha: string; precio: number; ganancia: number; consignado: boolean; }
 interface RankingReporte { nombre: string; cantidad: number; ingreso: number; ganancia: number; detalles: VentaDetalleReporte[]; }
 interface ClienteReporte extends RankingReporte { cliente?: Cliente; }
 interface ReportesData { detalles: VentaDetalleReporte[]; ventas: Venta[]; productos: Producto[]; clientes: Cliente[]; lotes: Lote[]; reservas: Reserva[]; }
@@ -35,7 +36,7 @@ type ReportTab = 'ventas' | 'marcas' | 'productos' | 'categorias' | 'lotes' | 'c
 
 @Component({
   selector: 'app-reportes', standalone: true,
-  imports: [AsyncPipe, CurrencyPipe, NgTemplateOutlet, ReactiveFormsModule, MatButtonModule, MatCardModule, MatDatepickerModule, MatFormFieldModule, MatIconModule, MatInputModule, MatNativeDateModule, MatSnackBarModule, MatTabsModule, PageHeaderComponent],
+  imports: [AsyncPipe, CurrencyPipe, DatePipe, NgTemplateOutlet, ReactiveFormsModule, MatButtonModule, MatCardModule, MatDatepickerModule, MatFormFieldModule, MatIconModule, MatInputModule, MatNativeDateModule, MatSnackBarModule, MatTabsModule, PageHeaderComponent],
   templateUrl: './reportes.html', styleUrl: './reportes.css',
 })
 export class ReportesComponent {
@@ -99,8 +100,20 @@ export class ReportesComponent {
     const filtro = this.filtros[this.pestanaActiva()].getRawValue();
     const vista = this.filtrarPorFecha(data, filtro.desde, filtro.hasta);
     const operaciones = new Set(vista.ventas.map((venta) => venta.operacionId ?? venta.id)).size;
-    const productosMasVendidos = this.rank(vista.detalles, (detalle) => detalle.venta.nombreProducto);
-    const marcas = this.rank(vista.detalles, (detalle) => detalle.producto?.marca || 'Sin marca');
+    const prendasVendidas: PrendaVendidaReporte[] = vista.detalles.map(({ venta, producto }) => ({
+      id: venta.productoId,
+      nombre: venta.nombreProducto,
+      codigo: venta.codigoProducto || producto?.codigo || venta.productoId,
+      marca: venta.marcaProducto || producto?.marca || 'Sin marca',
+      categoria: venta.categoriaProducto || producto?.categoria || 'Sin categoría',
+      fecha: venta.fechaVenta,
+      precio: Number(venta.precioVenta || 0),
+      ganancia: this.gananciaVenta(venta),
+      consignado: venta.consignado === true,
+    })).sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+    const marcas = this.rankMarcas(vista.detalles);
+    const cantidadMarcaLider = marcas[0]?.cantidad ?? 0;
+    const marcasLideres = marcas.filter((marca) => marca.cantidad === cantidadMarcaLider);
     const categorias = this.rank(vista.detalles, (detalle) => detalle.producto?.categoria || 'Sin categoría');
     const lotesPorId = new Map(vista.lotes.map((lote) => [lote.id, lote.nombre]));
     const lotes = this.rank(vista.detalles, (detalle) => lotesPorId.get(detalle.venta.loteId) || 'Sin lote').sort((a, b) => b.ganancia - a.ganancia || b.ingreso - a.ingreso);
@@ -114,10 +127,32 @@ export class ReportesComponent {
     const clientes = this.rank(vista.detalles, (detalle) => detalle.venta.clienteNombre || 'Venta sin cliente').map((item) => ({ ...item, cliente: item.detalles[0]?.venta.clienteId ? clientesPorId.get(item.detalles[0].venta.clienteId) : undefined })).slice(0, 10) as ClienteReporte[];
     const reservasActivas = vista.reservas.filter((reserva) => reserva.estado === 'activa');
     const hoy = new Date().setHours(0, 0, 0, 0);
+    const ingresosPropios = vista.ventas.filter((venta) => !venta.consignado)
+      .reduce((total, venta) => total + Number(venta.precioVenta || 0), 0);
+    const ingresosConsignados = vista.ventas.filter((venta) => venta.consignado)
+      .reduce((total, venta) => total + Number(venta.precioVenta || 0), 0);
+    const gananciaPropia = vista.ventas.filter((venta) => !venta.consignado)
+      .reduce((total, venta) => total + this.gananciaVenta(venta), 0);
+    const parteConsignadores = vista.ventas.filter((venta) => venta.consignado)
+      .reduce((total, venta) => total + this.parteConsignador(venta), 0);
+    const comisionConsignacion = vista.ventas.filter((venta) => venta.consignado)
+      .reduce((total, venta) => total + Math.max(0, Number(venta.precioVenta || 0) - this.parteConsignador(venta)), 0);
+    const gananciaTienda = gananciaPropia + comisionConsignacion;
     return {
       ...vista,
-      metricas: { operaciones, prendas: vista.detalles.length, ingreso: vista.ventas.reduce((total, venta) => total + Number(venta.precioVenta), 0), ganancia: vista.ventas.reduce((total, venta) => total + Number(venta.ganancia), 0), descuento: vista.ventas.reduce((total, venta) => total + Number(venta.descuentoAplicado ?? 0), 0) },
-      productosMasVendidos, marcas, categorias, lotes, clientes,
+      metricas: {
+        operaciones,
+        prendas: vista.detalles.length,
+        ingreso: ingresosPropios + ingresosConsignados,
+        ingresosPropios,
+        ingresosConsignados,
+        parteConsignadores,
+        gananciaPropia,
+        comisionConsignacion,
+        ganancia: gananciaTienda,
+        descuento: vista.ventas.reduce((total, venta) => total + Number(venta.descuentoAplicado ?? 0), 0),
+      },
+      prendasVendidas, marcas, marcaLider: { nombres: marcasLideres.map((marca) => marca.nombre).join(', '), cantidad: cantidadMarcaLider }, categorias, lotes, clientes,
       metricasLotes: { comprados: lotesComprados.length, vendidos: lotesConVentas, disponibles: lotesDisponibles, mejorLote: loteMayorGanancia?.nombre || 'Sin ganancia positiva', mejorGanancia: loteMayorGanancia?.ganancia ?? 0, peorLote: loteMenorGanancia?.nombre || '—', peorGanancia: loteMenorGanancia?.ganancia ?? 0, tienePerdida: (loteMenorGanancia?.ganancia ?? 0) < 0 },
       reservas: { total: vista.reservas.length, activas: reservasActivas.length, vencidas: reservasActivas.filter((reserva) => reserva.fechaVencimiento && new Date(reserva.fechaVencimiento).getTime() < hoy).length, convertidas: vista.reservas.filter((reserva) => reserva.estado === 'confirmada').length },
     };
@@ -140,10 +175,38 @@ export class ReportesComponent {
   }
 
   private crearFiltro() { return this.fb.group({ desde: [null as Date | null], hasta: [null as Date | null] }); }
+  private parteConsignador(venta: Venta): number {
+    return Math.max(0, Number(venta.montoPendienteConsignador ?? venta.precioCompra ?? 0));
+  }
+  private gananciaVenta(venta: Venta): number {
+    if (venta.ganancia !== undefined && venta.ganancia !== null && Number.isFinite(Number(venta.ganancia))) {
+      return Number(venta.ganancia);
+    }
+    return Number(venta.precioVenta || 0) - (venta.consignado ? this.parteConsignador(venta) : Number(venta.precioCompra || 0));
+  }
+  private rankMarcas(detalles: VentaDetalleReporte[]): RankingReporte[] {
+    const grupos = new Map<string, { nombre: string; detalles: VentaDetalleReporte[] }>();
+    for (const detalle of detalles) {
+      const nombre = (detalle.venta.marcaProducto || detalle.producto?.marca || 'Sin marca').trim() || 'Sin marca';
+      const clave = nombre.toLocaleLowerCase();
+      const grupo = grupos.get(clave) ?? { nombre, detalles: [] };
+      grupo.detalles.push(detalle);
+      grupos.set(clave, grupo);
+    }
+    return [...grupos.values()]
+      .map(({ nombre, detalles: items }) => ({
+        nombre,
+        cantidad: items.length,
+        ingreso: items.reduce((sum, item) => sum + Number(item.venta.precioVenta || 0), 0),
+        ganancia: items.reduce((sum, item) => sum + this.gananciaVenta(item.venta), 0),
+        detalles: items,
+      }))
+      .sort((a, b) => b.cantidad - a.cantidad || b.ingreso - a.ingreso || a.nombre.localeCompare(b.nombre));
+  }
   private rank(detalles: VentaDetalleReporte[], nombre: (detalle: VentaDetalleReporte) => string): RankingReporte[] {
     const grupos = new Map<string, VentaDetalleReporte[]>();
     detalles.forEach((detalle) => grupos.set(nombre(detalle), [...(grupos.get(nombre(detalle)) ?? []), detalle]));
-    return [...grupos.entries()].map(([nombre, items]) => ({ nombre, cantidad: items.length, ingreso: items.reduce((s, i) => s + Number(i.venta.precioVenta), 0), ganancia: items.reduce((s, i) => s + Number(i.venta.ganancia), 0), detalles: items })).sort((a, b) => b.cantidad - a.cantidad || b.ingreso - a.ingreso);
+    return [...grupos.entries()].map(([nombre, items]) => ({ nombre, cantidad: items.length, ingreso: items.reduce((s, i) => s + Number(i.venta.precioVenta || 0), 0), ganancia: items.reduce((s, i) => s + this.gananciaVenta(i.venta), 0), detalles: items })).sort((a, b) => b.cantidad - a.cantidad || b.ingreso - a.ingreso);
   }
 }
 
