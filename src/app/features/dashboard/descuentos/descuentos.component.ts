@@ -11,6 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
+import { SearchableSelectDirective } from '../../../shared/directives/searchable-select.directive';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -149,7 +150,7 @@ export class DescuentosComponent {
 interface DescuentoDialogData { productos: Producto[]; descuento?: Descuento; }
 @Component({
   standalone: true,
-  imports: [CurrencyPipe, ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule],
+  imports: [CurrencyPipe, ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, SearchableSelectDirective],
   template: `
     <h2 mat-dialog-title>{{ data.descuento ? 'Agregar productos a ' + data.descuento.nombre : 'Nuevo descuento' }}</h2>
     <mat-dialog-content>
@@ -181,7 +182,7 @@ export class DescuentoDialogComponent {
 
 @Component({
   standalone: true,
-  imports: [ReactiveFormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule],
+  imports: [ReactiveFormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, SearchableSelectDirective],
   template: `<h2 mat-dialog-title>Editar descuento</h2><mat-dialog-content><form [formGroup]="form" class="edit-discount-form"><mat-form-field appearance="outline"><mat-label>Nombre</mat-label><input matInput formControlName="nombre" /></mat-form-field><mat-form-field appearance="outline"><mat-label>Tipo</mat-label><mat-select formControlName="tipo"><mat-option value="porcentaje">Porcentaje</mat-option><mat-option value="precio">Precio final fijo</mat-option></mat-select></mat-form-field><mat-form-field appearance="outline"><mat-label>{{ form.controls.tipo.value === 'porcentaje' ? 'Descuento (%)' : 'Precio final (Bs)' }}</mat-label><input matInput type="number" min="0.01" formControlName="valor" /></mat-form-field></form></mat-dialog-content><mat-dialog-actions align="end"><button mat-button mat-dialog-close>Cancelar</button><button mat-flat-button [disabled]="form.invalid" (click)="save()">Guardar cambios</button></mat-dialog-actions>`,
   styles: [`.edit-discount-form{display:grid;gap:10px}.edit-discount-form mat-form-field{width:100%}`],
 })

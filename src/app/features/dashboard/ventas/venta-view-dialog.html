@@ -5,6 +5,7 @@
     <div><span>Fecha</span><strong>{{ first.fechaVenta | date: 'longDate' }}</strong></div>
     <div><span>Metodo de pago</span><strong>{{ first.metodoPago || 'otro' }}</strong></div>
     <div><span>Cliente</span><strong>{{ first.clienteNombre || 'No registrado' }}</strong></div>
+    <div><span>Entrega</span><strong>{{ first.estadoEntrega === 'pendiente' ? 'Pendiente' : first.estadoEntrega === 'entregado' ? 'Entregada' : 'Sin definir' }}</strong></div>
     <div><span>Telefono</span><strong>{{ first.clienteTelefono || 'No registrado' }}</strong></div>
     <div><span>CI</span><strong>{{ first.clienteCi || 'No registrado' }}</strong></div>
   </section>

@@ -90,6 +90,12 @@ table { min-width: 1500px; }
   max-width: 340px;
 }
 
+.associate-bar app-searchable-select {
+  flex: 1 1 220px;
+  min-width: 220px;
+  max-width: 340px;
+}
+
 .form-grid.compact-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -254,5 +260,6 @@ table { min-width: 1500px; }
   .associate-bar { flex-direction: column; align-items: stretch; }
   .associate-bar .inline-form { flex-direction: column; align-items: stretch; }
   .associate-bar mat-form-field { max-width: none; }
+  .associate-bar app-searchable-select { width: 100%; max-width: none; }
 }
   

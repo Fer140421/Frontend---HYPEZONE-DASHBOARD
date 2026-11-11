@@ -1,17 +1,17 @@
 
-    <mat-sidenav-container class="shell">
+    <mat-sidenav-container class="shell" [class.shell-compact]="sidebarCollapsed() && !isHandset()">
       <mat-sidenav
         #sidenav
         class="sidebar"
+        [class.sidebar-compact]="sidebarCollapsed() && !isHandset()"
         [mode]="(isHandset$ | async) ? 'over' : 'side'"
         [opened]="sidebarOpened()"
         (openedChange)="sidebarOpened.set($event)"
       >
         <a class="brand" routerLink="/dashboard/resumen">
-          <span class="brand-mark">HZ</span>
-          <span>
-            <strong>Hypezone</strong>
-            <small>Streetwear admin</small>
+          <img class="brand-logo" src="/chura-ropa.jpeg" alt="" />
+          <span class="brand-text">
+            <strong>CHURA ROPA</strong>
           </span>
         </a>
 
@@ -21,6 +21,8 @@
               mat-list-item
               [routerLink]="item.route"
               routerLinkActive="active-link"
+              [attr.aria-label]="item.label"
+              [title]="sidebarCollapsed() && !isHandset() ? item.label : ''"
               (click)="sidenav.mode === 'over' ? sidebarOpened.set(false) : undefined"
             >
               <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
@@ -36,10 +38,10 @@
             mat-icon-button
             type="button"
             (click)="toggleSidebar()"
-            [title]="sidebarOpened() ? 'Ocultar menú' : 'Mostrar menú'"
-            aria-label="Alternar menú lateral"
+            [title]="(isHandset() ? sidebarOpened() : !sidebarCollapsed()) ? 'Contraer menú' : 'Expandir menú'"
+            [attr.aria-label]="(isHandset() ? sidebarOpened() : !sidebarCollapsed()) ? 'Contraer menú lateral' : 'Expandir menú lateral'"
           >
-            <mat-icon>{{ sidebarOpened() ? 'menu_open' : 'menu' }}</mat-icon>
+            <mat-icon>{{ (isHandset() ? sidebarOpened() : !sidebarCollapsed()) ? 'menu_open' : 'menu' }}</mat-icon>
           </button>
           <span class="topbar-title">Panel de control</span>
           @if (showEnvironmentBanner) {

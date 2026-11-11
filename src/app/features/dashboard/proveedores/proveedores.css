@@ -60,7 +60,7 @@
   flex: 0 0 auto;
   width: 42px;
   height: 42px;
-  border: 1px solid rgba(54, 183, 166, 0.24);
+  border: 1px solid rgba(150, 102, 56, 0.24);
   border-radius: 10px;
   background: var(--hz-primary-soft);
   color: var(--hz-primary-hover);
@@ -153,7 +153,7 @@
   align-items: center;
   max-width: 100%;
   padding: 4px 8px;
-  border: 1px solid rgba(54, 183, 166, 0.24);
+  border: 1px solid rgba(150, 102, 56, 0.24);
   border-radius: 6px;
   background: var(--hz-primary-soft);
   color: var(--hz-primary-hover);

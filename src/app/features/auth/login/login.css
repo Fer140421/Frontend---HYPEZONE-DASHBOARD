@@ -1,5 +1,5 @@
 /* -------------------------------------------------------------------------- */
-/* REDISEÑO MINIMALISTA DE LOGIN - HYPEZONE DASHBOARD                        */
+/* Acceso al panel de Chura Ropa                                              */
 /* -------------------------------------------------------------------------- */
 
 :host {
@@ -36,9 +36,9 @@
   position: absolute;
   inset: 0;
   background: 
-    radial-gradient(circle at 10% 20%, rgba(54, 183, 166, 0.12) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(54, 183, 166, 0.08) 0%, transparent 45%),
-    radial-gradient(circle at 50% 50%, rgba(20, 20, 20, 0.95) 0%, var(--hz-dark) 100%);
+    radial-gradient(circle at 10% 20%, rgba(150, 102, 56, 0.18) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(150, 102, 56, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(33, 28, 23, 0.95) 0%, var(--hz-dark) 100%);
 }
 
 .glow-orb {
@@ -91,7 +91,7 @@
   flex-direction: column;
   justify-content: space-between;
   padding: 44px 40px;
-  background: linear-gradient(150deg, #141618 0%, var(--hz-dark) 100%);
+  background: linear-gradient(150deg, #171411 0%, var(--hz-dark) 100%);
   color: var(--hz-surface);
   position: relative;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
@@ -105,17 +105,22 @@
 }
 
 .hero-brand .brand-mark {
-  display: grid;
-  place-items: center;
   width: 42px;
   height: 42px;
   border-radius: 10px;
-  color: #ffffff;
-  font-weight: 900;
-  font-size: 1.1rem;
-  background: linear-gradient(135deg, var(--hz-primary), var(--hz-primary-hover));
-  box-shadow: 0 4px 12px rgba(54, 183, 166, 0.3);
+  object-fit: cover;
+  border: 1px solid rgba(244, 234, 223, 0.28);
   flex-shrink: 0;
+}
+
+.hero-logo {
+  display: block;
+  width: min(210px, 70%);
+  aspect-ratio: 3 / 2;
+  margin-bottom: 24px;
+  border-radius: 12px;
+  object-fit: cover;
+  object-position: center;
 }
 
 .hero-brand-text {
@@ -201,16 +206,10 @@
 }
 
 .mobile-brand .brand-mark {
-  display: grid;
-  place-items: center;
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  color: #ffffff;
-  font-weight: 900;
-  font-size: 1.05rem;
-  background: linear-gradient(135deg, var(--hz-primary), var(--hz-primary-hover));
-  box-shadow: 0 4px 12px rgba(54, 183, 166, 0.3);
+  object-fit: cover;
 }
 
 .mobile-brand-name {
@@ -278,14 +277,14 @@
   font-weight: 700 !important;
   background-color: var(--hz-primary) !important;
   color: #ffffff !important;
-  box-shadow: 0 4px 14px rgba(54, 183, 166, 0.25) !important;
+  box-shadow: 0 4px 14px rgba(150, 102, 56, 0.25) !important;
   margin-top: 6px;
   transition: all 0.2s ease !important;
 }
 
 .login-submit-btn:hover:not([disabled]) {
   background-color: var(--hz-primary-hover) !important;
-  box-shadow: 0 6px 18px rgba(54, 183, 166, 0.38) !important;
+  box-shadow: 0 6px 18px rgba(150, 102, 56, 0.38) !important;
 }
 
 .login-submit-btn[disabled] {

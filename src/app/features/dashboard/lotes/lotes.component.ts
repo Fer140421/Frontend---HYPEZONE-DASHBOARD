@@ -12,6 +12,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
+import { SearchableSelectDirective } from '../../../shared/directives/searchable-select.directive';
+import { SearchableSelectComponent } from '../../../shared/components/searchable-select/searchable-select.component';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -101,6 +103,8 @@ export interface LoteDetail {
     MatInputModule,
     MatPaginatorModule,
     MatSelectModule,
+    SearchableSelectDirective,
+    SearchableSelectComponent,
     MatSnackBarModule,
     MatTableModule,
     MatTooltipModule,
@@ -160,6 +164,12 @@ export class LotesComponent implements OnInit {
   readonly proveedoresSource$ = this.proveedores.getAll(true).pipe(
     map((items) => [...items].sort((a, b) => a.nombreCompleto.localeCompare(b.nombreCompleto))),
     shareReplay({ bufferSize: 1, refCount: true }),
+  );
+  readonly proveedoresOptions$ = this.proveedoresSource$.pipe(
+    map((items) => items.map((proveedor) => ({
+      id: proveedor.id,
+      label: this.proveedorLabel(proveedor),
+    }))),
   );
 
   private readonly baseData$ = combineLatest([
@@ -509,6 +519,13 @@ export class LotesComponent implements OnInit {
       .catch((error: unknown) => this.showError(error));
   }
 
+  despublicarProductoDeWeb(producto: Producto): void {
+    if (!this.auth.can('products.update') || !producto.id || producto.estadoPublicacion !== 'publicado') return;
+    this.productos.despublicarDeWeb(producto.id)
+      .then(() => this.message('Producto retirado de la web.'))
+      .catch((error: unknown) => this.showError(error));
+  }
+
   confirmarPublicacionLote(detail: LoteDetail): void {
     if (!this.auth.can('products.update')) {
       return;
@@ -625,6 +642,7 @@ export class LoteNextStepDialogComponent {}
     MatIconModule,
     MatInputModule,
     MatSelectModule,
+    SearchableSelectComponent,
     MatTooltipModule,
     ImageUploaderComponent,
   ],

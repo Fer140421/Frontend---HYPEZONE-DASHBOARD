@@ -2,6 +2,7 @@ import { AuditableEntity } from './base.model';
 
 export type MetodoPago = 'efectivo' | 'qr';
 export type MetodoPagoHistorico = MetodoPago | 'transferencia' | 'otro';
+export type EstadoEntregaVenta = 'pendiente' | 'entregado';
 
 export interface Venta extends AuditableEntity {
   schemaVersion?: number;
@@ -22,6 +23,8 @@ export interface Venta extends AuditableEntity {
   clienteNombre?: string;
   clienteTelefono?: string;
   clienteCi?: string;
+  estadoEntrega?: EstadoEntregaVenta;
+  fechaEntrega?: string;
   metodoPago?: MetodoPagoHistorico;
   fechaVenta: string;
   notas?: string;

@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { PageEvent, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
+import { SearchableSelectDirective } from '../../../shared/directives/searchable-select.directive';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -49,6 +50,7 @@ type EstadoCategoriaFiltro = 'todos' | 'activos' | 'inactivos';
     MatTableModule,
     MatTooltipModule,
     MatSelectModule,
+    SearchableSelectDirective,
     EmptyStateComponent,
     FilterDrawerComponent,
     LoadingComponent,
@@ -299,7 +301,7 @@ interface CategoriaTransferDialogData {
 @Component({
   selector: 'app-categoria-transfer-dialog',
   standalone: true,
-  imports: [MatButtonModule, MatDialogModule, MatFormFieldModule, MatSelectModule],
+  imports: [MatButtonModule, MatDialogModule, MatFormFieldModule, MatSelectModule, SearchableSelectDirective],
   templateUrl: './categoria-transfer-dialog.html',
   styleUrl: './categoria-transfer-dialog.css',
 })

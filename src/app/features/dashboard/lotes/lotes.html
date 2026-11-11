@@ -297,14 +297,7 @@
           <div class="associate-bar">
             <span class="associate-label"><mat-icon>link</mat-icon> Asociar prenda existente sin lote:</span>
             <form class="inline-form" [formGroup]="associateForm" (ngSubmit)="associate(detail.resumen.lote)">
-              <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                <mat-label>Seleccionar prenda sin lote</mat-label>
-                <mat-select formControlName="productoId">
-                  @for (producto of detail.productosSinLote; track producto.id) {
-                    <mat-option [value]="producto.id">{{ producto.nombre }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+              <app-searchable-select label="Seleccionar prenda sin lote" formControlName="productoId" [required]="true" [options]="detail.productosSinLote" valueKey="id" labelKey="nombre" />
               <button mat-stroked-button type="submit" [disabled]="associateForm.invalid || detail.resumen.lote.activo === false">
                 <mat-icon>add_link</mat-icon>
                 Asociar
@@ -342,9 +335,9 @@
                     <strong>{{ precio(p) | currency: 'BOB' : 'symbol-narrow' }}</strong>
                   </div>
                 </div>
-                @if ((auth.can('products.update') && p.estadoPublicacion !== 'publicado') || (mode() === 'edit' && auth.can('lots.update'))) {
+                @if (auth.can('products.update') || (mode() === 'edit' && auth.can('lots.update'))) {
                   <div class="prenda-card-actions">
-                    @if (auth.can('products.update') && p.estadoPublicacion !== 'publicado') {
+                    @if (auth.can('products.update') && p.activo !== false && p.estadoPublicacion !== 'publicado') {
                       <button
                         mat-icon-button
                         type="button"
@@ -355,6 +348,9 @@
                       >
                         <mat-icon>language</mat-icon>
                       </button>
+                    }
+                    @if (auth.can('products.update') && p.activo !== false && p.estadoPublicacion === 'publicado') {
+                      <button mat-icon-button type="button" (click)="despublicarProductoDeWeb(p)" matTooltip="Quitar de la web" aria-label="Quitar de la web"><mat-icon>unpublished</mat-icon></button>
                     }
                     @if (mode() === 'edit' && auth.can('lots.update')) {
                     <button 
@@ -448,15 +444,7 @@
         <mat-datepicker-toggle matIconSuffix [for]="picker" />
         <mat-datepicker #picker />
       </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Proveedor</mat-label>
-        <mat-select formControlName="proveedorId">
-          <mat-option value="">Sin proveedor</mat-option>
-          @for (proveedor of proveedoresSource$ | async; track proveedor.id) {
-            <mat-option [value]="proveedor.id">{{ proveedorLabel(proveedor) }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <app-searchable-select label="Proveedor" formControlName="proveedorId" [options]="(proveedoresOptions$ | async) ?? []" valueKey="id" labelKey="label" emptyLabel="Sin proveedor" />
       <mat-form-field appearance="outline">
         <mat-label>Lugar de compra</mat-label>
         <input matInput formControlName="lugarCompra" placeholder="Ej: Importadora X" />

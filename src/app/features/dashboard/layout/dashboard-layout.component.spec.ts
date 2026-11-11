@@ -78,6 +78,36 @@ describe('DashboardLayoutComponent authorization', () => {
     expect(sidebarText()).not.toContain('Usuarios y permisos');
   });
 
+  it('keeps the sidebar open with accessible icon links when collapsed on desktop', () => {
+    grantedPermissions.set(new Set<Permission>(['dashboard.view']));
+    fixture.detectChanges();
+
+    const shell = fixture.nativeElement.querySelector('mat-sidenav-container');
+    const sidebar = fixture.nativeElement.querySelector('mat-sidenav');
+    const content = fixture.nativeElement.querySelector('mat-sidenav-content');
+    const menuButton = fixture.nativeElement.querySelector('.topbar button');
+    expect(getComputedStyle(sidebar).width).toBe('280px');
+    expect(getComputedStyle(content).marginLeft).toBe('280px');
+    expect(menuButton.getBoundingClientRect().left).toBeGreaterThanOrEqual(sidebar.getBoundingClientRect().right);
+
+    fixture.componentInstance.toggleSidebar();
+    fixture.detectChanges();
+
+    const summaryLink = fixture.nativeElement.querySelector('a[aria-label="Resumen"]');
+    expect(fixture.componentInstance.sidebarOpened()).toBeTrue();
+    expect(sidebar.classList.contains('sidebar-compact')).toBeTrue();
+    expect(shell.classList.contains('shell-compact')).toBeTrue();
+    expect(getComputedStyle(shell).getPropertyValue('--sidebar-width').trim()).toBe('72px');
+    expect(summaryLink.querySelector('[matListItemTitle]')?.textContent).toContain('Resumen');
+    expect(summaryLink.getAttribute('title')).toBe('Resumen');
+
+    fixture.componentInstance.toggleSidebar();
+    fixture.detectChanges();
+    expect(sidebar.classList.contains('sidebar-compact')).toBeFalse();
+    expect(shell.classList.contains('shell-compact')).toBeFalse();
+    expect(sidebarText()).toContain('Resumen');
+  });
+
   function sidebarText(): string {
     return fixture.nativeElement.querySelector('mat-nav-list')?.textContent ?? '';
   }

@@ -20,6 +20,7 @@ import {
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
+import { SearchableSelectDirective } from '../../../shared/directives/searchable-select.directive';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { finalize } from 'rxjs';
 import {
@@ -63,6 +64,7 @@ export interface UserAuthorizationEditDialogData {
     MatFormFieldModule,
     MatIconModule,
     MatSelectModule,
+    SearchableSelectDirective,
     MatSlideToggleModule,
   ],
   templateUrl: './user-authorization-edit-dialog.html',

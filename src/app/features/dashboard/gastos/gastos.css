@@ -79,3 +79,166 @@
   align-items: center;
   gap: 4px;
 }
+
+.gastos-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 900px;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.gastos-metrics .metric-card {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-content: center;
+  column-gap: 10px;
+  min-width: 0;
+  min-height: 82px;
+  padding: 12px 14px;
+}
+
+.gastos-metrics .metric-card mat-icon {
+  grid-row: 1 / 3;
+  align-self: center;
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+}
+
+.gastos-metrics .metric-card span {
+  margin-top: 0;
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.gastos-metrics .metric-card strong {
+  margin-top: 2px;
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  overflow-wrap: anywhere;
+}
+
+.expense-status-hint {
+  margin: 0 0 10px;
+  color: var(--hz-black);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.expense-status-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: 900px;
+  margin-bottom: 20px;
+  padding: 2px 2px 8px;
+}
+
+.expense-status-tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  min-height: 58px;
+  padding: 8px 12px;
+  border: 2px solid var(--hz-border);
+  border-radius: 12px;
+  background: var(--hz-surface);
+  box-shadow: 0 2px 6px rgba(37, 27, 18, 0.05);
+  color: var(--hz-black);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease,
+    border-color 180ms ease, color 180ms ease;
+}
+
+.expense-status-tab-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 700;
+}
+
+.expense-status-tab-title mat-icon {
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+  color: var(--hz-primary);
+}
+
+.expense-status-tab-title strong {
+  min-width: 22px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--hz-primary-soft);
+  color: inherit;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.expense-status-tab-detail {
+  display: flex;
+  align-items: center;
+}
+
+.expense-status-tab-detail mat-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+  color: var(--hz-primary);
+  transition: transform 180ms ease;
+}
+
+.expense-status-tab:hover {
+  transform: translateY(-2px);
+  border-color: var(--hz-primary);
+  box-shadow: 0 7px 16px rgba(76, 46, 21, 0.12);
+}
+
+.expense-status-tab:hover .expense-status-tab-detail mat-icon {
+  transform: translateX(4px);
+}
+
+.expense-status-tab.active {
+  border-color: var(--hz-primary);
+  background: var(--hz-primary-soft);
+  color: var(--hz-primary-hover);
+  box-shadow: 0 4px 12px rgba(150, 102, 56, 0.15);
+}
+
+.expense-status-tab:focus-visible {
+  outline: 2px solid var(--hz-primary);
+  outline-offset: 3px;
+}
+
+@media (max-width: 650px) {
+  .expense-status-tabs {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding-bottom: 0;
+  }
+
+  .expense-status-tab {
+    min-height: 54px;
+  }
+
+  mat-card.gastos-list > mat-card-content {
+    padding: 12px !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .gastos-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .expense-status-tab,
+  .expense-status-tab-detail mat-icon {
+    transition: none;
+  }
+}

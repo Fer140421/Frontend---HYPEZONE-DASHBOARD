@@ -1,5 +1,5 @@
 <app-page-header
-  [title]="mode() === 'new' ? 'Nueva venta' : mode() === 'edit' ? 'Editar venta' : 'Ventas'"
+  [title]="mode() === 'new' ? (ventaRapida() ? 'Venta rápida' : 'Nueva venta') : mode() === 'edit' ? 'Editar venta' : 'Ventas'"
   [description]="
     mode() === 'list'
       ? 'Historial de productos vendidos.'
@@ -8,6 +8,10 @@
   [backUrl]="mode() !== 'list' ? '/dashboard/ventas' : null"
 >
   @if (mode() === 'list' && auth.can('sales.create')) {
+    <button mat-stroked-button type="button" (click)="iniciarVentaRapida()" [disabled]="procesandoVenta()"
+      [matTooltip]="cajaActiva() ? 'Usa la caja abierta' : 'Abre automáticamente una caja con Bs 0'">
+      <mat-icon>bolt</mat-icon> Venta rápida
+    </button>
     @if (cajaActiva()) {
       <button mat-stroked-button color="warn" type="button" (click)="abrirDialogoCierre()">
         <mat-icon>lock</mat-icon>
@@ -31,7 +35,10 @@
 </app-page-header>
 
 @if (mode() === 'new' || mode() === 'edit') {
-  <div class="sale-layout">
+  @if (ventaRapida() && mode() === 'new') {
+    <p class="quick-sale-notice">Esta venta usa la caja abierta. Si no había una, se abrió con Bs 0. Cierra la caja al terminar el turno para actualizar el balance.</p>
+  }
+  <div class="sale-layout" [class.quick-sale]="ventaRapida() && mode() === 'new'">
     <section class="catalog-panel">
       <div class="section-heading">
         <div>
@@ -110,13 +117,19 @@
             <span class="eyebrow">Paso 2</span>
             <mat-card-title>Detalle de venta</mat-card-title>
           </div>
-          <span class="item-count">{{ detalles.length }} prendas</span>
+          <div class="checkout-header-actions">
+            <button mat-stroked-button type="button" class="cost-toggle" (click)="showCosts.set(!showCosts())" [attr.aria-pressed]="showCosts()" [attr.aria-label]="showCosts() ? 'Ocultar costos y márgenes' : 'Ver costos y márgenes'">
+              <mat-icon>{{ showCosts() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              {{ showCosts() ? 'Ocultar costos' : 'Ver costos' }}
+            </button>
+            <span class="item-count">{{ detalles.length }} prendas</span>
+          </div>
         </mat-card-header>
         <mat-card-content>
           <form [formGroup]="saleForm" (ngSubmit)="registrarVenta()">
             <div formArrayName="detalles" class="cart-list">
               @for (control of detalles.controls; track control.getRawValue().productoId; let i = $index) {
-                <div class="cart-item" [formGroupName]="i">
+                <div class="cart-item" [formGroupName]="i" [class.loss-preview]="showCosts() && (margin(control.getRawValue().productoId, control.getRawValue().precioFinal) ?? 0) < 0">
                   @if (selectedImage(control.getRawValue().productoId); as src) {
                     <img [src]="src" alt="" loading="lazy" decoding="async" width="96" height="96" />
                   } @else {
@@ -128,11 +141,20 @@
                     @if (control.getRawValue().precioOriginal !== control.getRawValue().precioBase) {
                       <span class="offer-text">Precio de oferta aplicado</span>
                     }
+                    @if (showCosts()) {
+                      <div class="cost-preview">
+                        <span>Compra: {{ cost(control.getRawValue().productoId) === null ? 'Sin dato' : (cost(control.getRawValue().productoId) | currency: 'BOB' : 'symbol-narrow') }}</span>
+                        <span>Venta: {{ control.getRawValue().precioFinal | currency: 'BOB' : 'symbol-narrow' }}</span>
+                        @if (margin(control.getRawValue().productoId, control.getRawValue().precioFinal) !== null) {
+                          <strong [class.negative]="(margin(control.getRawValue().productoId, control.getRawValue().precioFinal) ?? 0) < 0">{{ (margin(control.getRawValue().productoId, control.getRawValue().precioFinal) ?? 0) < 0 ? 'Pérdida' : 'Margen' }}: {{ margin(control.getRawValue().productoId, control.getRawValue().precioFinal) | currency: 'BOB' : 'symbol-narrow' }}</strong>
+                        }
+                      </div>
+                    }
                   </div>
                   <mat-form-field appearance="outline" subscriptSizing="dynamic" class="price-input">
                     <mat-label>Precio final</mat-label>
                     <span matTextPrefix>Bs&nbsp;</span>
-                    <input matInput type="number" min="0" formControlName="precioFinal" />
+                    <input matInput type="number" min="0" formControlName="precioFinal" (input)="rememberManualPrice(control.getRawValue().productoId, $any($event.target).value)" />
                   </mat-form-field>
                   <button
                     mat-icon-button
@@ -174,6 +196,19 @@
                 <mat-datepicker-toggle matIconSuffix [for]="picker" />
                 <mat-datepicker #picker />
               </mat-form-field>
+
+              @if (mode() === 'new') {
+                <mat-form-field appearance="outline" class="full">
+                  <mat-label>Estado de entrega</mat-label>
+                  <mat-select formControlName="estadoEntrega">
+                    <mat-option value="entregado">Entregado ahora</mat-option>
+                    <mat-option value="pendiente">Pendiente de entrega o retiro</mat-option>
+                  </mat-select>
+                </mat-form-field>
+                @if (saleForm.controls.estadoEntrega.value === 'pendiente') {
+                  <p class="delivery-form-note full">Selecciona o registra un cliente con celular para encontrar esta compra después.</p>
+                }
+              }
 
               <div class="client-search full">
                 <mat-form-field appearance="outline">
@@ -301,27 +336,65 @@
     </aside>
   </div>
 } @else {
-  @if (!cajaActiva()) {
-    <div class="caja-cerrada-container">
-      <mat-card class="caja-cerrada-card">
-        <mat-card-content class="caja-cerrada-content">
-          <div class="caja-cerrada-icon-wrap">
-            <mat-icon>lock</mat-icon>
-          </div>
-          <h2>Caja cerrada</h2>
-          <p class="caja-cerrada-desc">
-            Para poder registrar ventas y consultar los movimientos de tu turno, primero debes aperturar tu caja con el monto inicial en efectivo.
-          </p>
-          @if (auth.can('sales.create')) {
-            <button mat-flat-button class="primary-action btn-abrir-caja-lg" type="button" (click)="abrirDialogoApertura()">
-              <mat-icon>point_of_sale</mat-icon>
-              Abrir caja
-            </button>
+  @if (entregasPendientes$ | async; as pendientes) {
+    <section class="delivery-section" aria-labelledby="delivery-title">
+      <div class="delivery-heading">
+        <div>
+          <h2 id="delivery-title">Entregas pendientes <span>{{ pendientes.length }}</span></h2>
+          <p>Compras por entregar o retirar, de cualquier turno.</p>
+        </div>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Buscar por cliente, celular o prenda</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [formControl]="entregaBuscando" />
+        </mat-form-field>
+      </div>
+      @if (pendientes.length) {
+        <div class="delivery-grid">
+          @for (pedido of pendientes; track pedido.id) {
+            <mat-card class="delivery-card">
+              <div class="delivery-card-top">
+                <strong>{{ pedido.first.clienteNombre || 'Cliente sin nombre' }}</strong>
+                <span>#{{ pedido.id.slice(0, 6).toUpperCase() }}</span>
+              </div>
+              <p>{{ pedido.detalles.length }} {{ pedido.detalles.length === 1 ? 'producto' : 'productos' }}</p>
+              <p class="delivery-products">
+                @for (detalle of pedido.detalles; track detalle.id) {
+                  {{ detalle.nombreProducto }}{{ $last ? '' : ' · ' }}
+                }
+              </p>
+              <div class="delivery-contact">
+                <span>{{ pedido.first.clienteTelefono || 'Sin celular registrado' }}</span>
+                @if (whatsappLink(pedido.first.clienteTelefono); as link) {
+                  <a [href]="link" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                }
+              </div>
+              <div class="delivery-actions">
+                <small>{{ pedido.first.fechaVenta | date: 'dd/MM/yyyy' }}</small>
+                <button mat-button type="button" (click)="viewSale(pedido.first, pedido.detalles)">Ver compra</button>
+                @if (auth.can('sales.update')) {
+                  <button mat-button type="button" (click)="editSale(pedido.first)">Editar datos</button>
+                  <button mat-stroked-button type="button" (click)="actualizarEstadoEntrega(pedido.detalles, 'entregado')" [disabled]="procesandoVenta()">
+                    <mat-icon>task_alt</mat-icon> Marcar entregada
+                  </button>
+                }
+              </div>
+            </mat-card>
           }
-        </mat-card-content>
-      </mat-card>
+        </div>
+      } @else {
+        <p class="delivery-empty">No hay entregas pendientes con esta búsqueda.</p>
+      }
+    </section>
+  }
+  @if (!cajaActiva()) {
+    <div class="cash-notice">
+      <span>La caja está cerrada. Puedes consultar todas las ventas y entregas.</span>
+      @if (auth.can('sales.create')) {
+        <button mat-stroked-button type="button" (click)="abrirDialogoApertura()">Abrir caja</button>
+      }
     </div>
-  } @else {
+  }
     @if (cajaActiva(); as caja) {
       <mat-card class="session-info-card">
         <mat-card-content class="session-info-content">
@@ -360,8 +433,8 @@
       <mat-card-content>
         <div class="list-filter-bar">
           <mat-form-field appearance="outline" class="list-search">
-            <mat-label>Producto</mat-label>
-            <input matInput [formControl]="filters.controls.producto" placeholder="Nombre del producto" />
+            <mat-label>Producto, cliente o celular</mat-label>
+            <input matInput [formControl]="filters.controls.producto" placeholder="Buscar venta" />
           </mat-form-field>
           <button mat-stroked-button type="button" class="filter-trigger" (click)="openFilters()">
             <mat-icon>tune</mat-icon>
@@ -446,6 +519,14 @@
               <th mat-header-cell *matHeaderCellDef>Fecha</th>
               <td mat-cell *matCellDef="let venta">{{ venta.fechaVenta | date: 'mediumDate' }}</td>
             </ng-container>
+            <ng-container matColumnDef="entrega">
+              <th mat-header-cell *matHeaderCellDef>Entrega</th>
+              <td mat-cell *matCellDef="let venta">
+                <span class="delivery-badge" [class.pending]="venta.estadoEntrega === 'pendiente'" [class.unknown]="!venta.estadoEntrega">
+                  {{ venta.estadoEntrega === 'pendiente' ? 'Pendiente' : venta.estadoEntrega === 'entregado' ? 'Entregada' : 'Sin definir' }}
+                </span>
+              </td>
+            </ng-container>
             <ng-container matColumnDef="precioVenta">
               <th mat-header-cell *matHeaderCellDef>Precio acordado</th>
               <td mat-cell *matCellDef="let venta">
@@ -469,6 +550,11 @@
                   <mat-icon>visibility</mat-icon>
                 </button>
                 @if (auth.can('sales.update')) {
+                  @if (venta.estadoEntrega !== 'pendiente') {
+                    <button mat-icon-button type="button" (click)="actualizarEstadoEntrega(operationDetails(venta), 'pendiente')" matTooltip="Marcar entrega pendiente" aria-label="Marcar entrega pendiente" [disabled]="procesandoVenta()">
+                      <mat-icon>pending_actions</mat-icon>
+                    </button>
+                  }
                   <button mat-icon-button type="button" (click)="editSale(venta)" matTooltip="Editar venta" aria-label="Editar venta">
                     <mat-icon>edit</mat-icon>
                   </button>
@@ -489,7 +575,7 @@
               <div class="card-body-content">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
                   <h3 class="card-item-title">{{ venta.nombreProducto }}</h3>
-                  <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 99px; background: rgba(54, 183, 166, 0.12); color: #2fa394; font-weight: 700; text-transform: uppercase;">
+                  <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 99px; background: var(--hz-primary-soft); color: var(--hz-primary-hover); font-weight: 700; text-transform: uppercase;">
                     {{ venta.metodoPago || 'Efectivo' }}
                   </span>
                 </div>
@@ -497,6 +583,9 @@
                   {{ venta.fechaVenta | date: 'mediumDate' }}
                   @if (venta.clienteNombre) { · {{ venta.clienteNombre }} }
                 </div>
+                <span class="delivery-badge" [class.pending]="venta.estadoEntrega === 'pendiente'" [class.unknown]="!venta.estadoEntrega">
+                  {{ venta.estadoEntrega === 'pendiente' ? 'Pendiente de entrega' : venta.estadoEntrega === 'entregado' ? 'Entregada' : 'Entrega sin definir' }}
+                </span>
                 <div class="card-item-price">{{ venta.precioVenta | currency: 'BOB' : 'symbol-narrow' }}</div>
                 <div class="card-item-details">
                   <span>Ganancia: <strong style="color: #10b981;">{{ venta.ganancia | currency: 'BOB' : 'symbol-narrow' }}</strong></span>
@@ -510,6 +599,11 @@
                   <mat-icon>visibility</mat-icon>
                 </button>
                 @if (auth.can('sales.update')) {
+                  @if (venta.estadoEntrega !== 'pendiente') {
+                    <button mat-icon-button type="button" (click)="$event.stopPropagation(); actualizarEstadoEntrega(operationDetails(venta), 'pendiente')" (keydown)="$event.stopPropagation()" matTooltip="Marcar entrega pendiente" aria-label="Marcar entrega pendiente" [disabled]="procesandoVenta()">
+                      <mat-icon>pending_actions</mat-icon>
+                    </button>
+                  }
                   <button mat-icon-button type="button" (click)="$event.stopPropagation(); editSale(venta)" (keydown)="$event.stopPropagation()" matTooltip="Editar venta" aria-label="Editar venta">
                     <mat-icon>edit</mat-icon>
                   </button>
@@ -537,5 +631,4 @@
       <app-loading text="Cargando ventas..." />
     </mat-card>
   }
-}
 }

@@ -9,11 +9,21 @@
       <mat-label>Nombre de la marca</mat-label>
       <input matInput formControlName="nombre" placeholder="Ej. Nike, Adidas, Puma" />
     </mat-form-field>
+    <div class="uploader-field">
+      <label class="field-label">Logo o imagen de la marca</label>
+      <app-image-uploader
+        [maxImages]="1"
+        [images]="imagenes()"
+        (uploaded)="imagenes.set($event)"
+        (uploadingChange)="uploading.set($event)"
+        (error)="errorMessage.set($event)"
+      />
+    </div>
   </form>
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button mat-dialog-close [disabled]="saving()">Cancelar</button>
-  <button mat-flat-button class="primary-action" (click)="save()" [disabled]="form.invalid || saving()">
+  <button mat-flat-button class="primary-action" (click)="save()" [disabled]="form.invalid || saving() || uploading()">
     {{ saving() ? 'Guardando...' : (isEdit ? 'Guardar cambios' : 'Crear marca') }}
   </button>
 </mat-dialog-actions>

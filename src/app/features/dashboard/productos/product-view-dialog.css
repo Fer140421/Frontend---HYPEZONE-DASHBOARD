@@ -10,7 +10,7 @@
 
 .product-category-tag {
   display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 6px;
-  background: rgba(54, 183, 166, 0.12); color: var(--hz-primary-hover);
+  background: rgba(150, 102, 56, 0.12); color: var(--hz-primary-hover);
   font: 800 0.72rem/1 inherit; text-transform: uppercase; letter-spacing: 0.5px;
 }
 .meta-icon { font-size: 14px; width: 14px; height: 14px; }
@@ -106,7 +106,7 @@
   display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px;
   background: var(--hz-surface); border: 1px solid var(--hz-border); transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-.spec-card:hover { border-color: rgba(54, 183, 166, 0.4); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); }
+.spec-card:hover { border-color: rgba(150, 102, 56, 0.4); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); }
 .spec-icon-wrap { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 8px; background: var(--hz-primary-soft); color: var(--hz-primary-hover); flex-shrink: 0; }
 .spec-icon-wrap mat-icon { font-size: 20px; width: 20px; height: 20px; }
 .spec-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

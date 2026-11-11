@@ -14,10 +14,13 @@ export type CategoriaProducto =
 export type GeneroProducto = 'hombre' | 'mujer' | 'unisex' | 'nino' | 'nina' | 'niño' | 'niña';
 export type EstadoProducto = 'disponible' | 'reservado' | 'vendido' | 'por_recoger';
 export type EstadoPublicacionProducto = 'pendiente' | 'publicado';
+export type DestinoDevolucionProducto = 'inversion' | 'ganancia';
 
 export interface Producto extends AuditableEntity {
   schemaVersion?: number;
   finanzasRegistrado?: boolean;
+  destinoDevolucionEliminacion?: DestinoDevolucionProducto;
+  montoDevolucionEliminacion?: number;
   loteId?: string;
   nombre: string;
   marca?: string;

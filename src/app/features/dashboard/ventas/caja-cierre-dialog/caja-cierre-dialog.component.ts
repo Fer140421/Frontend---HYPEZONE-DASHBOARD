@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { SearchableSelectDirective } from '../../../../shared/directives/searchable-select.directive';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Caja, CierreCajaCalculo } from '../../../../core/models/caja.model';
 import { CajaService } from '../../../../core/services/caja.service';
@@ -27,6 +28,7 @@ export interface CajaCierreDialogData {
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
+    SearchableSelectDirective,
     MatIconModule,
     MatSnackBarModule,
   ],

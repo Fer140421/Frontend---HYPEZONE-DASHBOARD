@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { collection, deleteDoc, deleteField, doc, getDoc, runTransaction, serverTimestamp, setDoc, writeBatch } from '@angular/fire/firestore';
 import { Observable, map } from 'rxjs';
-import { Producto, normalizeProducto, precioCompraProducto } from '../models/producto.model';
+import { DestinoDevolucionProducto, Producto, normalizeProducto, precioCompraProducto } from '../models/producto.model';
 import { ESTADO_FINANCIERO_INICIAL } from '../models/finanzas.model';
 import { FirestoreRepository, removeUndefinedDeep } from './firestore.repository';
 
@@ -98,7 +98,7 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
           ...ESTADO_FINANCIERO_INICIAL,
           ...(estadoSnapshot.exists() ? estadoSnapshot.data() : {}),
         };
-        const deltaCosto = current.finanzasRegistrado
+        const deltaCosto = current.finanzasRegistrado && current.activo !== false
           ? Number(normalizedItem.precioCompra) - Number(current.precioCompra || 0)
           : 0;
         const now = serverTimestamp();
@@ -127,22 +127,82 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
     }
   }
 
-  override async delete(id: string): Promise<void> {
-    const snapshot = await getDoc(doc(this.firestore, `productos/${id}`));
-    if (!snapshot.exists()) {
-      throw new Error('El producto no existe.');
+  override async delete(id: string, destino: DestinoDevolucionProducto = 'inversion'): Promise<void> {
+    if (destino !== 'inversion' && destino !== 'ganancia') {
+      throw new Error('Selecciona el destino de la devolución.');
     }
+    const productRef = doc(this.firestore, `productos/${id}`);
+    const publicRef = doc(this.firestore, `productosPublicos/${id}`);
+    const finanzasRef = doc(this.firestore, 'finanzas/estado');
+    await runTransaction(this.firestore, async (transaction) => {
+      const [snapshot, publicSnapshot, finanzasSnapshot] = await Promise.all([
+        transaction.get(productRef), transaction.get(publicRef), transaction.get(finanzasRef),
+      ]);
+      if (!snapshot.exists()) throw new Error('El producto no existe.');
+      const producto = snapshot.data() as Producto;
+      if (producto.activo === false) throw new Error('El producto ya está inactivo.');
+      if (producto.estado !== 'disponible' && producto.estado !== 'por_recoger') {
+        throw new Error('Los productos vendidos o reservados no se pueden eliminar.');
+      }
+      const costo = precioCompraProducto(producto);
+      if (!Number.isFinite(costo) || costo < 0) throw new Error('El costo de compra no es válido.');
+      const devolucion = producto.finanzasRegistrado ? costo : 0;
+      const estado = {
+        ...ESTADO_FINANCIERO_INICIAL,
+        ...(finanzasSnapshot.exists() ? finanzasSnapshot.data() : {}),
+      };
+      const campo = destino === 'inversion' ? 'inversionDisponible' : 'gananciaAcumulada';
+      const timestamp = serverTimestamp();
+      transaction.update(productRef, {
+        activo: false,
+        estadoPublicacion: 'pendiente',
+        destinoDevolucionEliminacion: destino,
+        montoDevolucionEliminacion: devolucion,
+        updatedAt: timestamp,
+      });
+      if (publicSnapshot.exists()) transaction.update(publicRef, { activo: false, updatedAt: timestamp });
+      if (devolucion > 0) {
+        transaction.set(finanzasRef, {
+          ...estado,
+          [campo]: Number(estado[campo]) + devolucion,
+          updatedAt: timestamp,
+        });
+      }
+    });
+  }
 
-    const producto = snapshot.data() as Producto;
-    if (producto.activo === false) {
-      throw new Error('El producto ya esta inactivo.');
-    }
-
-    if (producto.estado !== 'disponible') {
-      throw new Error('Los productos vendidos o reservados no se pueden eliminar.');
-    }
-
-    await super.delete(id);
+  override async activate(id: string): Promise<void> {
+    const productRef = doc(this.firestore, `productos/${id}`);
+    const finanzasRef = doc(this.firestore, 'finanzas/estado');
+    await runTransaction(this.firestore, async (transaction) => {
+      const [snapshot, finanzasSnapshot] = await Promise.all([
+        transaction.get(productRef), transaction.get(finanzasRef),
+      ]);
+      if (!snapshot.exists()) throw new Error('El producto no existe.');
+      const producto = snapshot.data() as Producto;
+      if (producto.activo !== false) throw new Error('El producto ya está activo.');
+      const destino = producto.destinoDevolucionEliminacion;
+      if (destino && producto.finanzasRegistrado) {
+        const costo = precioCompraProducto(producto);
+        if (!Number.isFinite(costo) || costo < 0) throw new Error('El costo de compra no es válido.');
+        const campo = destino === 'inversion' ? 'inversionDisponible' : 'gananciaAcumulada';
+        const estado = {
+          ...ESTADO_FINANCIERO_INICIAL,
+          ...(finanzasSnapshot.exists() ? finanzasSnapshot.data() : {}),
+        };
+        transaction.set(finanzasRef, {
+          ...estado,
+          [campo]: Number(estado[campo]) - costo,
+          updatedAt: serverTimestamp(),
+        });
+      }
+      transaction.update(productRef, {
+        activo: true,
+        destinoDevolucionEliminacion: deleteField(),
+        montoDevolucionEliminacion: deleteField(),
+        updatedAt: serverTimestamp(),
+      });
+    });
   }
 
   override async hardDelete(id: string): Promise<void> {
@@ -164,28 +224,47 @@ export class ProductoRepository extends FirestoreRepository<Producto> {
 
   async publicarEnWeb(id: string): Promise<void> {
     const productRef = doc(this.firestore, `productos/${id}`);
-    const snapshot = await getDoc(productRef);
-    if (!snapshot.exists()) throw new Error('El producto no existe.');
-
-    const producto = normalizeProducto({ id: snapshot.id, ...(snapshot.data() as Producto) });
-    const faltantes = this.datosFaltantesParaPublicar(producto);
-    if (faltantes.length) {
-      throw new Error(`Completa lo siguiente antes de publicar: ${faltantes.join(', ')}.`);
-    }
-
-    const timestamp = serverTimestamp();
-    await setDoc(
-      doc(this.firestore, `productosPublicos/${id}`),
-      removeUndefinedDeep({
+    const publicRef = doc(this.firestore, `productosPublicos/${id}`);
+    await runTransaction(this.firestore, async (transaction) => {
+      const [snapshot, publicSnapshot] = await Promise.all([
+        transaction.get(productRef), transaction.get(publicRef),
+      ]);
+      if (!snapshot.exists()) throw new Error('El producto no existe.');
+      const producto = normalizeProducto({ id: snapshot.id, ...(snapshot.data() as Producto) });
+      const yaEstabaPublicado = publicSnapshot.exists() &&
+        publicSnapshot.data()['estado'] === producto.estado && producto.estado !== 'por_recoger';
+      const faltantes = this.datosFaltantesParaPublicar(producto)
+        .filter((dato) => !yaEstabaPublicado || dato !== 'estado disponible');
+      if (faltantes.length) {
+        throw new Error(`Completa lo siguiente antes de publicar: ${faltantes.join(', ')}.`);
+      }
+      const timestamp = serverTimestamp();
+      transaction.set(publicRef, removeUndefinedDeep({
         ...sanitizePublicProduct(producto),
         productoId: id,
         activo: true,
-        createdAt: timestamp,
+        ...(!publicSnapshot.exists() ? { createdAt: timestamp } : {}),
         updatedAt: timestamp,
-      }),
-      { merge: true },
-    );
-    await super.update(id, { estadoPublicacion: 'publicado' });
+      }), { merge: true });
+      transaction.update(productRef, { estadoPublicacion: 'publicado', updatedAt: timestamp });
+    });
+  }
+
+  async despublicarDeWeb(id: string): Promise<void> {
+    const productRef = doc(this.firestore, `productos/${id}`);
+    const publicRef = doc(this.firestore, `productosPublicos/${id}`);
+    await runTransaction(this.firestore, async (transaction) => {
+      const [snapshot, publicSnapshot] = await Promise.all([
+        transaction.get(productRef), transaction.get(publicRef),
+      ]);
+      if (!snapshot.exists()) throw new Error('El producto no existe.');
+      if ((snapshot.data()['estadoPublicacion'] ?? 'publicado') !== 'publicado') {
+        throw new Error('El producto no está publicado en la web.');
+      }
+      const timestamp = serverTimestamp();
+      transaction.update(productRef, { estadoPublicacion: 'pendiente', updatedAt: timestamp });
+      if (publicSnapshot.exists()) transaction.update(publicRef, { activo: false, updatedAt: timestamp });
+    });
   }
 
   /**

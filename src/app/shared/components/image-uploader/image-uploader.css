@@ -59,13 +59,13 @@
 
 .upload-dropzone:hover:not(.is-uploading) {
   border-color: var(--hz-primary);
-  background: rgba(54, 183, 166, 0.04);
+  background: rgba(150, 102, 56, 0.04);
 }
 
 .upload-dropzone.is-uploading {
   border-color: var(--hz-primary);
   border-style: solid;
-  background: rgba(54, 183, 166, 0.08);
+  background: rgba(150, 102, 56, 0.08);
   cursor: wait;
 }
 

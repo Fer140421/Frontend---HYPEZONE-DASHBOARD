@@ -6,17 +6,17 @@
   </div>
 
   <div class="login-container">
-    <!-- Panel Izquierdo: Minimalista con Marca & Logo Hypezone -->
+    <!-- Identidad de Chura Ropa -->
     <div class="login-hero-panel">
       <div class="hero-brand">
-        <span class="brand-mark">HZ</span>
+        <img class="brand-mark" src="/chura-ropa.jpeg" alt="" />
         <div class="hero-brand-text">
-          <span class="hero-brand-title">HYPEZONE</span>
-          <span class="hero-brand-subtitle">Fashion Management</span>
+          <span class="hero-brand-title">CHURA ROPA</span>
         </div>
       </div>
 
       <div class="hero-content">
+        <img class="hero-logo" src="/chura-ropa-oficial.png" alt="Logo oficial de Chura Ropa" />
         <h1 class="hero-title">Gestión y control de inventario</h1>
         <p class="hero-description">
           Plataforma centralizada para la administración de prendas, marcas y ventas.
@@ -33,8 +33,8 @@
       <mat-card class="login-card" appearance="outlined">
         <mat-card-header class="login-card-header">
           <div class="mobile-brand" aria-hidden="true">
-            <span class="brand-mark">HZ</span>
-            <span class="mobile-brand-name">HYPEZONE</span>
+            <img class="brand-mark" src="/chura-ropa.jpeg" alt="" />
+            <span class="mobile-brand-name">CHURA ROPA</span>
           </div>
           <mat-card-title class="login-title">Iniciar sesión</mat-card-title>
           <mat-card-subtitle class="login-subtitle">
@@ -50,7 +50,7 @@
                 matInput
                 type="email"
                 formControlName="email"
-                placeholder="ejemplo@hypezone.com"
+                placeholder="correo@ejemplo.com"
                 autocomplete="email"
               />
               @if (form.get('email')?.hasError('required') && form.get('email')?.touched) {

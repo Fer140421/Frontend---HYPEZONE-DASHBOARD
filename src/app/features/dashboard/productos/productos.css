@@ -11,5 +11,39 @@
 
 :host .catalog-field { display: flex; align-items: center; min-width: 0; gap: 2px; }
 :host .catalog-field mat-form-field { flex: 1 1 auto; min-width: 0; }
+:host .catalog-field app-searchable-select { flex: 1 1 auto; min-width: 0; }
 :host .quick-option-button { align-self: flex-start; flex: 0 0 auto; width: 36px; height: 36px; margin-top: 10px; color: var(--hz-primary-hover); }
 :host .quick-option-button:hover { background: var(--hz-primary-soft); }
+
+:host .product-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 8px;
+}
+
+:host .product-group-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 7px 13px;
+  border: 1px solid var(--hz-border);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--hz-gray);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+:host .product-group-button.active {
+  border-color: var(--hz-primary-hover);
+  background: var(--hz-primary-soft);
+  color: var(--hz-primary-hover);
+}
+
+:host .product-group-button mat-icon { width: 18px; height: 18px; font-size: 18px; }
+:host .product-group-count { padding: 1px 7px; border-radius: 12px; background: rgba(0, 0, 0, .06); }
+:host .product-group-help { margin: 0 0 12px; color: var(--hz-gray); font-size: 12px; }

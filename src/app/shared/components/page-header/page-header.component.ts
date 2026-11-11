@@ -11,7 +11,7 @@ import { RouterLink } from '@angular/router';
   styleUrl: './page-header.css',
 })
 export class PageHeaderComponent {
-  readonly eyebrow = input('Hypezone');
+  readonly eyebrow = input('Chura Ropa');
   readonly title = input.required<string>();
   readonly description = input('');
   readonly backUrl = input<string | null>(null);

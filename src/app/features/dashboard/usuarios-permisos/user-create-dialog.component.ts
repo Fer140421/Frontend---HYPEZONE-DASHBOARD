@@ -5,6 +5,7 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { SearchableSelectDirective } from '../../../shared/directives/searchable-select.directive';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { PermissionDefinition, PermissionKey } from '../../../core/authorization/permission-catalog';
 import { CreateUserCommand } from '../../../core/services/user-authorization-admin.service';
@@ -23,6 +24,7 @@ export interface UserCreateDialogData {
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
+    SearchableSelectDirective,
     MatSlideToggleModule,
   ],
   templateUrl: './user-create-dialog.html',

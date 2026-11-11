@@ -47,6 +47,12 @@ service cloud.firestore {
       allow create: if hasPermission('products.create');
       // Sales staff may only change availability and the final sale price.
       allow update: if hasPermission('products.update') || (
+        hasPermission('products.delete') &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'activo', 'estadoPublicacion', 'destinoDevolucionEliminacion',
+          'montoDevolucionEliminacion', 'updatedAt'
+        ])
+      ) || (
         hasPermission('sales.create') &&
         resource.data.estado == 'disponible' &&
         request.resource.data.estado in ['reservado', 'vendido'] &&
@@ -63,9 +69,12 @@ service cloud.firestore {
 
     // Public sanitized mirror collection for online store (NO buying prices, NO internal notes)
     match /productosPublicos/{id} {
-      allow read: if resource.data.activo == true || hasPermission('products.view');
-      allow create: if hasPermission('products.create');
+      allow read: if hasPermission('products.view') || resource.data.activo == true;
+      allow create: if hasPermission('products.create') || hasPermission('products.update');
       allow update: if hasPermission('products.update') || (
+        hasPermission('products.delete') && request.resource.data.activo == false &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activo', 'updatedAt'])
+      ) || (
         hasPermission('sales.create') &&
         request.resource.data.estado in ['reservado', 'vendido'] &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -126,12 +135,12 @@ service cloud.firestore {
     // no Cloud Function or privileged server is required.
     match /finanzas/{id} {
       allow read: if hasPermission('sales.view') || hasPermission('settings.view') ||
-        hasPermission('products.create') || hasPermission('products.update') ||
+        hasPermission('products.create') || hasPermission('products.update') || hasPermission('products.delete') ||
         hasPermission('sales.create') || hasPermission('expenses.view') ||
         hasPermission('expenses.create') || hasPermission('expenses.update') || hasPermission('expenses.delete') ||
         hasPermission('lots.update');
       allow create, update: if hasPermission('settings.view') || hasPermission('products.create') ||
-        hasPermission('products.update') || hasPermission('sales.create') ||
+        hasPermission('products.update') || hasPermission('products.delete') || hasPermission('sales.create') ||
         hasPermission('expenses.create') || hasPermission('expenses.update') || hasPermission('expenses.delete') ||
         hasPermission('lots.update') || hasPermission('sales.view');
       allow delete: if false;

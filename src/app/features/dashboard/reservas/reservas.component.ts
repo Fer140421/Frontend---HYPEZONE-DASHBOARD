@@ -16,6 +16,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
+import { SearchableSelectDirective } from '../../../shared/directives/searchable-select.directive';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -79,6 +80,7 @@ import { CajaAperturaDialogComponent } from '../ventas/caja-apertura-dialog/caja
     MatInputModule,
     MatPaginatorModule,
     MatSelectModule,
+    SearchableSelectDirective,
     MatSnackBarModule,
     MatTableModule,
     MatTooltipModule,
@@ -108,9 +110,11 @@ export class ReservasComponent implements OnInit {
   readonly editingReservaId = signal<string | null>(null);
   readonly editingReserva = signal<Reserva | null>(null);
   readonly processing = signal(false);
+  readonly showCosts = signal(false);
   readonly loadError = signal<string | null>(null);
   readonly search = this.fb.nonNullable.control('');
   readonly selected = new Map<string, Producto>();
+  private loadedEditReservaId: string | null = null;
   readonly clienteSearchControl = this.fb.nonNullable.control('');
   readonly selectedCliente = signal<Cliente | null>(null);
   readonly clienteResultados = signal<Cliente[]>([]);
@@ -256,22 +260,28 @@ export class ReservasComponent implements OnInit {
   ngOnInit(): void {
     this.route.url.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((parts) => {
       if (parts.some((item) => item.path === 'nueva')) {
-        this.resetForm();
+        if (this.mode() !== 'new') this.showCosts.set(false);
+        if (this.mode() !== 'new') this.resetForm();
         this.mode.set('new');
         this.editingReservaId.set(null);
         this.editingReserva.set(null);
+        this.loadedEditReservaId = null;
       } else if (parts.some((item) => item.path === 'editar')) {
+        if (this.mode() !== 'edit') this.showCosts.set(false);
         this.mode.set('edit');
       } else {
+        if (this.mode() !== 'list') this.showCosts.set(false);
         this.mode.set('list');
         this.editingReservaId.set(null);
         this.editingReserva.set(null);
+        this.loadedEditReservaId = null;
       }
     });
 
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(async (params) => {
       const id = params.get('id');
-      if (id && this.mode() === 'edit') {
+      if (id && this.mode() === 'edit' && this.loadedEditReservaId !== id) {
+        this.loadedEditReservaId = id;
         this.editingReservaId.set(id);
         await this.cargarReservaParaEdicion(id);
       }
@@ -351,6 +361,18 @@ export class ReservasComponent implements OnInit {
       this.message('Error al cargar la reserva para editar.');
       void this.router.navigate(['/dashboard/reservas']);
     }
+  }
+
+  cost(id: string): number | null {
+    const cost = this.selected.get(id)?.precioCompra;
+    return typeof cost === 'number' && Number.isFinite(cost) ? cost : null;
+  }
+
+  margin(id: string, salePrice: number | null): number | null {
+    const cost = this.cost(id);
+    return cost === null || salePrice === null || !Number.isFinite(Number(salePrice))
+      ? null
+      : Number((Number(salePrice) - cost).toFixed(2));
   }
 
   add(producto: Producto): void {
@@ -736,6 +758,7 @@ export class ReservasComponent implements OnInit {
     MatIconModule,
     MatInputModule,
     MatSelectModule,
+    SearchableSelectDirective,
   ],
   template: `
     <h2 mat-dialog-title class="dialog-title">
@@ -946,7 +969,7 @@ export class ReservaPagoDialogComponent {
       monto: Number(raw.monto),
       metodoPago: raw.metodoPago,
       fecha: new Date().toISOString(),
-      notas: raw.notas || undefined,
+      ...(raw.notas.trim() ? { notas: raw.notas.trim() } : {}),
     } satisfies ReservaPago);
   }
 }

@@ -137,6 +137,7 @@ export class MarcasComponent implements OnInit {
     MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
+    ImageUploaderComponent,
   ],
   templateUrl: './marca-dialog.html',
   styleUrl: './marcas.css',
@@ -150,13 +151,15 @@ export class MarcaDialogComponent {
   readonly isEdit = !!this.data?.id;
   readonly saving = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly imagenes = signal<string[]>(this.data ? [marcaImagen(this.data)].filter((url): url is string => !!url) : []);
+  readonly uploading = signal(false);
 
   readonly form = this.fb.nonNullable.group({
     nombre: [this.data?.nombre ?? '', [Validators.required]],
   });
 
   async save(): Promise<void> {
-    if (this.form.invalid || this.saving()) return;
+    if (this.form.invalid || this.saving() || this.uploading()) return;
     this.errorMessage.set(null);
 
     const nombre = this.form.getRawValue().nombre.trim();
@@ -179,9 +182,14 @@ export class MarcaDialogComponent {
       }
 
       if (this.isEdit && this.data?.id) {
-        await this.repository.update(this.data.id, { nombre });
+        await this.repository.update(this.data.id, {
+          nombre,
+          imagenUrl: this.imagenes()[0] ?? '',
+          imagen: '',
+          imagenes: [],
+        });
       } else {
-        await this.repository.create({ nombre });
+        await this.repository.create({ nombre, imagenUrl: this.imagenes()[0] ?? '' });
       }
 
       this.saving.set(false);

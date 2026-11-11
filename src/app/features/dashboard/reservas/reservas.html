@@ -86,7 +86,13 @@
             <span class="eyebrow">Paso 2</span>
             <mat-card-title>{{ mode() === 'edit' ? 'Editar detalle' : 'Detalle de reserva' }}</mat-card-title>
           </div>
-          <span class="item-count">{{ detalles.length }} prendas</span>
+          <div class="checkout-header-actions">
+            <button mat-stroked-button type="button" class="cost-toggle" (click)="showCosts.set(!showCosts())" [attr.aria-pressed]="showCosts()" [attr.aria-label]="showCosts() ? 'Ocultar costos y márgenes' : 'Ver costos y márgenes'">
+              <mat-icon>{{ showCosts() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              {{ showCosts() ? 'Ocultar costos' : 'Ver costos' }}
+            </button>
+            <span class="item-count">{{ detalles.length }} prendas</span>
+          </div>
         </mat-card-header>
 
         <mat-card-content>
@@ -164,7 +170,7 @@
 
             <div formArrayName="detalles" class="cart-list">
               @for (detail of detalles.controls; track detail.value.productoId; let i = $index) {
-                <div class="cart-item" [formGroupName]="i">
+                <div class="cart-item" [formGroupName]="i" [class.loss-preview]="showCosts() && (margin(detail.value.productoId, detail.value.precioAcordado) ?? 0) < 0">
                   @if (selectedImage(detail.value.productoId); as src) {
                     <img
                       [src]="src"
@@ -180,6 +186,15 @@
                   <div class="cart-info">
                     <strong>{{ detail.value.nombre }}</strong>
                     <small>{{ selectedSubtitle(detail.value.productoId) }}</small>
+                    @if (showCosts()) {
+                      <div class="cost-preview">
+                        <span>Compra: {{ cost(detail.value.productoId) === null ? 'Sin dato' : (cost(detail.value.productoId) | currency: 'BOB' : 'symbol-narrow') }}</span>
+                        <span>Venta: {{ detail.value.precioAcordado | currency: 'BOB' : 'symbol-narrow' }}</span>
+                        @if (margin(detail.value.productoId, detail.value.precioAcordado) !== null) {
+                          <strong [class.negative]="(margin(detail.value.productoId, detail.value.precioAcordado) ?? 0) < 0">{{ (margin(detail.value.productoId, detail.value.precioAcordado) ?? 0) < 0 ? 'Pérdida' : 'Margen' }}: {{ margin(detail.value.productoId, detail.value.precioAcordado) | currency: 'BOB' : 'symbol-narrow' }}</strong>
+                        }
+                      </div>
+                    }
                   </div>
                   <mat-form-field appearance="outline" subscriptSizing="dynamic" class="price-input">
                     <mat-label>Precio acordado</mat-label>

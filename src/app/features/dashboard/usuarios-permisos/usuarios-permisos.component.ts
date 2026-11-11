@@ -23,6 +23,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
+import { SearchableSelectDirective } from '../../../shared/directives/searchable-select.directive';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -74,6 +75,7 @@ import { CreateUserCommand } from '../../../core/services/user-authorization-adm
     MatPaginatorModule,
     MatProgressSpinnerModule,
     MatSelectModule,
+    SearchableSelectDirective,
     MatSnackBarModule,
     MatTableModule,
     MatTooltipModule,

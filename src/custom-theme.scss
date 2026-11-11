@@ -3,19 +3,19 @@
 
 :root {
   /* Brand / Primary */
-  --hz-primary: #36b7a6;
-  --hz-primary-hover: #2fa394;
-  --hz-primary-soft: #eaf8f6;
+  --hz-primary: #966638;
+  --hz-primary-hover: #7c512c;
+  --hz-primary-soft: #f4eadf;
 
   /* Neutrales Oscuros */
-  --hz-black: #111111;
-  --hz-dark: #1a1a1a;
-  --hz-gray: #6b6b6b;
-  --hz-gray-light: #a3a3a3;
-  --hz-border: #e7e7e7;
+  --hz-black: #171411;
+  --hz-dark: #211c17;
+  --hz-gray: #70685f;
+  --hz-gray-light: #b1a99f;
+  --hz-border: #e8e1d8;
 
   /* Fondos y Superficies */
-  --hz-background: #f8f8f8;
+  --hz-background: #f8f6f2;
   --hz-surface: #ffffff;
   --hz-white: #ffffff;
 
@@ -31,13 +31,15 @@
   --mat-sys-on-primary: #ffffff;
   --mat-sys-primary-container: var(--hz-primary-soft);
   --mat-sys-on-primary-container: var(--hz-primary-hover);
+  --mat-sys-tertiary: var(--hz-primary-hover);
+  --mat-sys-on-tertiary: #ffffff;
 
   --mat-sys-surface: var(--hz-surface);
   --mat-sys-on-surface: var(--hz-black);
   --mat-sys-surface-container: var(--hz-surface);
   --mat-sys-surface-container-low: var(--hz-background);
-  --mat-sys-surface-container-high: #f4f4f4;
-  --mat-sys-surface-container-highest: #eeeeee;
+  --mat-sys-surface-container-high: #f4eadf;
+  --mat-sys-surface-container-highest: #e8e1d8;
 
   --mat-sys-on-surface-variant: var(--hz-gray);
   --mat-sys-outline: var(--hz-border);
@@ -50,7 +52,8 @@ html {
   @include mat.theme((
     color: (
       theme-type: light,
-      primary: mat.$cyan-palette,
+      primary: mat.$orange-palette,
+      tertiary: mat.$orange-palette,
     ),
     typography: Inter,
     density: 0,

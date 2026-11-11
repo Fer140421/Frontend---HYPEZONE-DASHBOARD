@@ -26,6 +26,7 @@ export class ImageUploaderComponent {
 
   @Output() uploaded = new EventEmitter<string[]>();
   @Output() error = new EventEmitter<string>();
+  @Output() uploadingChange = new EventEmitter<boolean>();
 
   constructor(private readonly cloudinaryService: CloudinaryService) {}
 
@@ -46,11 +47,17 @@ export class ImageUploaderComponent {
     }
 
     this.uploading.set(true);
+    this.uploadingChange.emit(true);
     this.cloudinaryService.uploadImages(files).subscribe({
       next: (urls) => this.uploaded.emit([...this.images(), ...urls].slice(0, this.maxImages())),
-      error: () => this.error.emit('No se pudieron subir las imágenes.'),
+      error: () => {
+        this.uploading.set(false);
+        this.uploadingChange.emit(false);
+        this.error.emit('No se pudieron subir las imágenes.');
+      },
       complete: () => {
         this.uploading.set(false);
+        this.uploadingChange.emit(false);
         inputElement.value = '';
       },
     });

@@ -80,7 +80,7 @@
 .title-icon {
   vertical-align: middle;
   margin-right: 8px;
-  color: var(--hz-primary, #36b7a6);
+  color: var(--hz-primary, #966638);
 }
 
 .dialog-detalle-content {
@@ -135,8 +135,8 @@
 }
 
 .fin-card.highlight {
-  border-color: var(--hz-primary, #36b7a6);
-  background: rgba(54, 183, 166, 0.08);
+  border-color: var(--hz-primary, #966638);
+  background: rgba(150, 102, 56, 0.08);
 }
 
 .fin-label {
@@ -179,7 +179,7 @@
   font-size: 20px;
   width: 20px;
   height: 20px;
-  color: var(--hz-primary, #36b7a6);
+  color: var(--hz-primary, #966638);
 }
 
 .pago-tag {

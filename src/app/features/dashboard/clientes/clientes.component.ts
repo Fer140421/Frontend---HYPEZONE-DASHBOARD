@@ -14,6 +14,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
+import { SearchableSelectDirective } from '../../../shared/directives/searchable-select.directive';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -74,6 +75,7 @@ type EstadoFiltro = 'todos' | 'activos' | 'inactivos';
     MatInputModule,
     MatPaginatorModule,
     MatSelectModule,
+    SearchableSelectDirective,
     MatSnackBarModule,
     MatTableModule,
     MatTooltipModule,
@@ -306,6 +308,7 @@ export class ClienteComprasDialogComponent {
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
+    SearchableSelectDirective,
   ],
   templateUrl: './cliente-form-dialog.html',
   styleUrl: './clientes.css',

@@ -70,6 +70,20 @@
             </div>
           </app-filter-drawer>
 
+          <div class="product-groups" role="group" aria-label="Secciones de productos">
+            <button type="button" class="product-group-button" [class.active]="vm.group === 'inventario'" [attr.aria-pressed]="vm.group === 'inventario'" (click)="setListGroup('inventario')">
+              <mat-icon>inventory_2</mat-icon>
+              Inventario y web <span class="product-group-count">{{ vm.inventarioCount }}</span>
+            </button>
+            <button type="button" class="product-group-button" [class.active]="vm.group === 'sin_foto'" [attr.aria-pressed]="vm.group === 'sin_foto'" (click)="setListGroup('sin_foto')">
+              <mat-icon>no_photography</mat-icon>
+              Sin foto <span class="product-group-count">{{ vm.sinFotoCount }}</span>
+            </button>
+          </div>
+          @if (vm.group === 'sin_foto') {
+            <p class="product-group-help">Agrega una foto desde Editar para que el producto aparezca en Inventario y web. Los productos pendientes se podrán publicar después.</p>
+          }
+
           <div class="list-toolbar-row">
             <span class="muted" style="font-size: 0.85rem; font-weight: 600;">
               {{ vm.productos.total }} {{ vm.productos.total === 1 ? 'producto' : 'productos' }}
@@ -100,9 +114,9 @@
 
         @if (vm.productos.total === 0) {
           <app-empty-state
-            icon="inventory_2"
-            title="Sin productos"
-            description="No se encontraron productos registrados o que coincidan con los filtros."
+            [icon]="vm.group === 'sin_foto' ? 'add_photo_alternate' : 'inventory_2'"
+            [title]="vm.group === 'sin_foto' ? 'No hay productos sin foto' : 'Sin productos'"
+            [description]="vm.group === 'sin_foto' ? 'No hay productos sin foto que coincidan con los filtros.' : 'No se encontraron productos registrados o que coincidan con los filtros.'"
           />
         } @else if (viewType() === 'table') {
           <div class="table-scroll">
@@ -179,9 +193,12 @@
                       @if (producto.estado === 'por_recoger') {
                         <button mat-icon-button color="primary" (click)="pasarAStock(producto)" matTooltip="Pasar a Stock (Recogido)" aria-label="Pasar a stock"><mat-icon>inventory_2</mat-icon></button>
                       }
-                      <button mat-icon-button (click)="openEdit(producto)" matTooltip="Editar producto" aria-label="Editar producto"><mat-icon>edit</mat-icon></button>
-                      @if (producto.estadoPublicacion !== 'publicado' && producto.estado !== 'por_recoger') {
+                      <button mat-icon-button (click)="openEdit(producto)" [matTooltip]="necesitaFoto(producto) ? 'Agregar foto y editar producto' : 'Editar producto'" [attr.aria-label]="necesitaFoto(producto) ? 'Agregar foto y editar producto' : 'Editar producto'"><mat-icon>{{ necesitaFoto(producto) ? 'add_a_photo' : 'edit' }}</mat-icon></button>
+                      @if (producto.activo !== false && producto.estadoPublicacion !== 'publicado' && producto.estado !== 'por_recoger') {
                         <button mat-icon-button color="primary" (click)="publicarEnWeb(producto)" matTooltip="Publicar en web" aria-label="Publicar en web"><mat-icon>publish</mat-icon></button>
+                      }
+                      @if (producto.estadoPublicacion === 'publicado' && producto.activo !== false) {
+                        <button mat-icon-button (click)="despublicarDeWeb(producto)" matTooltip="Quitar de la web" aria-label="Quitar de la web"><mat-icon>unpublished</mat-icon></button>
                       }
                       @if (producto.estado !== 'vendido' || producto.estadoPublicacion !== 'publicado') {
                         <button mat-icon-button (click)="archivarComoVendido(producto)" matTooltip="Archivar como vendido en Web (sin registrar dinero)" aria-label="Archivar como vendido en Web"><mat-icon>archive</mat-icon></button>
@@ -240,12 +257,17 @@
                         <mat-icon>inventory_2</mat-icon>
                       </button>
                     }
-                    <button mat-icon-button type="button" (click)="$event.stopPropagation(); openEdit(producto)" (keydown)="$event.stopPropagation()" matTooltip="Editar producto" aria-label="Editar producto">
-                      <mat-icon>edit</mat-icon>
+                    <button mat-icon-button type="button" (click)="$event.stopPropagation(); openEdit(producto)" (keydown)="$event.stopPropagation()" [matTooltip]="necesitaFoto(producto) ? 'Agregar foto y editar producto' : 'Editar producto'" [attr.aria-label]="necesitaFoto(producto) ? 'Agregar foto y editar producto' : 'Editar producto'">
+                      <mat-icon>{{ necesitaFoto(producto) ? 'add_a_photo' : 'edit' }}</mat-icon>
                     </button>
-                    @if (producto.estadoPublicacion !== 'publicado' && producto.estado !== 'por_recoger') {
+                    @if (producto.activo !== false && producto.estadoPublicacion !== 'publicado' && producto.estado !== 'por_recoger') {
                       <button mat-icon-button type="button" color="primary" (click)="$event.stopPropagation(); publicarEnWeb(producto)" (keydown)="$event.stopPropagation()" matTooltip="Publicar en web" aria-label="Publicar en web">
                         <mat-icon>publish</mat-icon>
+                      </button>
+                    }
+                    @if (producto.estadoPublicacion === 'publicado' && producto.activo !== false) {
+                      <button mat-icon-button type="button" (click)="$event.stopPropagation(); despublicarDeWeb(producto)" (keydown)="$event.stopPropagation()" matTooltip="Quitar de la web" aria-label="Quitar de la web">
+                        <mat-icon>unpublished</mat-icon>
                       </button>
                     }
                     @if (producto.estado !== 'vendido' || producto.estadoPublicacion !== 'publicado') {
@@ -309,46 +331,20 @@
                 <mat-label>Nombre</mat-label>
                 <input matInput formControlName="nombre" />
               </mat-form-field>
-              <div class="catalog-field"><mat-form-field appearance="outline">
-                <mat-label>Marca</mat-label>
-                <mat-select formControlName="marca"><mat-option value="">Sin definir</mat-option>@for (marca of options.marcas; track marca.id) { <mat-option [value]="marca.nombre">{{ marca.nombre }}</mat-option> } @for (marca of opcionesLocales.marcas(); track marca) { <mat-option [value]="marca">{{ marca }}</mat-option> }</mat-select>
-              </mat-form-field><button mat-icon-button type="button" class="quick-option-button" (click)="agregarOpcionRapida('marca')" matTooltip="Registrar marca" aria-label="Registrar marca"><mat-icon>add</mat-icon></button></div>
-              <div class="catalog-field"><mat-form-field appearance="outline">
-                <mat-label>Categoria</mat-label>
-                <mat-select formControlName="categoria">
-                  @for (categoria of options.categorias; track categoria.id) {
-                    <mat-option [value]="categoria.nombre">{{ categoria.nombre }}</mat-option>
-                  }
-                  @for (categoria of opcionesLocales.categorias(); track categoria) { <mat-option [value]="categoria">{{ categoria }}</mat-option> }
-                </mat-select>
-              </mat-form-field><button mat-icon-button type="button" class="quick-option-button" (click)="agregarOpcionRapida('categoria')" matTooltip="Registrar categoría" aria-label="Registrar categoría"><mat-icon>add</mat-icon></button></div>
-              <mat-form-field appearance="outline">
-                <mat-label>Lote</mat-label>
-                <mat-select formControlName="loteId">
-                  <mat-option value="">Sin lote</mat-option>
-                  @for (lote of options.lotes; track lote.id) {
-                    <mat-option [value]="lote.id">{{ lote.nombre }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-              <div class="catalog-field"><mat-form-field appearance="outline">
-                <mat-label>Talla</mat-label>
-                <mat-select formControlName="talla">
-                  @for (talla of options.tallas; track talla.id) {
-                    <mat-option [value]="talla.nombre">{{ talla.nombre }}</mat-option>
-                  }
-                  @for (talla of opcionesLocales.tallas(); track talla) { <mat-option [value]="talla">{{ talla }}</mat-option> }
-                </mat-select>
-              </mat-form-field><button mat-icon-button type="button" class="quick-option-button" (click)="agregarOpcionRapida('talla')" matTooltip="Registrar talla" aria-label="Registrar talla"><mat-icon>add</mat-icon></button></div>
-              <mat-form-field appearance="outline">
-                <mat-label>Género</mat-label>
-                <mat-select formControlName="genero">
-                  <mat-option value="">Sin definir</mat-option>
-                  @for (gen of generos; track gen.value) {
-                    <mat-option [value]="gen.value">{{ gen.label }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+              <div class="catalog-field">
+                <app-searchable-select label="Marca" formControlName="marca" [options]="options.marcas" valueKey="nombre" labelKey="nombre" [additionalOptions]="opcionesLocales.marcas()" emptyLabel="Sin definir" />
+                <button mat-icon-button type="button" class="quick-option-button" (click)="agregarOpcionRapida('marca')" matTooltip="Registrar marca" aria-label="Registrar marca"><mat-icon>add</mat-icon></button>
+              </div>
+              <div class="catalog-field">
+                <app-searchable-select label="Categoría" formControlName="categoria" [required]="true" [options]="options.categorias" valueKey="nombre" labelKey="nombre" [additionalOptions]="opcionesLocales.categorias()" />
+                <button mat-icon-button type="button" class="quick-option-button" (click)="agregarOpcionRapida('categoria')" matTooltip="Registrar categoría" aria-label="Registrar categoría"><mat-icon>add</mat-icon></button>
+              </div>
+              <app-searchable-select label="Lote" formControlName="loteId" [options]="options.lotes" valueKey="id" labelKey="nombre" emptyLabel="Sin lote" />
+              <div class="catalog-field">
+                <app-searchable-select label="Talla" formControlName="talla" [required]="true" [options]="options.tallas" valueKey="nombre" labelKey="nombre" [additionalOptions]="opcionesLocales.tallas()" />
+                <button mat-icon-button type="button" class="quick-option-button" (click)="agregarOpcionRapida('talla')" matTooltip="Registrar talla" aria-label="Registrar talla"><mat-icon>add</mat-icon></button>
+              </div>
+              <app-searchable-select label="Género" formControlName="genero" [options]="generos" emptyLabel="Sin definir" />
               <mat-form-field appearance="outline">
                 <mat-label>Estado</mat-label>
                 <mat-select formControlName="estado">

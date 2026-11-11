@@ -57,7 +57,7 @@
 .metric-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06) !important;
-  border-color: rgba(54, 183, 166, 0.4) !important;
+  border-color: rgba(150, 102, 56, 0.4) !important;
 }
 
 /* Header inside Card */
@@ -127,8 +127,8 @@
 }
 
 .icon-badge[data-type="ganancia"] {
-  background: rgba(54, 183, 166, 0.15);
-  color: #2fa394;
+  background: rgba(150, 102, 56, 0.15);
+  color: var(--hz-primary-hover);
 }
 
 .icon-badge[data-type="perdidas"] {
@@ -206,12 +206,12 @@
 
 /* Hero / Featured Card ("Ganancia Real") */
 .featured-card {
-  background: linear-gradient(135deg, rgba(54, 183, 166, 0.1), rgba(54, 183, 166, 0.02)) !important;
-  border: 1px solid rgba(54, 183, 166, 0.4) !important;
+  background: linear-gradient(135deg, rgba(150, 102, 56, 0.1), rgba(150, 102, 56, 0.02)) !important;
+  border: 1px solid rgba(150, 102, 56, 0.4) !important;
 }
 
 .featured-card .card-value {
-  color: #2fa394;
+  color: var(--hz-primary-hover);
   font-size: clamp(1.35rem, 2.2vw, 1.85rem);
 }
 
@@ -262,7 +262,7 @@
 
 .sale-item:hover {
   background: var(--hz-surface);
-  border-color: rgba(54, 183, 166, 0.4);
+  border-color: rgba(150, 102, 56, 0.4);
   transform: translateX(4px);
 }
 

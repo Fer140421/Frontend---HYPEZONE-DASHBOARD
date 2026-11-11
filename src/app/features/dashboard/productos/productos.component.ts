@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
+import { SearchableSelectDirective } from '../../../shared/directives/searchable-select.directive';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSortModule } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
@@ -52,7 +53,9 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { StatusChipComponent } from '../../../shared/components/status-chip/status-chip.component';
 import { QuickCatalogValueDialogComponent } from '../../../shared/components/quick-catalog-value-dialog/quick-catalog-value-dialog.component';
+import { SearchableSelectComponent } from '../../../shared/components/searchable-select/searchable-select.component';
 import { QuickArchiveWebDialogComponent } from './quick-archive-web-dialog/quick-archive-web-dialog.component';
+import { ProductDeleteDialogComponent } from './product-delete-dialog.component';
 import {
   DEFAULT_PAGE_SIZE,
   DEFAULT_PAGE_SIZE_OPTIONS,
@@ -77,6 +80,8 @@ import {
     MatInputModule,
     MatPaginatorModule,
     MatSelectModule,
+    SearchableSelectDirective,
+    SearchableSelectComponent,
     MatSnackBarModule,
     MatSortModule,
     MatTableModule,
@@ -109,6 +114,7 @@ export class ProductosComponent implements OnInit {
     pageIndex: 0,
     pageSize: DEFAULT_PAGE_SIZE,
   });
+  private readonly listGroup$ = new BehaviorSubject<'inventario' | 'sin_foto'>('inventario');
 
   // Una fuente compartida por colección durante la vida de esta vista.
   private readonly productosSource$ = this.productoRepository.getAll(true).pipe(
@@ -210,13 +216,21 @@ export class ProductosComponent implements OnInit {
     tallas: this.tallas$,
     productos: this.productosFiltrados$,
     pagination: this.pagination$,
+    group: this.listGroup$,
   }).pipe(
-    map(({ categorias, lotes, tallas, productos, pagination }) => ({
-      categorias,
-      lotes,
-      tallas,
-      productos: paginateItems(productos, pagination),
-    })),
+    map(({ categorias, lotes, tallas, productos, pagination, group }) => {
+      const sinFoto = productos.filter((producto) => this.necesitaFoto(producto));
+      const inventario = productos.filter((producto) => !this.necesitaFoto(producto));
+      return {
+        categorias,
+        lotes,
+        tallas,
+        group,
+        inventarioCount: inventario.length,
+        sinFotoCount: sinFoto.length,
+        productos: paginateItems(group === 'sin_foto' ? sinFoto : inventario, pagination),
+      };
+    }),
     shareReplay({ bufferSize: 1, refCount: true }),
   );
   readonly formOptions$ = combineLatest({
@@ -334,6 +348,16 @@ export class ProductosComponent implements OnInit {
 
   private resetListPage(): void {
     this.pagination$.next({ pageIndex: 0, pageSize: this.pagination$.value.pageSize });
+  }
+
+  setListGroup(group: 'inventario' | 'sin_foto'): void {
+    if (this.listGroup$.value === group) return;
+    this.listGroup$.next(group);
+    this.resetListPage();
+  }
+
+  necesitaFoto(producto: Producto): boolean {
+    return producto.activo !== false && imagenesProducto(producto).length === 0;
   }
 
   precio(producto: Producto): number {
@@ -540,6 +564,16 @@ export class ProductosComponent implements OnInit {
     }
   }
 
+  async despublicarDeWeb(producto: Producto): Promise<void> {
+    if (!this.auth.can('products.update') || !producto.id || producto.estadoPublicacion !== 'publicado') return;
+    try {
+      await this.productoRepository.despublicarDeWeb(producto.id);
+      this.snack('Producto retirado de la web. Puedes volver a publicarlo cuando quieras.');
+    } catch (error) {
+      this.snack(error instanceof Error ? error.message : 'No se pudo retirar el producto de la web.');
+    }
+  }
+
   openPriceEdit(producto: Producto): void {
     if (!this.auth.can('products.update')) return;
     if (!producto.id) {
@@ -564,23 +598,23 @@ export class ProductosComponent implements OnInit {
 
   softDelete(producto: Producto): void {
     if (!this.auth.can('products.delete') || producto.activo === false) return;
-    if (producto.estado !== 'disponible') {
+    if (producto.estado !== 'disponible' && producto.estado !== 'por_recoger') {
       this.snack('Los productos vendidos o reservados no se pueden eliminar.');
       return;
     }
 
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Eliminar producto',
-        message: `Se ocultara "${producto.nombre}" sin borrarlo fisicamente.`,
-        confirmText: 'Eliminar',
-      },
+    const dialogRef = this.dialog.open(ProductDeleteDialogComponent, {
+      width: 'min(440px, 92vw)',
+      data: producto,
     });
 
-    dialogRef.afterClosed().subscribe(async (confirmed) => {
-      if (confirmed && producto.id) {
-        await this.productoRepository.delete(producto.id);
-        this.snack('Producto eliminado logicamente.');
+    dialogRef.afterClosed().subscribe(async (destino) => {
+      if (!destino || !producto.id) return;
+      try {
+        await this.productoRepository.delete(producto.id, destino);
+        this.snack('Producto eliminado y saldo actualizado.');
+      } catch (error) {
+        this.snack(error instanceof Error ? error.message : 'No se pudo eliminar el producto.');
       }
     });
   }
@@ -590,8 +624,12 @@ export class ProductosComponent implements OnInit {
     if (!producto.id) {
       return;
     }
-    await this.productoRepository.activate(producto.id);
-    this.snack('Producto restaurado.');
+    try {
+      await this.productoRepository.activate(producto.id);
+      this.snack('Producto restaurado y saldo ajustado. Publícalo de nuevo si debe aparecer en la web.');
+    } catch (error) {
+      this.snack(error instanceof Error ? error.message : 'No se pudo restaurar el producto.');
+    }
   }
 
   confirmRestore(producto: Producto): void {
@@ -770,6 +808,8 @@ export class ProductPriceDialogComponent {
     MatIconModule,
     MatInputModule,
     MatSelectModule,
+    SearchableSelectDirective,
+    SearchableSelectComponent,
     MatTooltipModule,
     ImageUploaderComponent,
   ],

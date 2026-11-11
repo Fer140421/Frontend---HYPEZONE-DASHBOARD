@@ -22,7 +22,7 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Importe (Bs)</mat-label>
+        <mat-label>Importe</mat-label>
         <span matTextPrefix class="currency-prefix">Bs&nbsp;</span>
         <input
           matInput
@@ -33,7 +33,6 @@
           min="0.01"
           required
         />
-        <mat-icon matSuffix>attach_money</mat-icon>
         @if (form.controls.monto.hasError('required') && form.controls.monto.touched) {
           <mat-error>El importe es obligatorio.</mat-error>
         }
@@ -45,6 +44,9 @@
       <mat-form-field appearance="outline">
         <mat-label>Categoría</mat-label>
         <mat-select formControlName="categoria" required>
+          <mat-select-trigger>
+            {{ obtenerCategoriaLabel(form.controls.categoria.value) }}
+          </mat-select-trigger>
           @for (cat of categorias; track cat.id) {
             <mat-option [value]="cat.id">
               <div class="option-flex">

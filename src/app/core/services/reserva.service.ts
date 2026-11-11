@@ -268,7 +268,7 @@ export class ReservaService {
       const monto = Number(pago.monto);
       if (!Number.isFinite(monto) || monto <= 0 || monto > Number(reserva.saldoPendiente))
         throw new Error('El abono debe ser mayor a 0 y no superar el saldo pendiente.');
-      const anticipos = [...(reserva.anticipos ?? []), { ...pago, monto }];
+      const anticipos = [...(reserva.anticipos ?? []), removeUndefinedDeep({ ...pago, monto })];
       tx.update(ref, {
         anticipos,
         saldoPendiente: Number(reserva.total) - totalAnticipos({ anticipos }),

@@ -13,7 +13,7 @@ import {
 } from '@angular/fire/firestore';
 import { Producto } from '../models/producto.model';
 import { CONFIGURACION_FIDELIDAD_DEFAULT, ConfiguracionFidelidad } from '../models/fidelidad.model';
-import { MetodoPago, Venta, metodosPago } from '../models/venta.model';
+import { EstadoEntregaVenta, MetodoPago, Venta, metodosPago } from '../models/venta.model';
 import { removeUndefinedDeep } from '../repositories/firestore.repository';
 
 export interface ClienteNuevoInput {
@@ -24,7 +24,7 @@ export interface ClienteNuevoInput {
 
 export type VentaInput = Pick<
   Venta,
-  'clienteId' | 'clienteNombre' | 'clienteTelefono' | 'clienteCi' | 'fechaVenta' | 'notas' | 'cajaId' | 'usuarioVentaId' | 'usuarioVentaNombre'
+  'clienteId' | 'clienteNombre' | 'clienteTelefono' | 'clienteCi' | 'fechaVenta' | 'notas' | 'cajaId' | 'usuarioVentaId' | 'usuarioVentaNombre' | 'estadoEntrega'
 > & {
   precioVenta: number;
   metodoPago: MetodoPago;
@@ -135,6 +135,8 @@ export class VentaService {
         clienteNombre: input.clienteNombre || undefined,
         clienteTelefono: input.clienteTelefono || undefined,
         clienteCi: input.clienteCi || undefined,
+        estadoEntrega: input.estadoEntrega ?? 'entregado',
+        fechaEntrega: input.estadoEntrega === 'pendiente' ? undefined : input.fechaVenta,
         metodoPago: input.metodoPago,
         fechaVenta: input.fechaVenta,
         notas: input.notas || undefined,
@@ -180,6 +182,8 @@ export class VentaService {
           clienteNombre: input.clienteNombre || undefined,
           clienteTelefono: input.clienteTelefono || undefined,
           clienteCi: input.clienteCi || undefined,
+          estadoEntrega: input.estadoEntrega ?? 'entregado',
+          fechaEntrega: input.estadoEntrega === 'pendiente' ? undefined : input.fechaVenta,
           metodoPago: input.metodoPago, fechaVenta: input.fechaVenta,
           notas: input.notas || undefined, activo: true, schemaVersion: 3,
           puntosGanados: clienteId ? fidelidad.puntosPorPrenda : 0,
@@ -204,6 +208,31 @@ export class VentaService {
     });
 
     return ventaRefs.map((ref) => ref.id);
+  }
+
+  async actualizarEntrega(detalles: Venta[], estadoEntrega: EstadoEntregaVenta): Promise<void> {
+    if (!detalles.length || detalles.some((detalle) => !detalle.id)) {
+      throw new Error('La venta no tiene detalles válidos.');
+    }
+    const operacionId = detalles[0].operacionId;
+    if (detalles.some((detalle) => detalle.operacionId !== operacionId)) {
+      throw new Error('Los productos no pertenecen a la misma venta.');
+    }
+    const refs = detalles.map((detalle) => doc(this.firestore, `ventas/${detalle.id}`));
+    const operacionRef = operacionId ? doc(this.firestore, `operacionesVenta/${operacionId}`) : null;
+    await runTransaction(this.firestore, async (transaction) => {
+      const snapshots = await Promise.all(refs.map((ref) => transaction.get(ref)));
+      if (snapshots.some((snapshot) => !snapshot.exists() || snapshot.data()?.['activo'] === false)) {
+        throw new Error('La venta fue modificada. Actualiza la lista.');
+      }
+      const operacionSnapshot = operacionRef ? await transaction.get(operacionRef) : null;
+      const fechaEntrega = estadoEntrega === 'entregado' ? new Date().toISOString() : deleteField();
+      const updatedAt = serverTimestamp();
+      refs.forEach((ref) => transaction.update(ref, { estadoEntrega, fechaEntrega, updatedAt }));
+      if (operacionRef && operacionSnapshot?.exists()) {
+        transaction.update(operacionRef, { estadoEntrega, fechaEntrega, updatedAt });
+      }
+    });
   }
 
   async editarVenta(detalles: Venta[], input: Omit<VentaInput, 'precioVenta'> & { precios: Record<string, number> }): Promise<void> {
@@ -333,7 +362,9 @@ export class VentaService {
       const common = { operacionId, cantidadDetalles:nuevos.length, totalOperacion, metodoPago:input.metodoPago,
         fechaVenta:input.fechaVenta, clienteId:clienteId||deleteField(),
         clienteNombre:input.clienteNombre||deleteField(), clienteTelefono:input.clienteTelefono||deleteField(),
-        clienteCi:input.clienteCi||deleteField(), notas:input.notas||deleteField(), updatedAt:timestamp };
+        clienteCi:input.clienteCi||deleteField(), notas:input.notas||deleteField(),
+        ...(originales[0].estadoEntrega ? { estadoEntrega: originales[0].estadoEntrega } : {}),
+        updatedAt:timestamp };
 
       for (const original of originales) {
         if (!nuevosIds.includes(original.productoId)) {
@@ -375,7 +406,9 @@ export class VentaService {
       transaction.set(operacionRef, { total:totalOperacion, cantidadDetalles:nuevos.length, metodoPago:input.metodoPago,
         fechaVenta:input.fechaVenta, clienteId:clienteId||deleteField(), clienteNombre:input.clienteNombre||deleteField(),
         clienteTelefono:input.clienteTelefono||deleteField(), clienteCi:input.clienteCi||deleteField(),
-        notas:input.notas||deleteField(), activo:true, schemaVersion:1, updatedAt:timestamp }, { merge:true });
+        notas:input.notas||deleteField(),
+        ...(originales[0].estadoEntrega ? { estadoEntrega: originales[0].estadoEntrega } : {}),
+        activo:true, schemaVersion:1, updatedAt:timestamp }, { merge:true });
     });
   }
 

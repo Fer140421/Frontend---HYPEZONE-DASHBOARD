@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
+import { SearchableSelectDirective } from '../../../shared/directives/searchable-select.directive';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -29,6 +30,8 @@ import {
 } from '../../../shared/utils/pagination.util';
 import { GastoDialogComponent } from './gasto-dialog.component';
 
+type EstadoDescuento = 'sin_descontar' | 'descontados' | 'todos';
+
 @Component({
   selector: 'app-gastos',
   standalone: true,
@@ -47,6 +50,7 @@ import { GastoDialogComponent } from './gasto-dialog.component';
     MatInputModule,
     MatPaginatorModule,
     MatSelectModule,
+    SearchableSelectDirective,
     MatSnackBarModule,
     MatTableModule,
     MatTooltipModule,
@@ -68,6 +72,7 @@ export class GastosComponent implements OnInit {
   readonly categorias = CATEGORIAS_GASTO;
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
   readonly filtersOpen = signal(false);
+  readonly estadoDescuento = new BehaviorSubject<EstadoDescuento>('sin_descontar');
 
   readonly displayedColumns = [
     'fecha',
@@ -99,15 +104,16 @@ export class GastosComponent implements OnInit {
       const resumen = this.gastoService.calcularResumen(gastos);
       return {
         total: resumen.total,
-        totalCaja: resumen.totalCaja,
-        totalBanco: resumen.totalBanco,
+        totalDescontado: gastos
+          .filter((g) => g.activo !== false && g.descontado === true)
+          .reduce((total, g) => total + Number(g.monto || 0), 0),
         cantidad: gastos.filter((g) => g.activo !== false).length,
       };
     }),
     shareReplay({ bufferSize: 1, refCount: true }),
   );
 
-  readonly gastosFiltrados$ = combineLatest([
+  readonly gastosBaseFiltrados$ = combineLatest([
     this.gastos$,
     this.filters.controls.search.valueChanges.pipe(
       startWith(this.filters.controls.search.getRawValue()),
@@ -139,6 +145,24 @@ export class GastosComponent implements OnInit {
     shareReplay({ bufferSize: 1, refCount: true }),
   );
 
+  readonly resumenEstados$ = this.gastosBaseFiltrados$.pipe(
+    map((gastos) => ({
+      sinDescontar: gastos.filter((g) => g.descontado !== true).length,
+      descontados: gastos.filter((g) => g.descontado === true).length,
+      todos: gastos.length,
+    })),
+    shareReplay({ bufferSize: 1, refCount: true }),
+  );
+
+  readonly gastosFiltrados$ = combineLatest([this.gastosBaseFiltrados$, this.estadoDescuento]).pipe(
+    map(([gastos, estado]) => {
+      return gastos.filter((g) =>
+        estado === 'todos' || (estado === 'descontados' ? g.descontado === true : g.descontado !== true),
+      );
+    }),
+    shareReplay({ bufferSize: 1, refCount: true }),
+  );
+
   readonly pagedGastos$ = combineLatest([this.gastosFiltrados$, this.pagination$]).pipe(
     map(([gastos, pagination]) => paginateItems(gastos, pagination)),
     shareReplay({ bufferSize: 1, refCount: true }),
@@ -152,6 +176,12 @@ export class GastosComponent implements OnInit {
 
   openFilters(): void {
     this.filtersOpen.set(true);
+  }
+
+  seleccionarEstado(estado: EstadoDescuento): void {
+    if (this.estadoDescuento.value === estado) return;
+    this.estadoDescuento.next(estado);
+    this.resetPage();
   }
 
   applyFilters(): void {
@@ -216,4 +246,5 @@ export class GastosComponent implements OnInit {
     const item = this.categorias.find((c) => c.id === catId);
     return item ? item.label : catId;
   }
+
 }

@@ -11,7 +11,7 @@
 </app-page-header>
 
 @if (kpis$ | async; as kpis) {
-  <section class="metric-grid">
+  <section class="metric-grid gastos-metrics">
     <mat-card class="metric-card">
       <mat-icon class="icon-danger">payments</mat-icon>
       <span>Total gastos registrados</span>
@@ -20,14 +20,8 @@
 
     <mat-card class="metric-card">
       <mat-icon class="icon-warning">account_balance_wallet</mat-icon>
-      <span>Pagados de Caja física</span>
-      <strong>{{ kpis.totalCaja | currency: 'BOB' : 'symbol-narrow' }}</strong>
-    </mat-card>
-
-    <mat-card class="metric-card">
-      <mat-icon class="icon-info">account_balance</mat-icon>
-      <span>Pagados por Banco / QR</span>
-      <strong>{{ kpis.totalBanco | currency: 'BOB' : 'symbol-narrow' }}</strong>
+      <span>Total descontado de fondos</span>
+      <strong>{{ kpis.totalDescontado | currency: 'BOB' : 'symbol-narrow' }}</strong>
     </mat-card>
 
     <mat-card class="metric-card">
@@ -38,8 +32,59 @@
   </section>
 }
 
-<mat-card class="list-card">
+<mat-card class="list-card gastos-list">
   <mat-card-content>
+    @if (resumenEstados$ | async; as estados) {
+      <p class="expense-status-hint">Mostrar gastos por estado:</p>
+      <div class="expense-status-tabs" role="group" aria-label="Estado del descuento">
+        <button
+          type="button"
+          class="expense-status-tab"
+          [class.active]="estadoDescuento.value === 'sin_descontar'"
+          [attr.aria-pressed]="estadoDescuento.value === 'sin_descontar'"
+          (click)="seleccionarEstado('sin_descontar')"
+        >
+          <span class="expense-status-tab-title">
+            <mat-icon aria-hidden="true">pending_actions</mat-icon>
+            Sin descontar <strong>{{ estados.sinDescontar }}</strong>
+          </span>
+          <span class="expense-status-tab-detail">
+            <mat-icon aria-hidden="true">arrow_forward</mat-icon>
+          </span>
+        </button>
+        <button
+          type="button"
+          class="expense-status-tab"
+          [class.active]="estadoDescuento.value === 'descontados'"
+          [attr.aria-pressed]="estadoDescuento.value === 'descontados'"
+          (click)="seleccionarEstado('descontados')"
+        >
+          <span class="expense-status-tab-title">
+            <mat-icon aria-hidden="true">check_circle</mat-icon>
+            Descontados <strong>{{ estados.descontados }}</strong>
+          </span>
+          <span class="expense-status-tab-detail">
+            <mat-icon aria-hidden="true">arrow_forward</mat-icon>
+          </span>
+        </button>
+        <button
+          type="button"
+          class="expense-status-tab"
+          [class.active]="estadoDescuento.value === 'todos'"
+          [attr.aria-pressed]="estadoDescuento.value === 'todos'"
+          (click)="seleccionarEstado('todos')"
+        >
+          <span class="expense-status-tab-title">
+            <mat-icon aria-hidden="true">view_list</mat-icon>
+            Todos <strong>{{ estados.todos }}</strong>
+          </span>
+          <span class="expense-status-tab-detail">
+            <mat-icon aria-hidden="true">arrow_forward</mat-icon>
+          </span>
+        </button>
+      </div>
+    }
+
     <div class="list-filter-bar">
       <mat-form-field appearance="outline" class="list-search">
         <mat-label>Buscar por concepto o responsable</mat-label>
@@ -90,8 +135,8 @@
       @if (paged.total === 0) {
         <app-empty-state
           icon="money_off"
-          title="Sin gastos registrados"
-          description="No se encontraron registros de gastos que coincidan con los filtros aplicados."
+          [title]="estadoDescuento.value === 'sin_descontar' ? 'No hay gastos sin descontar' : estadoDescuento.value === 'descontados' ? 'No hay gastos descontados' : 'Sin gastos registrados'"
+          description="No se encontraron gastos en esta sección con los filtros aplicados."
         />
       } @else {
         <div class="table-scroll">

@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { SearchableSelectDirective } from '../../../shared/directives/searchable-select.directive';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { CATEGORIAS_GASTO, CategoriaGasto, FuenteDescuentoGasto, Gasto, MetodoPagoGasto } from '../../../core/models/gasto.model';
@@ -26,6 +27,7 @@ export interface GastoDialogData {
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
+    SearchableSelectDirective,
     MatSlideToggleModule,
     MatIconModule,
     MatSnackBarModule,
@@ -56,6 +58,10 @@ export class GastoDialogComponent implements OnInit {
     pagarDeCajaActiva: [true],
     notas: [''],
   });
+
+  obtenerCategoriaLabel(categoria: CategoriaGasto): string {
+    return this.categorias.find((item) => item.id === categoria)?.label ?? categoria;
+  }
 
   ngOnInit(): void {
     if (this.data?.gasto) {

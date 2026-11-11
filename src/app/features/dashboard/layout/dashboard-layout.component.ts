@@ -51,15 +51,22 @@ export class DashboardLayoutComponent {
   );
 
   readonly sidebarOpened = signal(true);
+  readonly sidebarCollapsed = signal(false);
+  readonly isHandset = signal(false);
 
   constructor() {
     this.isHandset$.pipe(takeUntilDestroyed()).subscribe((isHandset) => {
+      this.isHandset.set(isHandset);
       this.sidebarOpened.set(!isHandset);
     });
   }
 
   toggleSidebar(): void {
-    this.sidebarOpened.update((opened) => !opened);
+    if (this.isHandset()) {
+      this.sidebarOpened.update((opened) => !opened);
+    } else {
+      this.sidebarCollapsed.update((collapsed) => !collapsed);
+    }
   }
 
   private readonly navItems: NavItem[] = [

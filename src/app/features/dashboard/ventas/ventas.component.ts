@@ -11,14 +11,15 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
+import { SearchableSelectDirective } from '../../../shared/directives/searchable-select.directive';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
-import { BehaviorSubject, combineLatest, firstValueFrom, map, shareReplay, startWith, take } from 'rxjs';
+import { BehaviorSubject, combineLatest, defer, filter, firstValueFrom, map, shareReplay, startWith, take } from 'rxjs';
 import { Cliente } from '../../../core/models/cliente.model';
 import { Producto, imagenesProducto, precioProducto } from '../../../core/models/producto.model';
-import { MetodoPago, Venta, metodosPago } from '../../../core/models/venta.model';
+import { EstadoEntregaVenta, MetodoPago, Venta, metodosPago } from '../../../core/models/venta.model';
 import { ClienteRepository } from '../../../core/repositories/cliente.repository';
 import { FidelidadConfigRepository } from '../../../core/repositories/fidelidad-config.repository';
 import { ProductoRepository } from '../../../core/repositories/producto.repository';
@@ -68,6 +69,7 @@ import {
     MatInputModule,
     MatPaginatorModule,
     MatSelectModule,
+    SearchableSelectDirective,
     MatSnackBarModule,
     MatTableModule,
     MatTooltipModule,
@@ -77,7 +79,7 @@ import {
     PageHeaderComponent,
   ],
   templateUrl: './ventas.html',
-  styleUrl: './ventas.css',
+  styleUrls: ['./ventas.css', './ventas-flujos.css'],
 })
 export class VentasComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -101,24 +103,29 @@ export class VentasComponent implements OnInit {
   });
 
   readonly metodos = metodosPago;
-  readonly columns = ['nombreProducto', 'operacion', 'fechaVenta', 'precioVenta', 'ganancia', 'metodoPago', 'acciones'];
+  readonly columns = ['nombreProducto', 'operacion', 'fechaVenta', 'entrega', 'precioVenta', 'ganancia', 'metodoPago', 'acciones'];
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
   readonly mode = signal<'list' | 'new' | 'edit'>('list');
+  readonly ventaRapida = signal(false);
   readonly viewType = inject(ViewPreferenceService).getViewSignal('ventas', 'table');
   readonly filtersOpen = signal(false);
   readonly procesandoVenta = signal(false);
+  readonly entregaBuscando = this.fb.nonNullable.control('');
   readonly buscandoCliente = signal(false);
   readonly searchControl = this.fb.nonNullable.control('');
   readonly clienteSearchControl = this.fb.nonNullable.control('');
   readonly selectedCliente = signal<Cliente | null>(null);
   readonly clienteResultados = signal<Cliente[]>([]);
   readonly clienteBusquedaRealizada = signal(false);
+  readonly showCosts = signal(false);
   readonly configuracionFidelidad = signal<ConfiguracionFidelidad>(CONFIGURACION_FIDELIDAD_DEFAULT);
 
   private productosDisponibles: Producto[] = [];
   private ventasActuales: Venta[] = [];
   private editOriginalDetails: Venta[] = [];
   private readonly selected = new Map<string, Producto>();
+  private readonly manualPrices = new Map<string, number>();
+  private appliedRewardProductId = '';
 
   private readonly productosSource$ = this.productoRepository.getAll(true).pipe(
     shareReplay({ bufferSize: 1, refCount: true }),
@@ -128,6 +135,30 @@ export class VentasComponent implements OnInit {
     shareReplay({ bufferSize: 1, refCount: true }),
   );
   private readonly ventasSource$ = this.ventaRepository.getAll().pipe(
+    shareReplay({ bufferSize: 1, refCount: true }),
+  );
+
+  readonly entregasPendientes$ = combineLatest([
+    this.ventasSource$,
+    defer(() => this.entregaBuscando.valueChanges.pipe(startWith(this.entregaBuscando.getRawValue()))),
+  ]).pipe(
+    map(([ventas, busqueda]) => {
+      const grupos = new Map<string, Venta[]>();
+      ventas.filter((venta) => venta.activo !== false && venta.estadoEntrega === 'pendiente')
+        .forEach((venta) => {
+          const id = venta.operacionId ?? venta.id ?? venta.productoId;
+          grupos.set(id, [...(grupos.get(id) ?? []), venta]);
+        });
+      const termino = this.normalizeSearch(busqueda);
+      return [...grupos.entries()]
+        .map(([id, detalles]) => ({ id, detalles, first: detalles[0] }))
+        .filter(({ id, detalles, first }) =>
+          !termino || [id, first.clienteNombre, first.clienteTelefono,
+            ...detalles.map((detalle) => detalle.nombreProducto)]
+            .some((valor) => this.normalizeSearch(valor ?? '').includes(termino)),
+        )
+        .sort((a, b) => new Date(b.first.fechaVenta).getTime() - new Date(a.first.fechaVenta).getTime());
+    }),
     shareReplay({ bufferSize: 1, refCount: true }),
   );
 
@@ -164,6 +195,7 @@ export class VentasComponent implements OnInit {
     clienteNombre: [''],
     clienteTelefono: [''],
     clienteCi: [''],
+    estadoEntrega: ['entregado' as EstadoEntregaVenta],
     recompensaProductoId: [''],
     notas: [''],
   });
@@ -182,17 +214,12 @@ export class VentasComponent implements OnInit {
 
   readonly ventasFiltradas$ = combineLatest([
     this.ventasSource$,
-    this.cajaService.miCajaAbierta$,
     this.filters.controls.producto.valueChanges.pipe(startWith(this.filters.controls.producto.getRawValue())),
     this.appliedFilters$,
   ]).pipe(
-    map(([ventas, cajaActiva, productoValue, filters]) => {
+    map(([ventas, productoValue, filters]) => {
       this.ventasActuales = ventas;
-      if (!cajaActiva || !cajaActiva.id) {
-        return [];
-      }
-      const cajaId = cajaActiva.id;
-      const producto = productoValue.toLowerCase().trim();
+      const producto = this.normalizeSearch(productoValue);
       const desde = filters.desde
         ? new Date(filters.desde).setHours(0, 0, 0, 0)
         : 0;
@@ -201,12 +228,13 @@ export class VentasComponent implements OnInit {
         : Number.POSITIVE_INFINITY;
       return ventas.filter(
         (venta) =>
-          venta.cajaId === cajaId &&
-          (!producto || venta.nombreProducto.toLowerCase().includes(producto)) &&
+          venta.activo !== false &&
+          (!producto || [venta.nombreProducto, venta.clienteNombre, venta.clienteTelefono,
+            venta.operacionId, venta.id].some((value) => this.normalizeSearch(value ?? '').includes(producto))) &&
           (!filters.metodoPago || venta.metodoPago === filters.metodoPago) &&
           new Date(venta.fechaVenta).getTime() >= desde &&
           new Date(venta.fechaVenta).getTime() <= hasta,
-      );
+      ).sort((a, b) => new Date(b.fechaVenta).getTime() - new Date(a.fechaVenta).getTime());
     }),
     shareReplay({ bufferSize: 1, refCount: true }),
   );
@@ -258,6 +286,9 @@ export class VentasComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      this.ventaRapida.set(params.get('rapida') === '1');
+    });
     this.fidelidadRepository.get().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((configuracion) => {
       this.configuracionFidelidad.set(configuracion);
       this.aplicarDescuentoFidelidad();
@@ -274,7 +305,9 @@ export class VentasComponent implements OnInit {
       .subscribe((segments) => {
         const isNew = segments.some((segment) => segment.path === 'nueva');
         const isEdit = segments.some((segment) => segment.path === 'editar');
-        this.mode.set(isNew ? 'new' : isEdit ? 'edit' : 'list');
+        const nextMode = isNew ? 'new' : isEdit ? 'edit' : 'list';
+        if (nextMode !== this.mode()) this.showCosts.set(false);
+        this.mode.set(nextMode);
         if (isNew) {
           void this.verificarAperturaParaVenta();
         }
@@ -309,6 +342,7 @@ export class VentasComponent implements OnInit {
           clienteNombre: first.clienteNombre ?? '',
           clienteTelefono: first.clienteTelefono ?? '',
           clienteCi: first.clienteCi ?? '',
+          estadoEntrega: first.estadoEntrega ?? 'entregado',
           notas: first.notas ?? '',
         });
 
@@ -320,6 +354,7 @@ export class VentasComponent implements OnInit {
           this.selected.set(producto.id, producto);
           const group = this.createDetailGroup(producto);
           group.patchValue({ precioFinal: Number(detalle.precioVenta) });
+          this.manualPrices.set(producto.id, Number(detalle.precioVenta));
           this.detalles.push(group);
         });
 
@@ -412,6 +447,7 @@ export class VentasComponent implements OnInit {
     this.detalles.removeAt(index);
     if (id) {
       this.selected.delete(id);
+      this.manualPrices.delete(id);
       if (this.saleForm.controls.recompensaProductoId.getRawValue() === id) {
         this.saleForm.controls.recompensaProductoId.setValue('');
       }
@@ -499,12 +535,25 @@ export class VentasComponent implements OnInit {
     this.pagination$.next({ pageIndex: event.pageIndex, pageSize: event.pageSize });
   }
 
-  viewSale(venta: Venta): void {
+  viewSale(venta: Venta, detalles?: Venta[]): void {
     this.dialog.open(VentaViewDialogComponent, {
       width: 'min(860px,96vw)',
       maxHeight: '92vh',
-      data: { detalles: this.operationDetails(venta), productos: this.productosDisponibles },
+      data: { detalles: detalles ?? this.operationDetails(venta), productos: this.productosDisponibles },
     });
+  }
+
+  async actualizarEstadoEntrega(detalles: Venta[], estado: EstadoEntregaVenta): Promise<void> {
+    if (!this.auth.can('sales.update') || this.procesandoVenta()) return;
+    this.procesandoVenta.set(true);
+    try {
+      await this.ventaService.actualizarEntrega(detalles, estado);
+      this.snackBar.open(estado === 'entregado' ? 'Compra marcada como entregada.' : 'Compra marcada como pendiente.', 'OK', { duration: 3000 });
+    } catch (error) {
+      this.snackBar.open(error instanceof Error ? error.message : 'No se pudo actualizar la entrega.', 'OK', { duration: 4000 });
+    } finally {
+      this.procesandoVenta.set(false);
+    }
   }
 
   editSale(venta: Venta): void {
@@ -533,6 +582,26 @@ export class VentasComponent implements OnInit {
       this.abrirDialogoApertura(true, false);
     } else {
       void this.router.navigate(['/dashboard/ventas/nueva']);
+    }
+  }
+
+  async iniciarVentaRapida(): Promise<void> {
+    if (!this.auth.can('sales.create') || this.procesandoVenta()) return;
+    this.procesandoVenta.set(true);
+    try {
+      const cajaActual = await firstValueFrom(this.cajaService.miCajaAbierta$.pipe(take(1)));
+      if (!cajaActual) {
+        const cajaId = await this.cajaService.abrirCaja(0, 'Apertura rápida');
+        await firstValueFrom(this.cajaService.miCajaAbierta$.pipe(
+          filter((caja) => caja?.id === cajaId), take(1),
+        ));
+        this.snackBar.open('Caja abierta con Bs 0 para esta venta rápida.', 'OK', { duration: 3200 });
+      }
+      await this.router.navigate(['/dashboard/ventas/nueva'], { queryParams: { rapida: 1 } });
+    } catch (error) {
+      this.snackBar.open(error instanceof Error ? error.message : 'No se pudo iniciar la venta rápida.', 'OK', { duration: 4000 });
+    } finally {
+      this.procesandoVenta.set(false);
     }
   }
 
@@ -602,6 +671,11 @@ export class VentasComponent implements OnInit {
     this.procesandoVenta.set(true);
     try {
       const raw = this.saleForm.getRawValue();
+      if (this.mode() === 'new' && raw.estadoEntrega === 'pendiente' &&
+          (!raw.clienteNombre.trim() || !raw.clienteTelefono.trim())) {
+        this.snackBar.open('Para una entrega pendiente, selecciona o registra un cliente con celular.', 'OK', { duration: 4000 });
+        return;
+      }
       const detalles = raw.detalles.map((detalle) => ({
         producto: this.selected.get(detalle.productoId)!,
         precioVenta: Number(detalle.precioFinal),
@@ -620,6 +694,7 @@ export class VentasComponent implements OnInit {
         clienteNombre: raw.clienteNombre || undefined,
         clienteTelefono: raw.clienteTelefono || undefined,
         clienteCi: raw.clienteCi || undefined,
+        estadoEntrega: raw.estadoEntrega,
         productoRecompensaId: raw.recompensaProductoId || undefined,
         clienteNuevo: this.selectedCliente()?.id
           ? undefined
@@ -658,13 +733,14 @@ export class VentasComponent implements OnInit {
     }
   }
 
-  private operationDetails(venta: Venta): Venta[] {
+  operationDetails(venta: Venta): Venta[] {
     return venta.operacionId
       ? this.ventasActuales.filter((item) => item.operacionId === venta.operacionId)
       : [venta];
   }
 
   private createDetailGroup(producto: Producto) {
+    this.manualPrices.set(producto.id!, this.effectivePrice(producto));
     return this.fb.nonNullable.group({
       productoId: [producto.id!],
       nombre: [producto.nombre],
@@ -694,15 +770,35 @@ export class VentasComponent implements OnInit {
   private aplicarDescuentoFidelidad(): void {
     const recompensaProductoId = this.saleForm.controls.recompensaProductoId.getRawValue();
     const puedeAplicar = this.puedeUsarRecompensa();
+    const siguiente = puedeAplicar ? recompensaProductoId : '';
+    if (siguiente === this.appliedRewardProductId) return;
     const porcentaje = this.configuracionFidelidad().descuentoRecompensaPorcentaje / 100;
     this.detalles.controls.forEach((control) => {
-      const valorBase = Number(control.get('precioBase')?.getRawValue());
-      const esRecompensa = puedeAplicar && control.get('productoId')?.getRawValue() === recompensaProductoId;
-      control.get('precioFinal')?.setValue(
-        esRecompensa ? Number((valorBase * (1 - porcentaje)).toFixed(2)) : valorBase,
-        { emitEvent: false },
-      );
+      const id = String(control.get('productoId')?.getRawValue() ?? '');
+      if (id !== this.appliedRewardProductId && id !== siguiente) return;
+      const precioManual = this.manualPrices.get(id) ?? Number(control.get('precioBase')?.getRawValue());
+      control.get('precioFinal')?.setValue(id === siguiente
+        ? Number((precioManual * (1 - porcentaje)).toFixed(2))
+        : precioManual, { emitEvent: false });
     });
+    this.appliedRewardProductId = siguiente;
+  }
+
+  rememberManualPrice(id: string, value: string): void {
+    const precio = Number(value);
+    if (id && Number.isFinite(precio)) this.manualPrices.set(id, precio);
+  }
+
+  cost(id: string): number | null {
+    const cost = this.selected.get(id)?.precioCompra;
+    return typeof cost === 'number' && Number.isFinite(cost) ? cost : null;
+  }
+
+  margin(id: string, salePrice: number | null): number | null {
+    const cost = this.cost(id);
+    return cost === null || salePrice === null || !Number.isFinite(Number(salePrice))
+      ? null
+      : Number((Number(salePrice) - cost).toFixed(2));
   }
 
   private normalizeSearch(value: string): string {
@@ -776,6 +872,7 @@ export class VentaViewDialogComponent {
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
+    SearchableSelectDirective,
   ],
   templateUrl: './venta-edit-dialog.html',
   styleUrl: './venta-edit-dialog.css',

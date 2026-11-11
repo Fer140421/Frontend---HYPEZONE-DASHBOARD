@@ -31,8 +31,8 @@
 .btn-back:hover {
   background: var(--hz-primary-soft) !important;
   color: var(--hz-primary-hover) !important;
-  border-color: rgba(54, 183, 166, 0.35) !important;
-  box-shadow: 0 4px 12px rgba(54, 183, 166, 0.15) !important;
+  border-color: rgba(150, 102, 56, 0.35) !important;
+  box-shadow: 0 4px 12px rgba(150, 102, 56, 0.15) !important;
   transform: translateX(-2px);
 }
 
