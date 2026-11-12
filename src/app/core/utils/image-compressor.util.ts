@@ -11,8 +11,8 @@ export interface ImageCompressorOptions {
 
 /**
  * Compresses and resizes an image File in the browser using HTML5 Canvas.
- * Returns a new compressed File object. If compression fails or is unsupported,
- * returns the original file as a fallback.
+ * Returns a new compressed File object. If the browser cannot decode the image,
+ * returns the original file without compression.
  */
 export async function compressImage(
   file: File,
@@ -97,13 +97,17 @@ export async function compressImage(
 }
 
 /**
- * Compresses multiple image files concurrently.
+ * Compresses multiple image files one at a time to limit memory usage on phones.
  */
 export async function compressImages(
   files: File[],
   options?: ImageCompressorOptions
 ): Promise<File[]> {
-  return Promise.all(files.map((file) => compressImage(file, options)));
+  const compressed: File[] = [];
+  for (const file of files) {
+    compressed.push(await compressImage(file, options));
+  }
+  return compressed;
 }
 
 async function getCanvasImageSource(file: File): Promise<{ width: number; height: number; close?: () => void } & CanvasImageSource | null> {

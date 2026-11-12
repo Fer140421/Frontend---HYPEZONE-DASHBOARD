@@ -26,8 +26,8 @@
       <div class="dropzone-content">
         @if (uploading()) {
           <mat-icon class="spinning-icon">sync</mat-icon>
-          <strong class="status-heading">Comprimiendo y subiendo fotos...</strong>
-          <span class="status-subtext">Optimización automática en curso, por favor espera...</span>
+          <strong class="status-heading">Subiendo fotos: {{ uploadedCount() }} de {{ totalCount() }}</strong>
+          <span class="status-subtext">Procesando una foto a la vez, por favor espera...</span>
         } @else {
           <mat-icon class="upload-icon">cloud_upload</mat-icon>
           <strong class="status-heading">Haz clic o arrastra fotos aquí</strong>
@@ -40,6 +40,10 @@
       <mat-icon>check_circle</mat-icon>
       <span>Se alcanzó el límite máximo de fotos ({{ maxImages() }})</span>
     </div>
+  }
+
+  @if (lastError()) {
+    <p class="upload-error" role="alert">{{ lastError() }}</p>
   }
 
   @if (images().length) {

@@ -50,13 +50,13 @@
           <textarea matInput rows="2" formControlName="notas"></textarea>
         </mat-form-field>
         <div class="full">
-          <app-image-uploader [images]="imagenes()" (uploaded)="imagenes.set($event)" />
+          <app-image-uploader [images]="imagenes()" (uploaded)="imagenes.set($event)" (uploadingChange)="uploadingPhotos.set($event)" />
         </div>
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button type="button" mat-dialog-close>Cancelar</button>
-      <button mat-flat-button class="primary-action" type="button" [disabled]="form.invalid" (click)="save()">
+      <button mat-flat-button class="primary-action" type="button" [disabled]="form.invalid || uploadingPhotos()" (click)="save()">
         Guardar cambios
       </button>
     </mat-dialog-actions>

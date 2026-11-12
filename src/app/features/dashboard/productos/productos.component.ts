@@ -149,6 +149,7 @@ export class ProductosComponent implements OnInit {
   readonly currentProducto = signal<Producto | null>(null);
   readonly filtersOpen = signal(false);
   readonly imagenes = signal<string[]>([]);
+  readonly uploadingPhotos = signal(false);
   readonly consignadorSeleccionado = signal<Cliente | null>(null);
   readonly consignadorNuevo = signal<Cliente | null>(null);
   readonly consignadorSearch = this.fb.nonNullable.control('');
@@ -515,6 +516,10 @@ export class ProductosComponent implements OnInit {
 
   async save(): Promise<void> {
     if (!this.auth.can('products.create') && !this.auth.can('products.update')) return;
+    if (this.uploadingPhotos()) {
+      this.snack('Espera a que terminen de subirse las fotos.');
+      return;
+    }
     const raw = this.form.getRawValue();
     const duenoNuevo = this.consignadorNuevo();
     const duenoExistente = this.consignadorSeleccionado();
@@ -889,6 +894,7 @@ export class ProductEditDialogComponent {
   readonly estadosManuales = estadosManualesProducto;
   readonly generos = generosProducto;
   readonly imagenes = signal(imagenesProducto(this.data.producto));
+  readonly uploadingPhotos = signal(false);
   readonly opcionesLocales = { marcas: signal<string[]>([]), categorias: signal<string[]>([]), tallas: signal<string[]>([]) };
   private readonly dialog = inject(MatDialog);
 
@@ -908,6 +914,7 @@ export class ProductEditDialogComponent {
   });
 
   save(): void {
+    if (this.uploadingPhotos()) return;
     const raw = this.form.getRawValue();
     this.dialogRef.close({
       payload: { ...raw, loteId: raw.loteId || undefined, genero: (normalizeGenero(raw.genero) || undefined) as GeneroProducto | undefined, imagenes: this.imagenes(), activo: true } satisfies Partial<Producto>,

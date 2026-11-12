@@ -9,10 +9,10 @@
     <mat-form-field appearance="outline"><mat-label>Precio compra</mat-label><input matInput type="number" formControlName="precioCompra" /></mat-form-field>
     <mat-form-field appearance="outline"><mat-label>Precio venta</mat-label><input matInput type="number" formControlName="precioVenta" /></mat-form-field>
     <mat-form-field appearance="outline" class="full"><mat-label>Descripción</mat-label><textarea matInput rows="2" formControlName="descripcion"></textarea></mat-form-field>
-    <div class="full"><app-image-uploader [images]="imagenes()" [maxImages]="5" (uploaded)="imagenes.set($event)" (error)="message($event)" /></div>
+    <div class="full"><app-image-uploader [images]="imagenes()" [maxImages]="5" (uploaded)="imagenes.set($event)" (uploadingChange)="uploadingPhotos.set($event)" (error)="message($event)" /></div>
   </form>
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button type="button" [disabled]="saving()" (click)="cancel()">Cancelar</button>
-  <button mat-flat-button class="primary-action" type="button" [disabled]="form.invalid || saving()" (click)="saveAndContinue()"><mat-icon>add</mat-icon>{{ saving() ? 'Guardando...' : 'Guardar y agregar otro' }}</button>
+  <button mat-flat-button class="primary-action" type="button" [disabled]="form.invalid || saving() || uploadingPhotos()" (click)="saveAndContinue()"><mat-icon>add</mat-icon>{{ saving() ? 'Guardando...' : 'Guardar y agregar otro' }}</button>
 </mat-dialog-actions>

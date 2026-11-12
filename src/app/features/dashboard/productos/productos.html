@@ -406,6 +406,7 @@
                 <app-image-uploader
                   [images]="imagenes()"
                   (uploaded)="imagenes.set($event)"
+                  (uploadingChange)="uploadingPhotos.set($event)"
                   (error)="snack($event)"
                 />
               </div>
@@ -414,7 +415,7 @@
                 <button mat-button type="button" routerLink="/dashboard/productos">
                   Cancelar
                 </button>
-                <button mat-flat-button class="primary-action" type="submit" [disabled]="form.invalid">
+                <button mat-flat-button class="primary-action" type="submit" [disabled]="form.invalid || uploadingPhotos()">
                   Guardar producto
                 </button>
               </div>

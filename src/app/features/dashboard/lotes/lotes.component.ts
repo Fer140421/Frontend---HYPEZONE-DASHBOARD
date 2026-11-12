@@ -665,6 +665,7 @@ export class LoteProductCreateDialogComponent {
   readonly tallas$ = this.tallaRepository.getAll();
   readonly generos = generosProducto;
   readonly imagenes = signal<string[]>([]);
+  readonly uploadingPhotos = signal(false);
   readonly saving = signal(false);
   readonly opcionesLocales = {
     marcas: signal<string[]>([]),
@@ -691,7 +692,7 @@ export class LoteProductCreateDialogComponent {
   }
 
   async saveAndContinue(): Promise<void> {
-    if (this.form.invalid || this.saving()) {
+    if (this.form.invalid || this.saving() || this.uploadingPhotos()) {
       return;
     }
     this.saving.set(true);

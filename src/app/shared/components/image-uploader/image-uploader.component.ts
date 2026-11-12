@@ -23,6 +23,9 @@ export class ImageUploaderComponent {
   readonly images = input<string[]>([]);
   readonly maxImages = input(5);
   readonly uploading = signal(false);
+  readonly uploadedCount = signal(0);
+  readonly totalCount = signal(0);
+  readonly lastError = signal('');
 
   @Output() uploaded = new EventEmitter<string[]>();
   @Output() error = new EventEmitter<string>();
@@ -37,7 +40,9 @@ export class ImageUploaderComponent {
     const invalid = files.find((file) => !this.cloudinaryService.isValidImageType(file));
 
     if (invalid) {
-      this.error.emit('Solo se permiten archivos de imagen válidos (JPG, PNG, WEBP, HEIC, etc.).');
+      const message = 'Solo se permiten archivos de imagen válidos (JPG, PNG, WEBP, HEIC, etc.).';
+      this.lastError.set(message);
+      this.error.emit(message);
       inputElement.value = '';
       return;
     }
@@ -46,14 +51,27 @@ export class ImageUploaderComponent {
       return;
     }
 
+    const existingImages = [...this.images()];
+    this.lastError.set('');
+    this.uploadedCount.set(0);
+    this.totalCount.set(files.length);
     this.uploading.set(true);
     this.uploadingChange.emit(true);
     this.cloudinaryService.uploadImages(files).subscribe({
-      next: (urls) => this.uploaded.emit([...this.images(), ...urls].slice(0, this.maxImages())),
-      error: () => {
+      next: (urls) => {
+        this.uploadedCount.set(urls.length);
+        this.uploaded.emit([...existingImages, ...urls].slice(0, this.maxImages()));
+      },
+      error: (error: unknown) => {
         this.uploading.set(false);
         this.uploadingChange.emit(false);
-        this.error.emit('No se pudieron subir las imágenes.');
+        inputElement.value = '';
+        const cause = error instanceof Error ? error.message : 'No se pudieron subir las imágenes.';
+        const message = this.uploadedCount() > 0
+          ? `${cause} Las fotos anteriores quedaron cargadas; selecciona de nuevo las pendientes.`
+          : cause;
+        this.lastError.set(message);
+        this.error.emit(message);
       },
       complete: () => {
         this.uploading.set(false);
