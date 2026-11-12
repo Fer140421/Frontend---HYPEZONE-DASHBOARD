@@ -336,57 +336,9 @@
     </aside>
   </div>
 } @else {
-  @if (entregasPendientes$ | async; as pendientes) {
-    <section class="delivery-section" aria-labelledby="delivery-title">
-      <div class="delivery-heading">
-        <div>
-          <h2 id="delivery-title">Entregas pendientes <span>{{ pendientes.length }}</span></h2>
-          <p>Compras por entregar o retirar, de cualquier turno.</p>
-        </div>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Buscar por cliente, celular o prenda</mat-label>
-          <mat-icon matPrefix>search</mat-icon>
-          <input matInput [formControl]="entregaBuscando" />
-        </mat-form-field>
-      </div>
-      @if (pendientes.length) {
-        <div class="delivery-grid">
-          @for (pedido of pendientes; track pedido.id) {
-            <mat-card class="delivery-card">
-              <div class="delivery-card-top">
-                <strong>{{ pedido.first.clienteNombre || 'Cliente sin nombre' }}</strong>
-                <span>#{{ pedido.id.slice(0, 6).toUpperCase() }}</span>
-              </div>
-              <p>{{ pedido.detalles.length }} {{ pedido.detalles.length === 1 ? 'producto' : 'productos' }}</p>
-              <p class="delivery-products">
-                @for (detalle of pedido.detalles; track detalle.id) {
-                  {{ detalle.nombreProducto }}{{ $last ? '' : ' · ' }}
-                }
-              </p>
-              <div class="delivery-contact">
-                <span>{{ pedido.first.clienteTelefono || 'Sin celular registrado' }}</span>
-                @if (whatsappLink(pedido.first.clienteTelefono); as link) {
-                  <a [href]="link" target="_blank" rel="noopener noreferrer">WhatsApp</a>
-                }
-              </div>
-              <div class="delivery-actions">
-                <small>{{ pedido.first.fechaVenta | date: 'dd/MM/yyyy' }}</small>
-                <button mat-button type="button" (click)="viewSale(pedido.first, pedido.detalles)">Ver compra</button>
-                @if (auth.can('sales.update')) {
-                  <button mat-button type="button" (click)="editSale(pedido.first)">Editar datos</button>
-                  <button mat-stroked-button type="button" (click)="actualizarEstadoEntrega(pedido.detalles, 'entregado')" [disabled]="procesandoVenta()">
-                    <mat-icon>task_alt</mat-icon> Marcar entregada
-                  </button>
-                }
-              </div>
-            </mat-card>
-          }
-        </div>
-      } @else {
-        <p class="delivery-empty">No hay entregas pendientes con esta búsqueda.</p>
-      }
-    </section>
-  }
+  <mat-tab-group class="sales-tabs" animationDuration="180ms">
+    <mat-tab label="Ventas">
+      <div class="sales-tab-content">
   @if (!cajaActiva()) {
     <div class="cash-notice">
       <span>La caja está cerrada. Puedes consultar todas las ventas y entregas.</span>
@@ -631,4 +583,62 @@
       <app-loading text="Cargando ventas..." />
     </mat-card>
   }
+      </div>
+    </mat-tab>
+    <mat-tab label="Entregas pendientes">
+      <div class="sales-tab-content">
+  @if (entregasPendientes$ | async; as pendientes) {
+    <section class="delivery-section" aria-labelledby="delivery-title">
+      <div class="delivery-heading">
+        <div>
+          <h2 id="delivery-title">Entregas pendientes <span>{{ pendientes.length }}</span></h2>
+          <p>Compras por entregar o retirar, de cualquier turno.</p>
+        </div>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Buscar por cliente, celular o prenda</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [formControl]="entregaBuscando" />
+        </mat-form-field>
+      </div>
+      @if (pendientes.length) {
+        <div class="delivery-grid">
+          @for (pedido of pendientes; track pedido.id) {
+            <mat-card class="delivery-card">
+              <div class="delivery-card-top">
+                <strong>{{ pedido.first.clienteNombre || 'Cliente sin nombre' }}</strong>
+                <span>#{{ pedido.id.slice(0, 6).toUpperCase() }}</span>
+              </div>
+              <p>{{ pedido.detalles.length }} {{ pedido.detalles.length === 1 ? 'producto' : 'productos' }}</p>
+              <p class="delivery-products">
+                @for (detalle of pedido.detalles; track detalle.id) {
+                  {{ detalle.nombreProducto }}{{ $last ? '' : ' · ' }}
+                }
+              </p>
+              <div class="delivery-contact">
+                <span>{{ pedido.first.clienteTelefono || 'Sin celular registrado' }}</span>
+                @if (whatsappLink(pedido.first.clienteTelefono); as link) {
+                  <a [href]="link" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                }
+              </div>
+              <div class="delivery-actions">
+                <small>{{ pedido.first.fechaVenta | date: 'dd/MM/yyyy' }}</small>
+                <button mat-button type="button" (click)="viewSale(pedido.first, pedido.detalles)">Ver compra</button>
+                @if (auth.can('sales.update')) {
+                  <button mat-button type="button" (click)="editSale(pedido.first)">Editar datos</button>
+                  <button mat-stroked-button type="button" (click)="actualizarEstadoEntrega(pedido.detalles, 'entregado')" [disabled]="procesandoVenta()">
+                    <mat-icon>task_alt</mat-icon> Marcar entregada
+                  </button>
+                }
+              </div>
+            </mat-card>
+          }
+        </div>
+      } @else {
+        <p class="delivery-empty">No hay entregas pendientes con esta búsqueda.</p>
+      }
+    </section>
+  }
+      </div>
+    </mat-tab>
+  </mat-tab-group>
 }

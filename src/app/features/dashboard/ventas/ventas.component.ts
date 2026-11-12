@@ -14,6 +14,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { SearchableSelectDirective } from '../../../shared/directives/searchable-select.directive';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BehaviorSubject, combineLatest, defer, filter, firstValueFrom, map, shareReplay, startWith, take } from 'rxjs';
@@ -72,6 +73,7 @@ import {
     SearchableSelectDirective,
     MatSnackBarModule,
     MatTableModule,
+    MatTabsModule,
     MatTooltipModule,
     EmptyStateComponent,
     FilterDrawerComponent,
