@@ -7,6 +7,10 @@ export interface CotizacionDetalle {
   nombreProducto: string;
   codigo?: string;
   imagen?: string;
+  /** Snapshot of internal purchase cost when the quote was created. */
+  precioCompra?: number;
+  /** Snapshot of regular sale price for comparison with the quoted price. */
+  precioVenta?: number;
   precioCotizado: number;
 }
 

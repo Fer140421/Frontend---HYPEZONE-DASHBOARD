@@ -18,15 +18,34 @@
           </mat-form-field>
         </div>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Prendas para cotizar</mat-label>
-          <mat-select formControlName="productoIds" multiple>
-            @for (producto of productos$ | async; track producto.id) {
-              <mat-option [value]="producto.id">{{ producto.nombre }} · Talla {{ producto.talla }} · {{ producto.precioVenta | currency:'BOB':'symbol-narrow' }}</mat-option>
-            }
-          </mat-select>
-          <mat-hint>Elegir prendas para cotizar no las reserva; pueden venderse mientras la cotización esté vigente.</mat-hint>
-        </mat-form-field>
+        <section class="catalog-section">
+          <div class="catalog-heading">
+            <div><h2>Elige los productos</h2><p>Selecciona las prendas que quieres incluir. Cotizarlas no las reserva.</p></div>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Buscar producto</mat-label><mat-icon matPrefix>search</mat-icon>
+              <input matInput [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" placeholder="Nombre, marca o código" />
+            </mat-form-field>
+          </div>
+          <div class="product-grid">
+            @for (producto of productosFiltrados(productos$ | async); track producto.id) {
+              <mat-card class="product-card" [class.selected]="productoAgregado(producto)">
+                <div class="image-wrap">
+                  @if (producto.imagenes[0]) { <img [src]="producto.imagenes[0]" [alt]="producto.nombre" loading="lazy" /> }
+                  @else { <div class="no-image"><mat-icon>checkroom</mat-icon></div> }
+                </div>
+                <mat-card-content>
+                  <div class="product-meta"><span>{{ producto.marca || producto.categoria || 'Producto' }}</span><span>Talla {{ producto.talla }}</span></div>
+                  <h3>{{ producto.nombre }}</h3>
+                  <div class="catalog-price"><strong>{{ producto.precioVenta | currency:'BOB':'symbol-narrow' }}</strong></div>
+                  <button mat-stroked-button type="button" class="add-button" [disabled]="productoAgregado(producto)" (click)="agregarProducto(producto)">
+                    <mat-icon>{{ productoAgregado(producto) ? 'check' : 'add_shopping_cart' }}</mat-icon>
+                    {{ productoAgregado(producto) ? 'Agregado' : 'Agregar' }}
+                  </button>
+                </mat-card-content>
+              </mat-card>
+            } @empty { <div class="empty-catalog"><mat-icon>inventory_2</mat-icon><h3>No hay productos disponibles</h3></div> }
+          </div>
+        </section>
 
         @if (lineas().length) {
           <section class="quote-lines">
@@ -35,7 +54,7 @@
               <div class="quote-line">
                 <div class="quote-product">
                   @if (linea.imagen) { <img [src]="linea.imagen" [alt]="linea.nombreProducto" /> }
-                  <strong>{{ linea.nombreProducto }}</strong>
+                  <div><strong>{{ linea.nombreProducto }}</strong><small>Costo: {{ linea.precioCompra | currency:'BOB':'symbol-narrow' }} · Venta: {{ linea.precioVenta | currency:'BOB':'symbol-narrow' }}</small></div>
                 </div>
                 <mat-form-field appearance="outline">
                   <mat-label>Precio cotizado</mat-label>
@@ -44,7 +63,11 @@
                 </mat-form-field>
               </div>
             }
-            <div class="quote-total"><span>Total cotizado</span><strong>{{ total | currency:'BOB':'symbol-narrow' }}</strong></div>
+            <div class="quote-totals">
+              <div><span>Total a precio de costo</span><strong>{{ totalCompra | currency:'BOB':'symbol-narrow' }}</strong></div>
+              <div><span>Total a precio de venta</span><strong>{{ totalVenta | currency:'BOB':'symbol-narrow' }}</strong></div>
+              <div class="quoted-total"><span>Total cotizado</span><strong>{{ total | currency:'BOB':'symbol-narrow' }}</strong></div>
+            </div>
           </section>
         }
 

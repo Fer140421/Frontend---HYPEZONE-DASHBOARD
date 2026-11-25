@@ -13,7 +13,7 @@ import { Router } from '@angular/router';
 import { Observable, map, shareReplay } from 'rxjs';
 import { Cliente } from '../../../core/models/cliente.model';
 import { Cotizacion, CotizacionDetalle } from '../../../core/models/cotizacion.model';
-import { Producto, precioProducto } from '../../../core/models/producto.model';
+import { Producto, precioCompraProducto, precioProducto } from '../../../core/models/producto.model';
 import { ClienteRepository } from '../../../core/repositories/cliente.repository';
 import { CotizacionRepository } from '../../../core/repositories/cotizacion.repository';
 import { ProductoRepository } from '../../../core/repositories/producto.repository';
@@ -47,6 +47,7 @@ export class CotizacionesComponent implements OnInit {
   readonly creando = signal(false);
   readonly guardando = signal(false);
   readonly lineas = signal<CotizacionDetalle[]>([]);
+  readonly busqueda = signal('');
   private clientes: Cliente[] = [];
   private productos: Producto[] = [];
   readonly productos$ = this.productoRepository.getAll().pipe(
@@ -78,6 +79,29 @@ export class CotizacionesComponent implements OnInit {
 
   get total(): number {
     return this.lineas().reduce((sum, item) => sum + Number(item.precioCotizado || 0), 0);
+  }
+
+  get totalCompra(): number {
+    return this.lineas().reduce((sum, item) => sum + Number(item.precioCompra ?? 0), 0);
+  }
+
+  get totalVenta(): number {
+    return this.lineas().reduce((sum, item) => sum + Number(item.precioVenta ?? 0), 0);
+  }
+
+  productosFiltrados(items: Producto[] | null): Producto[] {
+    const query = this.busqueda().trim().toLocaleLowerCase();
+    return (items ?? []).filter((item) => !query || [item.nombre, item.marca, item.codigo, item.categoria]
+      .some((value) => value?.toLocaleLowerCase().includes(query)));
+  }
+
+  agregarProducto(producto: Producto): void {
+    if (this.lineas().some((item) => item.productoId === producto.id)) return;
+    this.form.controls.productoIds.setValue([...this.form.controls.productoIds.value, producto.id!]);
+  }
+
+  productoAgregado(producto: Producto): boolean {
+    return this.lineas().some((item) => item.productoId === producto.id);
   }
 
   setPrice(productoId: string, value: string): void {
@@ -149,6 +173,8 @@ export class CotizacionesComponent implements OnInit {
         nombreProducto: producto.nombre,
         codigo: producto.codigo,
         imagen: producto.imagenes?.[0] ? cloudinaryThumbnailUrl(producto.imagenes[0]) : undefined,
+        precioCompra: precioCompraProducto(producto),
+        precioVenta: precioProducto(producto),
         precioCotizado: precioProducto(producto),
       }];
     }));
