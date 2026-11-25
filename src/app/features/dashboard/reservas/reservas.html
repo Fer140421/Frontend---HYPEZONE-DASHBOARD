@@ -226,7 +226,7 @@
                   <span class="edit-anticipos-label">Anticipos ya registrados</span>
                   <span class="edit-anticipos-sub">{{ edit.anticipos.length || 0 }} abono(s) en historial</span>
                 </div>
-                <strong>{{ totalAnticipos(edit) | currency: 'BOB' : 'symbol-narrow' }}</strong>
+                <strong>{{ totalAnticiposDisponibles(edit) | currency: 'BOB' : 'symbol-narrow' }}</strong>
               </div>
             } @else {
               <mat-form-field appearance="outline">
@@ -362,7 +362,7 @@
               <ng-container matColumnDef="anticipo">
                 <th mat-header-cell *matHeaderCellDef>Anticipo</th>
                 <td mat-cell *matCellDef="let r">
-                  {{ totalAnticipos(r) | currency: 'BOB' : 'symbol-narrow' }}
+                  {{ totalAnticiposDisponibles(r) | currency: 'BOB' : 'symbol-narrow' }}
                 </td>
               </ng-container>
 
@@ -403,7 +403,7 @@
                         <mat-icon>payments</mat-icon>
                       </button>
                     }
-                    <button mat-icon-button matTooltip="Convertir en venta" (click)="convertir(r)">
+                    <button mat-icon-button matTooltip="Vender prendas de esta reserva" (click)="convertir(r)">
                       <mat-icon>point_of_sale</mat-icon>
                     </button>
                     <button mat-icon-button matTooltip="Cancelar reserva" (click)="cancelar(r)">

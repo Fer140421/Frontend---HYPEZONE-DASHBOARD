@@ -11,7 +11,7 @@ import {
 import { Cliente } from '../models/cliente.model';
 import { CONFIGURACION_FIDELIDAD_DEFAULT, ConfiguracionFidelidad } from '../models/fidelidad.model';
 import { Producto } from '../models/producto.model';
-import { Reserva, ReservaDetalle, ReservaPago, totalAnticipos } from '../models/reserva.model';
+import { Reserva, ReservaDetalle, ReservaPago, totalAnticipos, totalAnticiposDisponibles } from '../models/reserva.model';
 import { MetodoPago, Venta } from '../models/venta.model';
 import { removeUndefinedDeep } from '../repositories/firestore.repository';
 
@@ -21,6 +21,7 @@ export interface ReservaInput {
   detalles: Array<{ producto: Producto; precioAcordado: number }>;
   anticipo?: number;
   metodoAnticipo?: MetodoPago;
+  cajaIdAnticipo?: string;
   fechaReserva: string;
   fechaVencimiento?: string;
   notas?: string;
@@ -38,6 +39,10 @@ export interface ConvertirReservaCajaContext {
   cajaId?: string;
   usuarioVentaId?: string;
   usuarioVentaNombre?: string;
+}
+
+export interface PagoReservaConCaja extends ReservaPago {
+  cajaId: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -70,6 +75,10 @@ export class ReservaService {
       ? doc(this.firestore, `clientes/${input.cliente.id}`)
       : doc(collection(this.firestore, 'clientes'));
     const productRefs = ids.map((id) => doc(this.firestore, `productos/${id}`));
+    const cajaRef = anticipo > 0 && input.cajaIdAnticipo
+      ? doc(this.firestore, `cajas/${input.cajaIdAnticipo}`)
+      : undefined;
+    if (anticipo > 0 && !cajaRef) throw new Error('Abre una caja para registrar el anticipo.');
     await runTransaction(this.firestore, async (tx) => {
       const products = await Promise.all(productRefs.map((ref) => tx.get(ref)));
       products.forEach((snapshot) => {
@@ -78,6 +87,12 @@ export class ReservaService {
         if (producto.activo === false || producto.estado !== 'disponible')
           throw new Error(`El producto "${producto.nombre}" ya no está disponible.`);
       });
+      if (cajaRef) {
+        const caja = await tx.get(cajaRef);
+        if (!caja.exists() || caja.data()?.['estado'] !== 'abierta') {
+          throw new Error('La caja del anticipo ya no estÃ¡ abierta. Actualiza e intenta de nuevo.');
+        }
+      }
       const timestamp = serverTimestamp();
       if (input.clienteNuevo) {
         tx.set(
@@ -100,6 +115,7 @@ export class ReservaService {
               monto: anticipo,
               metodoPago: input.metodoAnticipo ?? 'efectivo',
               fecha: input.fechaReserva,
+              cajaId: input.cajaIdAnticipo,
             },
           ]
         : [];
@@ -170,7 +186,7 @@ export class ReservaService {
       const reserva = snapshot.data() as Reserva;
       if (reserva.estado !== 'activa') throw new Error('Solo se pueden editar reservas activas.');
 
-      const anticiposPagados = totalAnticipos(reserva);
+      const anticiposPagados = totalAnticiposDisponibles(reserva);
       if (total < anticiposPagados) {
         throw new Error(
           `El nuevo total (Bs ${total}) no puede ser menor al total de anticipos ya registrados (Bs ${anticiposPagados}).`,
@@ -260,6 +276,8 @@ export class ReservaService {
 
   async registrarAbono(reservaId: string, pago: ReservaPago): Promise<void> {
     const ref = doc(this.firestore, `reservas/${reservaId}`);
+    if (!pago.cajaId) throw new Error('Abre una caja antes de registrar un abono.');
+    const cajaRef = doc(this.firestore, `cajas/${pago.cajaId}`);
     await runTransaction(this.firestore, async (tx) => {
       const snapshot = await tx.get(ref);
       if (!snapshot.exists()) throw new Error('Reserva no encontrada.');
@@ -268,10 +286,14 @@ export class ReservaService {
       const monto = Number(pago.monto);
       if (!Number.isFinite(monto) || monto <= 0 || monto > Number(reserva.saldoPendiente))
         throw new Error('El abono debe ser mayor a 0 y no superar el saldo pendiente.');
+      const caja = await tx.get(cajaRef);
+      if (!caja.exists() || caja.data()?.['estado'] !== 'abierta') {
+        throw new Error('La caja del abono ya no estÃ¡ abierta. Actualiza e intenta de nuevo.');
+      }
       const anticipos = [...(reserva.anticipos ?? []), removeUndefinedDeep({ ...pago, monto })];
       tx.update(ref, {
         anticipos,
-        saldoPendiente: Number(reserva.total) - totalAnticipos({ anticipos }),
+        saldoPendiente: Math.max(0, Number(reserva.total) - totalAnticipos({ anticipos }) + Number(reserva.anticiposAplicados ?? 0)),
         updatedAt: serverTimestamp(),
       });
     });
@@ -309,136 +331,126 @@ export class ReservaService {
     });
   }
 
-  async convertirEnVenta(
+  async convertirPrendasEnVenta(
     reservaId: string,
-    metodoPago: MetodoPago,
+    productoIds: string[],
+    pagoNuevo: PagoReservaConCaja | undefined,
     fechaVenta: string,
-    cajaContext?: ConvertirReservaCajaContext,
+    cajaContext: ConvertirReservaCajaContext,
   ): Promise<string[]> {
+    const ids = [...new Set(productoIds.filter(Boolean))];
+    if (!ids.length) throw new Error('Selecciona al menos una prenda para convertir.');
+    if (!cajaContext.cajaId) throw new Error('Abre una caja para confirmar la venta.');
     const reservaRef = doc(this.firestore, `reservas/${reservaId}`);
+    const cajaRef = doc(this.firestore, `cajas/${cajaContext.cajaId}`);
     const operacionRef = doc(collection(this.firestore, 'operacionesVenta'));
-    const ventaRefs: ReturnType<typeof doc>[] = [];
     const fidelidad = await this.getConfiguracionFidelidad();
+    const ventaRefs: ReturnType<typeof doc>[] = [];
+
     await runTransaction(this.firestore, async (tx) => {
       const snapshot = await tx.get(reservaRef);
       if (!snapshot.exists()) throw new Error('Reserva no encontrada.');
       const reserva = snapshot.data() as Reserva;
-      if (reserva.estado !== 'activa')
-        throw new Error('Solo se pueden convertir reservas activas.');
-      const productRefs = reserva.detalles.map((item) =>
-        doc(this.firestore, `productos/${item.productoId}`),
-      );
+      if (reserva.estado !== 'activa') throw new Error('Solo se pueden convertir reservas activas.');
+      const selected = reserva.detalles.filter((detail) => ids.includes(detail.productoId));
+      if (selected.length !== ids.length) throw new Error('Una prenda ya no pertenece a esta reserva. Actualiza e intenta de nuevo.');
+      const selectedTotal = selected.reduce((sum, detail) => sum + Number(detail.precioAcordado), 0);
+      const payment = pagoNuevo ? removeUndefinedDeep({ ...pagoNuevo, monto: Number(pagoNuevo.monto) }) : undefined;
+      if (payment && (payment.cajaId !== cajaContext.cajaId || !Number.isFinite(payment.monto) || payment.monto < 0)) {
+        throw new Error('El pago final no es vÃ¡lido para esta caja.');
+      }
+      if (payment && payment.monto > Number(reserva.saldoPendiente) + 0.009) {
+        throw new Error('El pago supera el saldo pendiente de la reserva.');
+      }
+      const availableCredit = Math.max(0, totalAnticipos(reserva) - Number(reserva.anticiposAplicados ?? 0));
+      const shortfall = Math.max(0, selectedTotal - availableCredit);
+      if (shortfall > 0 && (!payment || payment.monto + 0.009 < shortfall)) {
+        throw new Error(`Falta cobrar Bs ${shortfall.toFixed(2)} para las prendas seleccionadas.`);
+      }
+
+      const cajaSnapshot = await tx.get(cajaRef);
+      if (!cajaSnapshot.exists() || cajaSnapshot.data()?.['estado'] !== 'abierta') {
+        throw new Error('La caja ya no estÃ¡ abierta. Actualiza e intenta de nuevo.');
+      }
+      const productRefs = selected.map((detail) => doc(this.firestore, `productos/${detail.productoId}`));
       const products = await Promise.all(productRefs.map((ref) => tx.get(ref)));
-      products.forEach((product) => {
-        if (!product.exists() || (product.data() as Producto).estado !== 'reservado')
-          throw new Error('Uno de los productos ya no está reservado para esta operación.');
+      products.forEach((product, index) => {
+        if (!product.exists() || (product.data() as Producto).estado !== 'reservado') {
+          throw new Error(`La prenda ${selected[index].nombreProducto} ya no estÃ¡ reservada.`);
+        }
+        const item = product.data() as Producto;
+        if (item.consignado && selected[index].precioAcordado < Number(item.precioCompra ?? 0)) {
+          throw new Error(`El precio acordado para ${selected[index].nombreProducto} no puede ser menor al monto del consignador.`);
+        }
       });
-      const saldo = Number(reserva.saldoPendiente);
       const clienteRef = doc(this.firestore, `clientes/${reserva.clienteId}`);
       const clienteSnapshot = await tx.get(clienteRef);
       if (!clienteSnapshot.exists()) throw new Error('El cliente de la reserva ya no existe.');
-      const cliente = clienteSnapshot.data() as Cliente;
-      const puntosGanados = reserva.detalles.length * fidelidad.puntosPorPrenda;
-      const puntosConCompra = Number(cliente.puntosDisponibles ?? 0) + puntosGanados;
-      tx.update(clienteRef, {
-        puntosDisponibles: puntosConCompra % fidelidad.puntosParaRecompensa,
-        puntosAcumulados: Number(cliente.puntosAcumulados ?? 0) + puntosGanados,
-        recompensasDisponibles:
-          Number(cliente.recompensasDisponibles ?? 0) +
-          Math.floor(puntosConCompra / fidelidad.puntosParaRecompensa),
-        updatedAt: serverTimestamp(),
-      });
-      const pagos: ReservaPago[] =
-        saldo > 0
-          ? [...(reserva.anticipos ?? []), { monto: saldo, metodoPago, fecha: fechaVenta }]
-          : [...(reserva.anticipos ?? [])];
+
       const timestamp = serverTimestamp();
-      tx.set(
-        operacionRef,
-        removeUndefinedDeep({
-          reservaId,
-          total: reserva.total,
-          cantidadDetalles: reserva.detalles.length,
-          clienteId: reserva.clienteId,
-          clienteNombre: reserva.clienteNombre,
-          clienteTelefono: reserva.clienteTelefono,
-          clienteCi: reserva.clienteCi,
-          metodoPago,
-          pagos,
-          anticipoAplicado: totalAnticipos(reserva),
-          fechaVenta,
-          notas: reserva.notas || undefined,
-          cajaId: cajaContext?.cajaId || undefined,
-          usuarioVentaId: cajaContext?.usuarioVentaId || undefined,
-          usuarioVentaNombre: cajaContext?.usuarioVentaNombre || undefined,
-          activo: true,
-          schemaVersion: 2,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        }),
-      );
-      reserva.detalles.forEach((detail, index) => {
+      const newPayments = payment && payment.monto > 0 ? [...(reserva.anticipos ?? []), payment] : [...(reserva.anticipos ?? [])];
+      const appliedNow = Math.min(selectedTotal, availableCredit + Number(payment?.monto ?? 0));
+      const totalApplied = Number(reserva.anticiposAplicados ?? 0) + appliedNow;
+      const remainingDetails = reserva.detalles.filter((detail) => !ids.includes(detail.productoId));
+      const remainingTotal = remainingDetails.reduce((sum, detail) => sum + Number(detail.precioAcordado), 0);
+      const availableAfter = Math.max(0, totalAnticipos({ anticipos: newPayments }) - totalApplied);
+      const remainingBalance = Math.max(0, remainingTotal - availableAfter);
+      const client = clienteSnapshot.data() as Cliente;
+      const loyaltyPoints = selected.length * fidelidad.puntosPorPrenda;
+      const pointsWithPurchase = Number(client.puntosDisponibles ?? 0) + loyaltyPoints;
+      tx.update(clienteRef, {
+        puntosDisponibles: pointsWithPurchase % fidelidad.puntosParaRecompensa,
+        puntosAcumulados: Number(client.puntosAcumulados ?? 0) + loyaltyPoints,
+        recompensasDisponibles: Number(client.recompensasDisponibles ?? 0) + Math.floor(pointsWithPurchase / fidelidad.puntosParaRecompensa),
+        updatedAt: timestamp,
+      });
+      tx.set(operacionRef, removeUndefinedDeep({
+        reservaId, total: selectedTotal, cantidadDetalles: selected.length,
+        clienteId: reserva.clienteId, clienteNombre: reserva.clienteNombre,
+        clienteTelefono: reserva.clienteTelefono, clienteCi: reserva.clienteCi,
+        metodoPago: payment?.metodoPago ?? 'efectivo',
+        pagos: payment && payment.monto > 0 ? [payment] : [],
+        anticipoAplicado: appliedNow, saldoCobrado: payment?.monto ?? 0,
+        fechaVenta, notas: reserva.notas || undefined, cajaId: cajaContext.cajaId,
+        usuarioVentaId: cajaContext.usuarioVentaId || undefined,
+        usuarioVentaNombre: cajaContext.usuarioVentaNombre || undefined,
+        activo: true, schemaVersion: 3, createdAt: timestamp, updatedAt: timestamp,
+      }));
+
+      selected.forEach((detail, index) => {
         const product = products[index].data() as Producto;
-        if (product.consignado && detail.precioAcordado < Number(product.precioCompra ?? 0)) {
-          throw new Error(`El precio acordado para ${detail.nombreProducto} no puede ser menor al monto del consignador.`);
-        }
+        const precioCompra = Number(product.precioCompra ?? 0);
         const ventaRef = doc(collection(this.firestore, 'ventas'));
         ventaRefs.push(ventaRef);
-        const precioCompra = Number(product.precioCompra ?? 0);
-        tx.set(
-          ventaRef,
-          removeUndefinedDeep<Partial<Venta>>({
-            operacionId: operacionRef.id,
-            reservaId,
-            cantidadDetalles: reserva.detalles.length,
-            totalOperacion: reserva.total,
-            productoId: detail.productoId,
-            loteId: product.loteId,
-            nombreProducto: detail.nombreProducto,
-            marcaProducto: product.marca || undefined,
-            codigoProducto: product.codigo || undefined,
-            categoriaProducto: product.categoria || undefined,
-            precioCompra,
-            precioVenta: detail.precioAcordado,
-            ganancia: detail.precioAcordado - precioCompra,
-            consignado: product.consignado === true,
-            consignadorNombre: product.consignado ? product.consignadorNombre : undefined,
-            montoPendienteConsignador: product.consignado ? precioCompra : undefined,
-            clienteId: reserva.clienteId,
-            clienteNombre: reserva.clienteNombre,
-            clienteTelefono: reserva.clienteTelefono,
-            clienteCi: reserva.clienteCi,
-            metodoPago,
-            fechaVenta,
-            notas: reserva.notas || undefined,
-            cajaId: cajaContext?.cajaId || undefined,
-            usuarioVentaId: cajaContext?.usuarioVentaId || undefined,
-            usuarioVentaNombre: cajaContext?.usuarioVentaNombre || undefined,
-            activo: true,
-            schemaVersion: 4,
-            createdAt: timestamp,
-            updatedAt: timestamp,
-            puntosGanados: fidelidad.puntosPorPrenda,
-          }),
-        );
-        tx.update(productRefs[index], {
-          estado: 'vendido',
-          precioVenta: detail.precioAcordado,
-          updatedAt: timestamp,
-        });
+        tx.set(ventaRef, removeUndefinedDeep<Partial<Venta>>({
+          operacionId: operacionRef.id, reservaId, cantidadDetalles: selected.length,
+          totalOperacion: selectedTotal, productoId: detail.productoId, loteId: product.loteId,
+          nombreProducto: detail.nombreProducto, marcaProducto: product.marca || undefined,
+          codigoProducto: product.codigo || undefined, categoriaProducto: product.categoria || undefined,
+          precioCompra, precioVenta: detail.precioAcordado, ganancia: detail.precioAcordado - precioCompra,
+          consignado: product.consignado === true,
+          consignadorNombre: product.consignado ? product.consignadorNombre : undefined,
+          montoPendienteConsignador: product.consignado ? precioCompra : undefined,
+          clienteId: reserva.clienteId, clienteNombre: reserva.clienteNombre,
+          clienteTelefono: reserva.clienteTelefono, clienteCi: reserva.clienteCi,
+          metodoPago: payment?.metodoPago ?? 'efectivo', fechaVenta, notas: reserva.notas || undefined,
+          cajaId: cajaContext.cajaId, usuarioVentaId: cajaContext.usuarioVentaId || undefined,
+          usuarioVentaNombre: cajaContext.usuarioVentaNombre || undefined,
+          activo: true, schemaVersion: 5, createdAt: timestamp, updatedAt: timestamp,
+          puntosGanados: fidelidad.puntosPorPrenda,
+        }));
+        tx.update(productRefs[index], { estado: 'vendido', precioVenta: detail.precioAcordado, updatedAt: timestamp });
         if (product.estadoPublicacion === 'publicado') {
-          tx.set(
-            doc(this.firestore, `productosPublicos/${detail.productoId}`),
-            { estado: 'vendido', precioVenta: detail.precioAcordado, updatedAt: timestamp },
-            { merge: true },
-          );
+          tx.set(doc(this.firestore, `productosPublicos/${detail.productoId}`), {
+            estado: 'vendido', precioVenta: detail.precioAcordado, updatedAt: timestamp,
+          }, { merge: true });
         }
       });
       tx.update(reservaRef, {
-        estado: 'confirmada',
-        saldoPendiente: 0,
-        ventaOperacionId: operacionRef.id,
-        fechaCierre: fechaVenta,
+        detalles: remainingDetails, total: remainingTotal, anticipos: newPayments,
+        anticiposAplicados: totalApplied, saldoPendiente: remainingBalance,
+        estado: remainingDetails.length ? 'activa' : 'confirmada',
+        ...(remainingDetails.length ? {} : { ventaOperacionId: operacionRef.id, fechaCierre: fechaVenta }),
         updatedAt: timestamp,
       });
     });

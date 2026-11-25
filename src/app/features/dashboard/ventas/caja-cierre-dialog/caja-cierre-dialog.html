@@ -23,10 +23,17 @@
             <strong class="box-val">{{ r.montoInicial | currency: 'BOB' : 'symbol-narrow' }}</strong>
           </div>
           <div class="summary-box">
-            <span class="box-label">Total vendido en turno</span>
+            <span class="box-label">Ingresos recibidos en turno</span>
             <strong class="box-val text-primary">+{{ r.totalVentas | currency: 'BOB' : 'symbol-narrow' }}</strong>
             <small class="box-sub">QR: {{ r.totalVentasQR | currency: 'BOB' : 'symbol-narrow' }} · Ef: {{ r.totalVentasEfectivo | currency: 'BOB' : 'symbol-narrow' }}</small>
           </div>
+          @if (r.totalAbonosReservaEfectivo + r.totalAbonosReservaQR > 0) {
+            <div class="summary-box">
+              <span class="box-label">Incluye abonos de reservas</span>
+              <strong class="box-val">{{ (r.totalAbonosReservaEfectivo + r.totalAbonosReservaQR) | currency: 'BOB' : 'symbol-narrow' }}</strong>
+              <small class="box-sub">QR: {{ r.totalAbonosReservaQR | currency: 'BOB' : 'symbol-narrow' }} · Ef: {{ r.totalAbonosReservaEfectivo | currency: 'BOB' : 'symbol-narrow' }}</small>
+            </div>
+          }
           <div class="summary-box">
             <span class="box-label">Costo de compra vendido</span>
             <strong class="box-val text-info">{{ r.totalCostoPrendas | currency: 'BOB' : 'symbol-narrow' }}</strong>

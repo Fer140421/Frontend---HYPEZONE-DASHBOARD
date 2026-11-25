@@ -5,6 +5,7 @@ import { Observable, firstValueFrom, of, shareReplay, switchMap, take } from 'rx
 import { Caja, CierreCajaCalculo } from '../models/caja.model';
 import { Gasto } from '../models/gasto.model';
 import { Venta } from '../models/venta.model';
+import { Reserva } from '../models/reserva.model';
 import { CajaRepository } from '../repositories/caja.repository';
 import { AuthService } from './auth.service';
 import { ESTADO_FINANCIERO_INICIAL } from '../models/finanzas.model';
@@ -82,13 +83,25 @@ export class CajaService {
       .map((d) => d.data() as Venta)
       .filter((v) => v.activo !== false);
 
-    const totalVentasEfectivo = ventas
-      .filter((v) => v.metodoPago === 'efectivo')
-      .reduce((sum, v) => sum + Number(v.precioVenta || 0), 0);
+    const reservasSnapshot = await getDocs(collection(this.firestore, 'reservas'));
+    const pagosReserva = reservasSnapshot.docs
+      .flatMap((document) => (document.data() as Reserva).anticipos ?? [])
+      .filter((pago) => pago.cajaId === cajaId);
+    const ventasDirectas = ventas.filter((venta) => !venta.reservaId);
 
-    const totalVentasQR = ventas
+    const abonosReservaEfectivo = pagosReserva
+      .filter((pago) => pago.metodoPago === 'efectivo')
+      .reduce((sum, pago) => sum + Number(pago.monto || 0), 0);
+    const abonosReservaQR = pagosReserva
+      .filter((pago) => pago.metodoPago === 'qr')
+      .reduce((sum, pago) => sum + Number(pago.monto || 0), 0);
+    const totalVentasEfectivo = ventasDirectas
+      .filter((v) => v.metodoPago === 'efectivo')
+      .reduce((sum, v) => sum + Number(v.precioVenta || 0), 0) + abonosReservaEfectivo;
+
+    const totalVentasQR = ventasDirectas
       .filter((v) => v.metodoPago === 'qr')
-      .reduce((sum, v) => sum + Number(v.precioVenta || 0), 0);
+      .reduce((sum, v) => sum + Number(v.precioVenta || 0), 0) + abonosReservaQR;
 
     const totalVentas = totalVentasEfectivo + totalVentasQR;
 
@@ -154,6 +167,8 @@ export class CajaService {
       totalVentasEfectivo,
       totalVentasQR,
       totalVentas,
+      totalAbonosReservaEfectivo: abonosReservaEfectivo,
+      totalAbonosReservaQR: abonosReservaQR,
       totalCostoPrendas,
       totalAdeudadoConsignadores,
       totalCapitalRecuperado,
@@ -221,6 +236,8 @@ export class CajaService {
       totalVentasEfectivo: resumen.totalVentasEfectivo,
       totalVentasQR: resumen.totalVentasQR,
       totalVentas: resumen.totalVentas,
+      totalAbonosReservaEfectivo: resumen.totalAbonosReservaEfectivo,
+      totalAbonosReservaQR: resumen.totalAbonosReservaQR,
       totalCostoPrendas: resumen.totalCostoPrendas,
       totalAdeudadoConsignadores: resumen.totalAdeudadoConsignadores,
       totalCapitalRecuperado: resumen.totalCapitalRecuperado,

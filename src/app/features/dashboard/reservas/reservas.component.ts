@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import {
   MAT_DIALOG_DATA,
@@ -41,6 +42,7 @@ import {
   Reserva,
   ReservaPago,
   estadosReserva,
+  totalAnticiposDisponibles,
   totalAnticipos,
 } from '../../../core/models/reserva.model';
 import { MetodoPago, metodosPago } from '../../../core/models/venta.model';
@@ -63,6 +65,73 @@ import { ClienteFormDialogComponent, ClienteFormDialogData } from '../clientes/c
 import { CajaAperturaDialogComponent } from '../ventas/caja-apertura-dialog/caja-apertura-dialog.component';
 
 @Component({
+  selector: 'app-seleccion-prendas-reserva-dialog',
+  standalone: true,
+  imports: [CurrencyPipe, MatButtonModule, MatCheckboxModule, MatDialogModule, MatIconModule],
+  template: `
+    <h2 mat-dialog-title>Elige las prendas que se llevará el cliente</h2>
+    <mat-dialog-content class="mat-typography partial-sale-content">
+      <p>Se aplicará el saldo disponible a las prendas seleccionadas. Las demás seguirán reservadas.</p>
+      <div class="partial-sale-list">
+        @for (detalle of data.reserva.detalles; track detalle.productoId) {
+          <mat-checkbox [checked]="selected().has(detalle.productoId)" (change)="toggle(detalle.productoId, $event.checked)">
+            <span>{{ detalle.nombreProducto }}</span>
+            <strong>{{ detalle.precioAcordado | currency:'BOB':'symbol-narrow' }}</strong>
+          </mat-checkbox>
+        }
+      </div>
+      <div class="partial-sale-summary">
+        <span>Seleccionado: <strong>{{ totalSeleccionado() | currency:'BOB':'symbol-narrow' }}</strong></span>
+        <span>Saldo disponible: <strong>{{ creditoDisponible | currency:'BOB':'symbol-narrow' }}</strong></span>
+        <span>Por cobrar: <strong>{{ porCobrar() | currency:'BOB':'symbol-narrow' }}</strong></span>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button type="button" mat-dialog-close>Cancelar</button>
+      <button mat-flat-button class="primary-action" type="button" [disabled]="!selected().size" (click)="confirmar()">
+        <mat-icon>point_of_sale</mat-icon>Continuar
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .partial-sale-content { display:grid; gap:12px; min-width:min(430px,86vw); }
+    .partial-sale-content p { margin:0; color:var(--mat-sys-on-surface-variant); }
+    .partial-sale-list { display:grid; gap:6px; }
+    .partial-sale-list mat-checkbox { border-bottom:1px solid var(--mat-sys-outline-variant); padding:6px 0; }
+    .partial-sale-list mat-checkbox span { display:inline-flex; justify-content:space-between; gap:16px; width:min(330px,65vw); }
+    .partial-sale-summary { display:grid; gap:6px; padding:12px; border-radius:8px; background:var(--mat-sys-surface-container-low); }
+  `],
+})
+export class SeleccionPrendasReservaDialogComponent {
+  private readonly ref = inject(MatDialogRef<SeleccionPrendasReservaDialogComponent>);
+  readonly data = inject<{ reserva: Reserva }>(MAT_DIALOG_DATA);
+  readonly selected = signal(new Set<string>());
+  readonly creditoDisponible = totalAnticiposDisponibles(this.data.reserva);
+
+  totalSeleccionado(): number {
+    return this.data.reserva.detalles
+      .filter((detalle) => this.selected().has(detalle.productoId))
+      .reduce((sum, detalle) => sum + Number(detalle.precioAcordado), 0);
+  }
+
+  porCobrar(): number {
+    return Math.max(0, this.totalSeleccionado() - this.creditoDisponible);
+  }
+
+  toggle(productoId: string, checked: boolean): void {
+    this.selected.update((current) => {
+      const next = new Set(current);
+      checked ? next.add(productoId) : next.delete(productoId);
+      return next;
+    });
+  }
+
+  confirmar(): void {
+    this.ref.close([...this.selected()]);
+  }
+}
+
+@Component({
   selector: 'app-reservas',
   standalone: true,
   imports: [
@@ -73,6 +142,7 @@ import { CajaAperturaDialogComponent } from '../ventas/caja-apertura-dialog/caja
     ReactiveFormsModule,
     MatButtonModule,
     MatCardModule,
+    MatCheckboxModule,
     MatDatepickerModule,
     MatDialogModule,
     MatFormFieldModule,
@@ -137,6 +207,7 @@ export class ReservasComponent implements OnInit {
     'acciones',
   ];
   readonly totalAnticipos = totalAnticipos;
+  readonly totalAnticiposDisponibles = totalAnticiposDisponibles;
   readonly pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS;
   readonly metodos = metodosPago;
   readonly estados = estadosReserva;
@@ -214,7 +285,7 @@ export class ReservasComponent implements OnInit {
         activas: items.filter((item) => item.estado === 'activa').length,
         anticipos: items
           .filter((item) => item.estado === 'activa')
-          .reduce((sum, item) => sum + totalAnticipos(item), 0),
+          .reduce((sum, item) => sum + totalAnticiposDisponibles(item), 0),
         saldo: items
           .filter((item) => item.estado === 'activa')
           .reduce((sum, item) => sum + Number(item.saldoPendiente), 0),
@@ -247,7 +318,7 @@ export class ReservasComponent implements OnInit {
 
   get totalAnticiposReservaEdit(): number {
     const edit = this.editingReserva();
-    return edit ? totalAnticipos(edit) : 0;
+    return edit ? totalAnticiposDisponibles(edit) : 0;
   }
 
   get saldo(): number {
@@ -507,6 +578,11 @@ export class ReservasComponent implements OnInit {
     }
 
     const raw = this.form.getRawValue();
+    if (!isEdit && Number(raw.anticipo) > 0 && !this.cajaActiva()?.id) {
+      this.message('Abre una caja para registrar el anticipo recibido.');
+      this.abrirDialogoApertura();
+      return;
+    }
 
     if (isEdit) {
       const edit = this.editingReserva();
@@ -514,7 +590,7 @@ export class ReservasComponent implements OnInit {
         this.message('No se encontró la información de la reserva a editar.');
         return;
       }
-      const anticiposPagados = totalAnticipos(edit);
+      const anticiposPagados = totalAnticiposDisponibles(edit);
       if (this.total < anticiposPagados) {
         this.message(
           `El total no puede ser menor a los anticipos ya registrados (Bs ${anticiposPagados}).`,
@@ -557,6 +633,7 @@ export class ReservasComponent implements OnInit {
           detalles: detallesInput,
           anticipo: Number(raw.anticipo),
           metodoAnticipo: raw.metodoAnticipo,
+          cajaIdAnticipo: Number(raw.anticipo) > 0 ? this.cajaActiva()?.id : undefined,
           fechaReserva: new Date().toISOString(),
           fechaVencimiento: raw.fechaVencimiento!.toISOString(),
           notas: raw.notas,
@@ -581,6 +658,12 @@ export class ReservasComponent implements OnInit {
       this.message('Esta reserva no tiene saldo pendiente por cobrar.');
       return;
     }
+    const caja = this.cajaActiva();
+    if (!caja?.id) {
+      this.message('Abre una caja antes de registrar el abono recibido.');
+      this.abrirDialogoApertura();
+      return;
+    }
 
     this.dialog
       .open(ReservaPagoDialogComponent, {
@@ -589,14 +672,14 @@ export class ReservasComponent implements OnInit {
           title: 'Registrar abono',
           maximo: reserva.saldoPendiente,
           total: reserva.total,
-          anticipos: totalAnticipos(reserva),
+          anticipos: totalAnticiposDisponibles(reserva),
         },
       })
       .afterClosed()
       .subscribe(async (pago?: ReservaPago) => {
         if (!pago) return;
         try {
-          await this.service.registrarAbono(reserva.id!, pago);
+          await this.service.registrarAbono(reserva.id!, { ...pago, cajaId: caja.id });
           this.message('Abono registrado correctamente.');
         } catch (error) {
           this.message(error instanceof Error ? error.message : 'No se pudo registrar el abono.');
@@ -625,33 +708,60 @@ export class ReservasComponent implements OnInit {
       return;
     }
 
-    this.dialog
-      .open(ReservaPagoDialogComponent, {
+    this.dialog.open(SeleccionPrendasReservaDialogComponent, {
+      width: 'min(620px,96vw)',
+      data: { reserva },
+    }).afterClosed().subscribe((productoIds?: string[]) => {
+      if (!productoIds?.length) return;
+      const totalSeleccionado = reserva.detalles
+        .filter((detalle) => productoIds.includes(detalle.productoId))
+        .reduce((sum, detalle) => sum + Number(detalle.precioAcordado), 0);
+      const creditoDisponible = totalAnticiposDisponibles(reserva);
+      const montoPorCobrar = Math.max(0, totalSeleccionado - creditoDisponible);
+      if (montoPorCobrar <= 0) {
+        void this.confirmarConversionParcial(reserva, productoIds, undefined, caja.id!);
+        return;
+      }
+      this.dialog.open(ReservaPagoDialogComponent, {
         width: 'min(500px,96vw)',
         data: {
-          title: 'Confirmar venta de reserva',
-          maximo: reserva.saldoPendiente,
-          total: reserva.total,
-          anticipos: totalAnticipos(reserva),
+          title: 'Cobrar y vender prendas seleccionadas',
+          maximo: montoPorCobrar,
+          total: totalSeleccionado,
+          anticipos: creditoDisponible,
           conversion: true,
         },
-      })
-      .afterClosed()
-      .subscribe(async (pago?: ReservaPago) => {
-        if (!pago) return;
-        try {
-          const user = this.auth.firebaseUser();
-          const profile = this.auth.profile();
-          await this.service.convertirEnVenta(reserva.id!, pago.metodoPago, pago.fecha, {
-            cajaId: caja.id,
-            usuarioVentaId: user?.uid,
-            usuarioVentaNombre: profile?.displayName || user?.displayName || user?.email || 'Usuario',
-          });
-          this.message('¡Reserva convertida en venta exitosamente!');
-        } catch (error) {
-          this.message(error instanceof Error ? error.message : 'No se pudo convertir la reserva.');
-        }
+      }).afterClosed().subscribe((pago?: ReservaPago) => {
+        if (pago) void this.confirmarConversionParcial(reserva, productoIds, pago, caja.id!);
       });
+    });
+  }
+
+  private async confirmarConversionParcial(
+    reserva: Reserva,
+    productoIds: string[],
+    pago: ReservaPago | undefined,
+    cajaId: string,
+  ): Promise<void> {
+    if (!reserva.id) return;
+    try {
+      const user = this.auth.firebaseUser();
+      const profile = this.auth.profile();
+      await this.service.convertirPrendasEnVenta(
+        reserva.id,
+        productoIds,
+        pago && pago.monto > 0 ? { ...pago, cajaId } : undefined,
+        pago?.fecha ?? new Date().toISOString(),
+        {
+          cajaId,
+          usuarioVentaId: user?.uid,
+          usuarioVentaNombre: profile?.displayName || user?.displayName || user?.email || 'Usuario',
+        },
+      );
+      this.message('Prendas vendidas; las demás siguen reservadas y el saldo fue actualizado.');
+    } catch (error) {
+      this.message(error instanceof Error ? error.message : 'No se pudo convertir la reserva.');
+    }
   }
 
   abrirDialogoApertura(): void {
@@ -770,7 +880,7 @@ export class ReservasComponent implements OnInit {
         @if (data.conversion) {
           <div class="summary-card">
             <div class="summary-line">
-              <span>Total de la reserva:</span>
+              <span>Prendas seleccionadas:</span>
               <strong>{{ (data.total ?? data.maximo) | currency: 'BOB' : 'symbol-narrow' }}</strong>
             </div>
             @if (data.anticipos !== undefined && data.anticipos > 0) {

@@ -1,0 +1,100 @@
+@if (creando()) {
+  <app-page-header title="Nueva cotización" description="Prepara precios para un cliente sin abrir caja ni apartar el inventario." />
+  <mat-card class="quote-editor">
+    <mat-card-content>
+      <form [formGroup]="form" (ngSubmit)="guardar()">
+        <div class="quote-fields">
+          <mat-form-field appearance="outline">
+            <mat-label>Cliente</mat-label>
+            <mat-select formControlName="clienteId">
+              @for (cliente of clientes$ | async; track cliente.id) {
+                <mat-option [value]="cliente.id">{{ cliente.nombreCompleto }} · {{ cliente.celular }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Vigencia (días)</mat-label>
+            <input matInput type="number" min="1" max="90" formControlName="vigenciaDias" />
+          </mat-form-field>
+        </div>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Prendas para cotizar</mat-label>
+          <mat-select formControlName="productoIds" multiple>
+            @for (producto of productos$ | async; track producto.id) {
+              <mat-option [value]="producto.id">{{ producto.nombre }} · Talla {{ producto.talla }} · {{ producto.precioVenta | currency:'BOB':'symbol-narrow' }}</mat-option>
+            }
+          </mat-select>
+          <mat-hint>Elegir prendas para cotizar no las reserva; pueden venderse mientras la cotización esté vigente.</mat-hint>
+        </mat-form-field>
+
+        @if (lineas().length) {
+          <section class="quote-lines">
+            <h2>Precios propuestos</h2>
+            @for (linea of lineas(); track linea.productoId) {
+              <div class="quote-line">
+                <div class="quote-product">
+                  @if (linea.imagen) { <img [src]="linea.imagen" [alt]="linea.nombreProducto" /> }
+                  <strong>{{ linea.nombreProducto }}</strong>
+                </div>
+                <mat-form-field appearance="outline">
+                  <mat-label>Precio cotizado</mat-label>
+                  <span matTextPrefix>Bs&nbsp;</span>
+                  <input matInput type="number" min="0" step="0.5" [value]="linea.precioCotizado" (input)="setPrice(linea.productoId, $any($event.target).value)" />
+                </mat-form-field>
+              </div>
+            }
+            <div class="quote-total"><span>Total cotizado</span><strong>{{ total | currency:'BOB':'symbol-narrow' }}</strong></div>
+          </section>
+        }
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Notas</mat-label>
+          <textarea matInput rows="2" formControlName="notas"></textarea>
+        </mat-form-field>
+        <div class="actions">
+          <button mat-button type="button" (click)="cancelarCreacion()">Cancelar</button>
+          <button mat-flat-button class="primary-action" type="submit" [disabled]="guardando() || form.invalid || !lineas().length">
+            <mat-icon>request_quote</mat-icon>{{ guardando() ? 'Guardando...' : 'Guardar cotización' }}
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+} @else {
+  <app-page-header title="Cotizaciones" description="Cotiza prendas sin afectar caja ni apartar productos.">
+    @if (auth.can('sales.create')) {
+      <button mat-flat-button class="primary-action" type="button" (click)="creando.set(true)">
+        <mat-icon>add</mat-icon>Nueva cotización
+      </button>
+    }
+  </app-page-header>
+
+  <div class="quote-list">
+    @for (quote of cotizaciones$ | async; track quote.id) {
+      <mat-card class="quote-card">
+        <mat-card-content>
+          <div class="quote-card-header">
+            <div><strong>{{ quote.clienteNombre }}</strong><small>{{ quote.clienteTelefono }} · {{ quote.fechaCotizacion | date:'dd/MM/yyyy' }}</small></div>
+            <span class="quote-status" [class.expired]="estado(quote) === 'Vencida'">{{ estado(quote) }}</span>
+          </div>
+          <div class="quote-detail-list">
+            @for (linea of quote.detalles; track linea.productoId) {
+              <div><span>{{ linea.nombreProducto }}</span><strong>{{ linea.precioCotizado | currency:'BOB':'symbol-narrow' }}</strong></div>
+            }
+          </div>
+          @if (quote.notas) { <p class="quote-notes">{{ quote.notas }}</p> }
+          <div class="quote-card-footer">
+            <span>Vence {{ quote.fechaVencimiento | date:'dd/MM/yyyy' }}</span>
+            <strong>{{ quote.total | currency:'BOB':'symbol-narrow' }}</strong>
+            @if (quote.estado === 'vigente' && estado(quote) !== 'Vencida' && auth.can('sales.create')) {
+              <button mat-stroked-button type="button" (click)="convertir(quote)"><mat-icon>event_available</mat-icon>Convertir en reserva</button>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+    } @empty {
+      <mat-card class="empty-quotes"><mat-icon>request_quote</mat-icon><strong>Aún no hay cotizaciones</strong><span>Créala sin abrir caja y sin bloquear prendas.</span></mat-card>
+    }
+  </div>
+}

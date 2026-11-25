@@ -10,9 +10,11 @@ export interface ReservaDetalle {
 }
 
 export interface ReservaPago {
+  id?: string;
   monto: number;
   metodoPago: MetodoPago;
   fecha: string;
+  cajaId?: string;
   notas?: string;
 }
 
@@ -25,12 +27,15 @@ export interface Reserva extends AuditableEntity {
   detalles: ReservaDetalle[];
   total: number;
   anticipos: ReservaPago[];
+  /** Total de anticipos ya aplicados a prendas convertidas en ventas. */
+  anticiposAplicados?: number;
   saldoPendiente: number;
   estado: EstadoReserva;
   fechaReserva: string;
   fechaVencimiento?: string;
   notas?: string;
   ventaOperacionId?: string;
+  cotizacionId?: string;
   fechaCierre?: string;
 }
 
@@ -38,4 +43,8 @@ export const estadosReserva: EstadoReserva[] = ['activa', 'confirmada', 'cancela
 
 export function totalAnticipos(reserva: Pick<Reserva, 'anticipos'>): number {
   return (reserva.anticipos ?? []).reduce((total, pago) => total + Number(pago.monto ?? 0), 0);
+}
+
+export function totalAnticiposDisponibles(reserva: Pick<Reserva, 'anticipos' | 'anticiposAplicados'>): number {
+  return Math.max(0, totalAnticipos(reserva) - Number(reserva.anticiposAplicados ?? 0));
 }

@@ -115,9 +115,13 @@ export class ResumenComponent {
     map(([productos, ventas, lotes, marcas, gastos, cajas, estadoFinanciero, perdidasManuales]) => {
       const activos = productos.filter((p) => p.activo !== false);
       const disponibles = activos.filter((p) => p.estado === 'disponible');
+      const disponiblesPropias = disponibles.filter((p) => p.consignado !== true);
+      const disponiblesConsignadas = disponibles.length - disponiblesPropias.length;
       const porRecoger = activos.filter((p) => p.estado === 'por_recoger');
+      const porRecogerPropias = porRecoger.filter((p) => p.consignado !== true);
+      const porRecogerConsignadas = porRecoger.length - porRecogerPropias.length;
       const vendidos = activos.filter((p) => p.estado === 'vendido');
-      const capitalPorRecoger = porRecoger.reduce((total, p) => total + precioCompraProducto(p), 0);
+      const capitalPorRecoger = porRecogerPropias.reduce((total, p) => total + precioCompraProducto(p), 0);
       const ventasActivas = ventas.filter((venta) => venta.activo !== false);
       const gastosActivos = gastos.filter((g) => g.activo !== false);
 
@@ -134,7 +138,8 @@ export class ResumenComponent {
         return total + Number(caja.montoInicial || 0) + ventasEfectivo - gastosEfectivo;
       }, 0);
 
-      const valorStockCosto = disponibles.reduce((total, p) => total + precioCompraProducto(p), 0);
+      // La consignación pertenece al consignador; no forma parte del capital invertido por la tienda.
+      const valorStockCosto = disponiblesPropias.reduce((total, p) => total + precioCompraProducto(p), 0);
       const valorStockVenta = disponibles.reduce((total, p) => total + precioProducto(p), 0);
       // Cálculo de la marca más vendida
       const productoMap = new Map(productos.map((p) => [p.id, p]));
@@ -226,7 +231,7 @@ export class ResumenComponent {
           icon: 'inventory_2',
           currency: true,
           type: 'stock_costo',
-          subtext: `${disponibles.length} prendas listas para venta`,
+          subtext: `${disponiblesPropias.length} prendas propias listas para venta${disponiblesConsignadas > 0 ? ` · ${disponiblesConsignadas} consignadas excluidas` : ''}`,
         },
       ];
 
@@ -272,9 +277,9 @@ export class ResumenComponent {
           value: porRecoger.length,
           icon: 'local_shipping',
           type: 'por_recoger',
-          subtext: capitalPorRecoger > 0
-            ? `Capital: ${capitalPorRecoger.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.`
-            : 'Sin prendas pendientes',
+          subtext: `${porRecogerPropias.length > 0
+            ? `Capital propio: ${capitalPorRecoger.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.`
+            : 'Sin capital propio pendiente'}${porRecogerConsignadas > 0 ? ` · ${porRecogerConsignadas} consignadas excluidas` : ''}`,
         },
         {
           label: 'Ventas del día',

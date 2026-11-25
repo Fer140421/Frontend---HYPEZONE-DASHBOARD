@@ -12,6 +12,9 @@ import {
   where,
 } from '@angular/fire/firestore';
 import { Producto } from '../models/producto.model';
+import { ESTADO_FINANCIERO_INICIAL } from '../models/finanzas.model';
+import { Caja } from '../models/caja.model';
+import { Reserva, totalAnticipos } from '../models/reserva.model';
 import { CONFIGURACION_FIDELIDAD_DEFAULT, ConfiguracionFidelidad } from '../models/fidelidad.model';
 import { EstadoEntregaVenta, MetodoPago, Venta, metodosPago } from '../models/venta.model';
 import { removeUndefinedDeep } from '../repositories/firestore.repository';
@@ -457,6 +460,18 @@ export class VentaService {
       if (currentDetails.some((venta, index) => venta.productoId !== detalles[index].productoId)) {
         throw new Error('La venta cambió mientras se procesaba. Actualiza la lista.');
       }
+      const cajaIds = [...new Set(currentDetails.map((venta) => venta.cajaId).filter((id): id is string => !!id))];
+      const cajas = await Promise.all(cajaIds.map(async (id) => ({
+        id,
+        ref: doc(this.firestore, `cajas/${id}`),
+        snapshot: await transaction.get(doc(this.firestore, `cajas/${id}`)),
+      })));
+      const cajasCerradas = cajas.filter(({ snapshot }) => snapshot.exists() && snapshot.data()?.['estado'] === 'cerrada');
+      if (cajas.some(({ snapshot }) => !snapshot.exists())) {
+        throw new Error('No se encontró la caja de esta venta; no se eliminó para proteger el cierre financiero.');
+      }
+      const finanzasRef = doc(this.firestore, 'finanzas/estado');
+      const finanzasSnapshot = cajasCerradas.length ? await transaction.get(finanzasRef) : undefined;
       const productoSnapshots = await Promise.all(productoRefs.map((ref) => transaction.get(ref)));
       if (productoSnapshots.some((snapshot) => !snapshot.exists())) {
         throw new Error('No se encontró una de las prendas; no se eliminó la venta.');
@@ -470,7 +485,126 @@ export class VentaService {
       }
       const operacionRef = operacionId ? doc(this.firestore, `operacionesVenta/${operacionId}`) : undefined;
       const operacionSnapshot = operacionRef ? await transaction.get(operacionRef) : undefined;
+      const reservaIds = [...new Set(currentDetails.map((venta) => venta.reservaId).filter((id): id is string => !!id))];
+      const reservas = await Promise.all(reservaIds.map(async (id) => ({
+        id,
+        ref: doc(this.firestore, `reservas/${id}`),
+        snapshot: await transaction.get(doc(this.firestore, `reservas/${id}`)),
+      })));
+      if (reservas.some(({ snapshot }) => !snapshot.exists())) {
+        throw new Error('No se encontró la reserva asociada; no se eliminó la venta.');
+      }
       const timestamp = serverTimestamp();
+
+      // Recalcular el cierre guardado y revertir el efecto financiero de ventas cerradas.
+      const reducciones = new Map<string, {
+        efectivo: number; qr: number; total: number; costo: number; deuda: number;
+        capital: number; ganancia: number; gananciasPositivas: number; perdidas: number;
+      }>();
+      for (const venta of currentDetails) {
+        if (!venta.cajaId || !cajasCerradas.some((caja) => caja.id === venta.cajaId)) continue;
+        const precio = Math.max(0, Number(venta.precioVenta || 0));
+        const costo = Math.max(0, Number(venta.precioCompra || 0));
+        const consignado = venta.consignado === true;
+        const ganancia = Number(venta.ganancia ?? (precio - costo));
+        const deuda = consignado
+          ? Math.max(0, Number(venta.montoPendienteConsignador ?? venta.precioCompra ?? 0) - Number(venta.montoLiquidadoConsignador ?? 0))
+          : 0;
+        const item = reducciones.get(venta.cajaId) ?? {
+          efectivo: 0, qr: 0, total: 0, costo: 0, deuda: 0, capital: 0,
+          ganancia: 0, gananciasPositivas: 0, perdidas: 0,
+        };
+        if (!venta.reservaId && venta.metodoPago === 'efectivo') {
+          item.efectivo += precio;
+          item.total += precio;
+        }
+        if (!venta.reservaId && venta.metodoPago === 'qr') {
+          item.qr += precio;
+          item.total += precio;
+        }
+        if (!consignado) {
+          item.costo += costo;
+          item.capital += Math.min(costo, precio);
+          item.perdidas += Math.max(0, -ganancia);
+          item.gananciasPositivas += Math.max(0, ganancia);
+        } else {
+          item.gananciasPositivas += Math.max(0, precio - Number(venta.montoPendienteConsignador ?? venta.precioCompra ?? 0));
+        }
+        item.deuda += deuda;
+        item.ganancia += ganancia;
+        reducciones.set(venta.cajaId, item);
+      }
+      for (const caja of cajasCerradas) {
+        const data = caja.snapshot.data() as Caja;
+        const delta = reducciones.get(caja.id)!;
+        const nuevoEfectivo = Math.max(0, Number(data.totalVentasEfectivo ?? 0) - delta.efectivo);
+        const esperadoEfectivo = Number(data.totalEsperadoEfectivo ?? (
+          Number(data.montoInicial ?? 0) + Number(data.totalVentasEfectivo ?? 0) - Number(data.totalGastosEfectivo ?? 0)
+        ));
+        const esperadoGeneral = Number(data.totalEsperadoGeneral ?? (
+          Number(data.montoInicial ?? 0) + Number(data.totalVentas ?? 0) - Number(data.totalGastos ?? 0)
+        ));
+        const nuevoEsperadoEfectivo = esperadoEfectivo - delta.efectivo;
+        const nuevaInversionBase = Number(data.capitalMasInversion ?? (Number(data.montoInicial ?? 0) + Number(data.totalCostoPrendas ?? 0))) - delta.costo;
+        const montoReal = Number(data.montoFinalReal ?? 0);
+        const referencia = nuevoEfectivo > 0 ? nuevoEsperadoEfectivo : nuevaInversionBase;
+        transaction.update(caja.ref, {
+          totalVentasEfectivo: nuevoEfectivo,
+          totalVentasQR: Math.max(0, Number(data.totalVentasQR ?? 0) - delta.qr),
+          totalVentas: Math.max(0, Number(data.totalVentas ?? 0) - delta.total),
+          totalCostoPrendas: Math.max(0, Number(data.totalCostoPrendas ?? 0) - delta.costo),
+          totalAdeudadoConsignadores: Math.max(0, Number(data.totalAdeudadoConsignadores ?? 0) - delta.deuda),
+          totalCapitalRecuperado: Math.max(0, Number(data.totalCapitalRecuperado ?? 0) - delta.capital),
+          totalGanancia: Number(data.totalGanancia ?? 0) - delta.ganancia,
+          totalGananciasPositivas: Math.max(0, Number(data.totalGananciasPositivas ?? 0) - delta.gananciasPositivas),
+          totalPerdidasVentas: Math.max(0, Number(data.totalPerdidasVentas ?? 0) - delta.perdidas),
+          totalEsperadoEfectivo: nuevoEsperadoEfectivo,
+          totalEsperadoGeneral: esperadoGeneral - delta.total,
+          capitalMasInversion: nuevaInversionBase,
+          diferencia: montoReal - referencia,
+          updatedAt: timestamp,
+        });
+      }
+      if (cajasCerradas.length && finanzasSnapshot) {
+        const estado = { ...ESTADO_FINANCIERO_INICIAL, ...(finanzasSnapshot.exists() ? finanzasSnapshot.data() : {}) };
+        const totalCapital = [...reducciones.values()].reduce((sum, item) => sum + item.capital, 0);
+        const totalGanancias = [...reducciones.values()].reduce((sum, item) => sum + item.gananciasPositivas, 0);
+        const totalPerdidas = [...reducciones.values()].reduce((sum, item) => sum + item.perdidas, 0);
+        const totalDeuda = [...reducciones.values()].reduce((sum, item) => sum + item.deuda, 0);
+        transaction.set(finanzasRef, {
+          ...estado,
+          inversionDisponible: Number(estado.inversionDisponible) - totalCapital,
+          gananciaAcumulada: Number(estado.gananciaAcumulada) - totalGanancias,
+          perdidasAcumuladas: Math.max(0, Number(estado.perdidasAcumuladas) - totalPerdidas),
+          deudaConsignacionPendiente: Math.max(0, Number(estado.deudaConsignacionPendiente ?? 0) - totalDeuda),
+          updatedAt: timestamp,
+        });
+      }
+
+      for (const reservaEntry of reservas) {
+        const reserva = reservaEntry.snapshot.data() as Reserva;
+        const detallesEliminados = currentDetails
+          .filter((venta) => venta.reservaId === reservaEntry.id)
+          .map((venta) => ({
+            productoId: venta.productoId,
+            nombreProducto: venta.nombreProducto,
+            precioAcordado: Number(venta.precioVenta || 0),
+          }));
+        const totalRestaurado = detallesEliminados.reduce((sum, item) => sum + item.precioAcordado, 0);
+        const total = Number(reserva.total || 0) + totalRestaurado;
+        const anticiposAplicados = Math.max(0, Number(reserva.anticiposAplicados ?? 0) - totalRestaurado);
+        const creditoDisponible = Math.max(0, totalAnticipos(reserva) - anticiposAplicados);
+        transaction.update(reservaEntry.ref, {
+          detalles: [...(reserva.detalles ?? []), ...detallesEliminados],
+          total,
+          anticiposAplicados,
+          saldoPendiente: Math.max(0, total - creditoDisponible),
+          estado: 'activa',
+          ventaOperacionId: deleteField(),
+          fechaCierre: deleteField(),
+          updatedAt: timestamp,
+        });
+      }
 
       const puntosPorCliente = new Map<string, number>();
       currentDetails.forEach((venta) => {
@@ -490,11 +624,11 @@ export class VentaService {
 
       currentDetails.forEach((venta, index) => {
         transaction.delete(refs[index]);
-        transaction.update(productoRefs[index], { estado: 'disponible', updatedAt: timestamp });
+        transaction.update(productoRefs[index], { estado: venta.reservaId ? 'reservado' : 'disponible', updatedAt: timestamp });
         const producto = productoSnapshots[index].data() as Producto;
         if (producto.estadoPublicacion === 'publicado') {
           transaction.set(doc(this.firestore, `productosPublicos/${venta.productoId}`), {
-            estado: 'disponible', updatedAt: timestamp,
+            estado: venta.reservaId ? 'reservado' : 'disponible', updatedAt: timestamp,
           }, { merge: true });
         }
       });

@@ -47,6 +47,13 @@
       <span class="fin-label">Cobrado en efectivo</span>
       <strong class="fin-val text-success">{{ data.caja.totalEfectivo | currency: 'BOB' : 'symbol-narrow' }}</strong>
     </div>
+    @if (data.caja.totalAbonosReservaEfectivo + data.caja.totalAbonosReservaQR > 0) {
+      <div class="fin-card">
+        <span class="fin-label">Abonos recibidos de reservas</span>
+        <strong class="fin-val">{{ (data.caja.totalAbonosReservaEfectivo + data.caja.totalAbonosReservaQR) | currency: 'BOB' : 'symbol-narrow' }}</strong>
+        <small class="cell-subtitle">Efectivo {{ data.caja.totalAbonosReservaEfectivo | currency:'BOB':'symbol-narrow' }} · QR {{ data.caja.totalAbonosReservaQR | currency:'BOB':'symbol-narrow' }}</small>
+      </div>
+    }
     <div class="fin-card">
       <span class="fin-label">Costo de compra vendido</span>
       <strong class="fin-val text-info">{{ data.caja.totalCostoPrendas | currency: 'BOB' : 'symbol-narrow' }}</strong>

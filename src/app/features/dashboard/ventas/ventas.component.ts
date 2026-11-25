@@ -241,36 +241,11 @@ export class VentasComponent implements OnInit {
     shareReplay({ bufferSize: 1, refCount: true }),
   );
 
-  readonly summary$ = this.ventasFiltradas$.pipe(
-    map((ventas) => {
-      const totalVendido = ventas.reduce((total, venta) => total + Number(venta.precioVenta || 0), 0);
-      const costo = ventas.reduce((total, venta) => total + Number(venta.precioCompra || 0), 0);
-      const ganancia = ventas.reduce(
-        (total, venta) =>
-          total +
-          Number(
-            venta.ganancia !== undefined && venta.ganancia !== null
-              ? venta.ganancia
-              : Number(venta.precioVenta || 0) - Number(venta.precioCompra || 0),
-          ),
-        0,
-      );
-      return {
-        totalVentas: ventas.length,
-        totalVendido,
-        costo,
-        ganancia,
-      };
-    }),
-  );
-
   readonly listViewModel$ = combineLatest({
     ventas: this.ventasFiltradas$,
-    summary: this.summary$,
     pagination: this.pagination$,
   }).pipe(
-    map(({ ventas, summary, pagination }) => ({
-      summary,
+    map(({ ventas, pagination }) => ({
       ventas: paginateItems(ventas, pagination),
     })),
     shareReplay({ bufferSize: 1, refCount: true }),
@@ -567,7 +542,7 @@ export class VentasComponent implements OnInit {
     if (!this.auth.can('sales.update') || this.procesandoVenta()) return;
     const detalles = this.operationDetails(venta);
     const nombre = detalles.length > 1 ? `${detalles.length} prendas` : venta.nombreProducto;
-    if (!window.confirm(`¿Eliminar la venta de ${nombre}? Se borrará la venta y las prendas volverán al inventario disponible.`)) return;
+    if (!window.confirm(`¿Eliminar la venta de ${nombre}? Las prendas volverán al inventario. Si la venta pertenece a una caja cerrada, se recalcularán sus totales financieros y se conservará el monto real contado; la diferencia del cierre se actualizará.`)) return;
     this.procesandoVenta.set(true);
     try {
       await this.ventaService.eliminarVenta(detalles);
@@ -585,6 +560,10 @@ export class VentasComponent implements OnInit {
     } else {
       void this.router.navigate(['/dashboard/ventas/nueva']);
     }
+  }
+
+  irACotizaciones(): void {
+    void this.router.navigate(['/dashboard/cotizaciones']);
   }
 
   async iniciarVentaRapida(): Promise<void> {

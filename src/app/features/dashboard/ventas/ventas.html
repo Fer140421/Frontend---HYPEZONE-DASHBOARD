@@ -8,6 +8,9 @@
   [backUrl]="mode() !== 'list' ? '/dashboard/ventas' : null"
 >
   @if (mode() === 'list' && auth.can('sales.create')) {
+    <button mat-stroked-button type="button" (click)="irACotizaciones()">
+      <mat-icon>request_quote</mat-icon> Cotizar
+    </button>
     <button mat-stroked-button type="button" (click)="iniciarVentaRapida()" [disabled]="procesandoVenta()"
       [matTooltip]="cajaActiva() ? 'Usa la caja abierta' : 'Abre automáticamente una caja con Bs 0'">
       <mat-icon>bolt</mat-icon> Venta rápida
@@ -374,13 +377,6 @@
     }
 
     @if (listViewModel$ | async; as vm) {
-    <section class="summary-cards">
-      <mat-card><span>Prendas vendidas</span><strong>{{ vm.summary.totalVentas }}</strong></mat-card>
-      <mat-card><span>Total vendido</span><strong>{{ vm.summary.totalVendido | currency: 'BOB' : 'symbol-narrow' }}</strong></mat-card>
-      <mat-card><span>Inversión a reponer</span><strong>{{ vm.summary.costo | currency: 'BOB' : 'symbol-narrow' }}</strong></mat-card>
-      <mat-card><span>Ganancia neta</span><strong style="color: #10b981;">{{ vm.summary.ganancia | currency: 'BOB' : 'symbol-narrow' }}</strong></mat-card>
-    </section>
-
     <mat-card class="list-card">
       <mat-card-content>
         <div class="list-filter-bar">

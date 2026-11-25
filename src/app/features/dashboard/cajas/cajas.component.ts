@@ -22,6 +22,7 @@ import { Venta } from '../../../core/models/venta.model';
 import { CajaRepository } from '../../../core/repositories/caja.repository';
 import { GastoRepository } from '../../../core/repositories/gasto.repository';
 import { VentaRepository } from '../../../core/repositories/venta.repository';
+import { ReservaRepository } from '../../../core/repositories/reserva.repository';
 import { AuthService } from '../../../core/services/auth.service';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { FilterDrawerComponent } from '../../../shared/components/filter-drawer/filter-drawer.component';
@@ -53,6 +54,8 @@ export interface CajaItemVM {
   fuenteCoberturaPerdida?: Caja['fuenteCoberturaPerdida'];
   totalEfectivo: number;
   totalQR: number;
+  totalAbonosReservaEfectivo: number;
+  totalAbonosReservaQR: number;
   totalGastos: number;
   totalGastosEfectivo: number;
   totalEsperado: number;
@@ -102,6 +105,7 @@ export class CajasComponent implements OnInit {
   private readonly cajaRepository = inject(CajaRepository);
   private readonly ventaRepository = inject(VentaRepository);
   private readonly gastoRepository = inject(GastoRepository);
+  private readonly reservaRepository = inject(ReservaRepository);
   private readonly destroyRef = inject(DestroyRef);
   readonly auth = inject(AuthService);
 
@@ -136,9 +140,10 @@ export class CajasComponent implements OnInit {
   private readonly cajasSource$ = this.cajaRepository.getAll(true);
   private readonly ventasSource$ = this.ventaRepository.getAll(true);
   private readonly gastosSource$ = this.gastoRepository.getAll(true);
+  private readonly reservasSource$ = this.reservaRepository.getAll(true);
 
-  readonly cajasVM$ = combineLatest([this.cajasSource$, this.ventasSource$, this.gastosSource$]).pipe(
-    map(([cajas, ventas, gastos]) => {
+  readonly cajasVM$ = combineLatest([this.cajasSource$, this.ventasSource$, this.gastosSource$, this.reservasSource$]).pipe(
+    map(([cajas, ventas, gastos, reservas]) => {
       const sorted = [...cajas].sort(
         (a, b) => new Date(b.fechaApertura).getTime() - new Date(a.fechaApertura).getTime(),
       );
@@ -150,18 +155,27 @@ export class CajasComponent implements OnInit {
         const gastosDeCaja = gastos.filter(
           (g) => g.cajaId === caja.id && g.activo !== false,
         );
+        const pagosReserva = reservas.flatMap((reserva) => reserva.anticipos ?? [])
+          .filter((pago) => pago.cajaId === caja.id);
+        const totalAbonosReservaEfectivo = pagosReserva
+          .filter((pago) => pago.metodoPago === 'efectivo')
+          .reduce((sum, pago) => sum + Number(pago.monto || 0), 0);
+        const totalAbonosReservaQR = pagosReserva
+          .filter((pago) => pago.metodoPago === 'qr')
+          .reduce((sum, pago) => sum + Number(pago.monto || 0), 0);
 
         const totalVendido = ventasDeCaja.reduce(
           (sum, v) => sum + Number(v.precioVenta || 0),
           0,
         );
         const totalPrendas = ventasDeCaja.length;
-        const totalEfectivo = ventasDeCaja
+        const ventasDirectas = ventasDeCaja.filter((venta) => !venta.reservaId);
+        const totalEfectivo = ventasDirectas
           .filter((v) => v.metodoPago === 'efectivo')
-          .reduce((sum, v) => sum + Number(v.precioVenta || 0), 0);
-        const totalQR = ventasDeCaja
+          .reduce((sum, v) => sum + Number(v.precioVenta || 0), 0) + totalAbonosReservaEfectivo;
+        const totalQR = ventasDirectas
           .filter((v) => v.metodoPago === 'qr')
-          .reduce((sum, v) => sum + Number(v.precioVenta || 0), 0);
+          .reduce((sum, v) => sum + Number(v.precioVenta || 0), 0) + totalAbonosReservaQR;
 
         const ventasPropias = ventasDeCaja.filter((venta) => !venta.consignado);
         const ventasConsignadas = ventasDeCaja.filter((venta) => venta.consignado === true);
@@ -207,7 +221,7 @@ export class CajasComponent implements OnInit {
 
         const baseInicial = Number(caja.montoInicial || 0);
         const totalEsperado = caja.totalEsperadoEfectivo ?? (baseInicial + totalEfectivo - totalGastosEfectivo);
-        const totalEsperadoGeneral = caja.totalEsperadoGeneral ?? (baseInicial + totalVendido - totalGastos);
+        const totalEsperadoGeneral = caja.totalEsperadoGeneral ?? (baseInicial + totalEfectivo + totalQR - totalGastos);
         const capitalMasInversion = caja.capitalMasInversion ?? (baseInicial + totalCostoPrendas);
 
         return {
@@ -229,6 +243,8 @@ export class CajasComponent implements OnInit {
           fuenteCoberturaPerdida: caja.fuenteCoberturaPerdida,
           totalEfectivo,
           totalQR,
+          totalAbonosReservaEfectivo,
+          totalAbonosReservaQR,
           totalGastos,
           totalGastosEfectivo,
           totalEsperado,

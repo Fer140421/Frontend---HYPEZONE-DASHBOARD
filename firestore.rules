@@ -54,14 +54,14 @@ service cloud.firestore {
         ])
       ) || (
         hasPermission('sales.create') &&
-        resource.data.estado == 'disponible' &&
+        resource.data.estado in ['disponible', 'reservado'] &&
         request.resource.data.estado in ['reservado', 'vendido'] &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'estado', 'precioVenta', 'updatedAt'
         ])
       ) || (
         hasPermission('sales.update') && resource.data.estado == 'vendido' &&
-        request.resource.data.estado == 'disponible' &&
+        request.resource.data.estado in ['disponible', 'reservado'] &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'updatedAt'])
       );
       allow delete: if hasPermission('products.delete');
@@ -77,11 +77,12 @@ service cloud.firestore {
       ) || (
         hasPermission('sales.create') &&
         request.resource.data.estado in ['reservado', 'vendido'] &&
+        resource.data.estado in ['disponible', 'reservado'] &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'estado', 'precioVenta', 'updatedAt'
         ])
       ) || (
-        hasPermission('sales.update') && request.resource.data.estado == 'disponible' &&
+        hasPermission('sales.update') && request.resource.data.estado in ['disponible', 'reservado'] &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'updatedAt'])
       );
       allow delete: if hasPermission('products.delete');
@@ -170,6 +171,13 @@ service cloud.firestore {
       allow read: if hasPermission('sales.view');
       allow create: if hasPermission('sales.create');
       allow update: if hasPermission('sales.update');
+      allow delete: if false;
+    }
+
+    match /cotizaciones/{id} {
+      allow read: if hasPermission('sales.view');
+      allow create: if hasPermission('sales.create');
+      allow update: if hasPermission('sales.update') || hasPermission('sales.create');
       allow delete: if false;
     }
 
